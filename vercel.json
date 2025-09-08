@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/scrape-schedule",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/send-notifications",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/update-weather",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
