@@ -13,7 +13,13 @@
     "db:reset": "supabase db reset",
     "telegram:webhook": "node scripts/setup-webhook.js"
   },
-  "keywords": ["surfing", "telegram", "bot", "notifications", "the-wave"],
+  "keywords": [
+    "surfing",
+    "telegram",
+    "bot",
+    "notifications",
+    "the-wave"
+  ],
   "author": "WavePing Team",
   "license": "MIT",
   "dependencies": {
@@ -22,6 +28,7 @@
     "@vercel/node": "^3.0.21",
     "cheerio": "^1.0.0-rc.12",
     "date-fns": "^3.0.0",
+    "dotenv": "^17.2.2",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
