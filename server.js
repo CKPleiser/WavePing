@@ -62,8 +62,131 @@ bot.command('prefs', async (ctx) => {
 
 bot.command('today', async (ctx) => {
   ctx.reply('🔍 Getting today\'s sessions...')
-  // Implementation for today's sessions
+  
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Get sessions for today
+    const { data: sessions, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .gte('date_time', `${today}T00:00:00`)
+      .lt('date_time', `${today}T23:59:59`)
+      .order('date_time')
+    
+    if (error) {
+      console.error('Error fetching sessions:', error)
+      return ctx.reply('❌ Error loading sessions. Try again later.')
+    }
+    
+    if (!sessions || sessions.length === 0) {
+      // Show sample data if no sessions in database
+      const sampleSessions = [
+        { time: '09:00', level: 'Beginner', side: 'Left', spots: 3 },
+        { time: '10:30', level: 'Intermediate', side: 'Right', spots: 1 },
+        { time: '14:00', level: 'Advanced', side: 'Any', spots: 5 },
+        { time: '16:30', level: 'Expert', side: 'Left', spots: 2 }
+      ]
+      
+      let message = `🏄‍♂️ *Today's Sessions (${today})*\n\n`
+      message += `📝 *Sample data - real sessions coming soon*\n\n`
+      
+      sampleSessions.forEach(session => {
+        message += `🕐 *${session.time}* - ${session.level}\n`
+        message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
+      })
+      
+      return ctx.reply(message, { parse_mode: 'Markdown' })
+    }
+    
+    let message = `🏄‍♂️ *Today's Sessions (${today})*\n\n`
+    
+    sessions.forEach(session => {
+      const time = new Date(session.date_time).toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+      const spots = session.available_spots || 0
+      const level = session.session_level || 'Unknown'
+      const side = session.side || 'Any'
+      
+      message += `🕐 *${time}* - ${level}\n`
+      message += `📍 Side: ${side} | 🎫 Spots: ${spots}\n\n`
+    })
+    
+    ctx.reply(message, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error in today command:', error)
+    ctx.reply('❌ Error loading today\'s sessions.')
+  }
 })
+
+bot.command('tomorrow', async (ctx) => {
+  ctx.reply('🔍 Getting tomorrow\'s sessions...')
+  
+  try {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+    
+    // Get sessions for tomorrow
+    const { data: sessions, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .gte('date_time', `${tomorrowStr}T00:00:00`)
+      .lt('date_time', `${tomorrowStr}T23:59:59`)
+      .order('date_time')
+    
+    if (error) {
+      console.error('Error fetching sessions:', error)
+      return ctx.reply('❌ Error loading sessions. Try again later.')
+    }
+    
+    if (!sessions || sessions.length === 0) {
+      // Show sample data if no sessions in database
+      const sampleSessions = [
+        { time: '08:30', level: 'Improver', side: 'Right', spots: 4 },
+        { time: '11:00', level: 'Intermediate', side: 'Left', spots: 2 },
+        { time: '13:30', level: 'Advanced', side: 'Any', spots: 6 },
+        { time: '15:00', level: 'Expert', side: 'Right', spots: 1 },
+        { time: '17:30', level: 'Beginner', side: 'Any', spots: 8 }
+      ]
+      
+      let message = `🏄‍♂️ *Tomorrow's Sessions (${tomorrowStr})*\n\n`
+      message += `📝 *Sample data - real sessions coming soon*\n\n`
+      
+      sampleSessions.forEach(session => {
+        message += `🕐 *${session.time}* - ${session.level}\n`
+        message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
+      })
+      
+      return ctx.reply(message, { parse_mode: 'Markdown' })
+    }
+    
+    let message = `🏄‍♂️ *Tomorrow's Sessions (${tomorrowStr})*\n\n`
+    
+    sessions.forEach(session => {
+      const time = new Date(session.date_time).toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+      const spots = session.available_spots || 0
+      const level = session.session_level || 'Unknown'
+      const side = session.side || 'Any'
+      
+      message += `🕐 *${time}* - ${level}\n`
+      message += `📍 Side: ${side} | 🎫 Spots: ${spots}\n\n`
+    })
+    
+    ctx.reply(message, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error in tomorrow command:', error)
+    ctx.reply('❌ Error loading tomorrow\'s sessions.')
+  }
+})
+
 
 bot.command('setup', async (ctx) => {
   try {
@@ -169,14 +292,16 @@ bot.action(/level_(.+)/, async (ctx) => {
       ? `\n\n*Currently selected*: ${currentLevels.join(', ')}`
       : ''
     
+    console.log('Current levels from DB:', currentLevels)
+    
     await ctx.editMessageText(`⚙️ *Edit Session Levels*\n\nClick levels to toggle them:${selectedText}`, {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback(`${currentLevels.includes('beginner') ? '✅' : '🟢'} Beginner`, 'level_beginner')],
-        [Markup.button.callback(`${currentLevels.includes('improver') ? '✅' : '🔵'} Improver`, 'level_improver')],
-        [Markup.button.callback(`${currentLevels.includes('intermediate') ? '✅' : '🟡'} Intermediate`, 'level_intermediate')],
-        [Markup.button.callback(`${currentLevels.includes('advanced') ? '✅' : '🟠'} Advanced`, 'level_advanced')],
-        [Markup.button.callback(`${currentLevels.includes('expert') ? '✅' : '🔴'} Expert`, 'level_expert')],
+        [Markup.button.callback(`${currentLevels.includes('beginner') ? '✅ ' : ''}🟢 Beginner`, 'level_beginner')],
+        [Markup.button.callback(`${currentLevels.includes('improver') ? '✅ ' : ''}🔵 Improver`, 'level_improver')],
+        [Markup.button.callback(`${currentLevels.includes('intermediate') ? '✅ ' : ''}🟡 Intermediate`, 'level_intermediate')],
+        [Markup.button.callback(`${currentLevels.includes('advanced') ? '✅ ' : ''}🟠 Advanced`, 'level_advanced')],
+        [Markup.button.callback(`${currentLevels.includes('expert') ? '✅ ' : ''}🔴 Expert`, 'level_expert')],
         [Markup.button.callback('✅ Done', 'levels_done')]
       ]).reply_markup
     })
