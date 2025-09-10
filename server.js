@@ -14,7 +14,17 @@ const supabase = createClient(
 // Add session middleware
 bot.use(session())
 
-// Health check endpoint
+// Homepage
+app.get('/', (req, res) => {
+  res.json({ 
+    name: 'WavePing Bot',
+    status: 'running',
+    description: 'Smart Telegram bot for The Wave Bristol surf session alerts',
+    bot: '@WavePingBot'
+  })
+})
+
+// Health check endpoint  
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() })
 })
@@ -133,7 +143,7 @@ if (process.env.NODE_ENV === 'production') {
     console.log(`🚀 Server running on port ${PORT}`)
     
     // Set webhook
-    const webhookUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app'}.railway.app/webhook`
+    const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL || `https://waveping-production.up.railway.app/webhook`
     bot.telegram.setWebhook(webhookUrl).then(() => {
       console.log(`📱 Webhook set to: ${webhookUrl}`)
     }).catch(console.error)
