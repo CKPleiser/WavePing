@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { WavePingBot } from '../../lib/telegram/bot'
+import { WavePingBot } from '../../../lib/telegram/bot'
 
 const bot = new WavePingBot(process.env.TELEGRAM_BOT_TOKEN || '')
 

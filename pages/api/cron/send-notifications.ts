@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createAdminClient } from '../../lib/supabase/client'
+import { createAdminClient } from '../../../lib/supabase/client'
 import { format, addHours, addDays, addWeeks } from 'date-fns'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

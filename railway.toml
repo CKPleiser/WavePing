@@ -1,0 +1,9 @@
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/health"
+
+[build]
+buildCommand = "npm install"
+
+[env]
+NODE_ENV = "production"

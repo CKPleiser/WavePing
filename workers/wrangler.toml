@@ -1,0 +1,12 @@
+name = "waveping-bot"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+TELEGRAM_BOT_TOKEN = "8498309436:AAF56MbM5aRXcTbYzcktNqLHJZRMtvm1Rwc"
+NEXT_PUBLIC_SUPABASE_URL = "https://efjpjisfaxekpqshnblu.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmanBqaXNmYXhla3Bxc2huYmx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczNTYyNDUsImV4cCI6MjA3MjkzMjI0NX0.54WqC2Qe0DK31PTg-M_Eo2pGo6kVB7OiDW5mOJop7Ys"
+SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmanBqaXNmYXhla3Bxc2huYmx1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzM1NjI0NSwiZXhwIjoyMDcyOTMyMjQ1fQ.mWsy5bwiWlFGCF56UzSVvHLoQ9_IbAhGQib-gTFaHc4"

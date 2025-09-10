@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { WaveScraper, type ScrapedSession } from '../../lib/scraper/wave-scraper'
-import { createAdminClient } from '../../lib/supabase/client'
-import type { SessionRow } from '../../lib/supabase/types'
+import { WaveScraper, type ScrapedSession } from '../../../lib/scraper/wave-scraper'
+import { createAdminClient } from '../../../lib/supabase/client'
+import type { SessionRow } from '../../../lib/supabase/types'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify cron secret
@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('is_active', true)
 
     const existingById = new Map(
-      (existingSessions || []).map(session => [session.id, session])
+      (existingSessions || []).map((session: any) => [session.id, session])
     )
 
     let newSessions = 0
@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Process each scraped session
     for (const session of scrapedSessions) {
-      const existing = existingById.get(session.id)
+      const existing: any = existingById.get(session.id)
       
       if (!existing) {
         // New session
@@ -119,16 +119,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Mark sessions as inactive if they weren't found in the scrape
     // (only for sessions in the past or that have become unavailable)
-    const scrapedIds = new Set(scrapedSessions.map(s => s.id))
+    const scrapedIds = new Set(scrapedSessions.map((s: any) => s.id))
     const toDeactivate = (existingSessions || []).filter(
-      session => !scrapedIds.has(session.id) && new Date(session.date) >= new Date()
+      (session: any) => !scrapedIds.has(session.id) && new Date(session.date) >= new Date()
     )
 
     if (toDeactivate.length > 0) {
       await supabase
         .from('sessions')
         .update({ is_active: false })
-        .in('id', toDeactivate.map(s => s.id))
+        .in('id', toDeactivate.map((s: any) => s.id))
       
       console.log(`Deactivated ${toDeactivate.length} sessions`)
     }

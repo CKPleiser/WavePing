@@ -84,7 +84,7 @@ export class WaveScraper {
       '.schedule-row'
     ]
 
-    let sessionElements: cheerio.Cheerio<cheerio.Element> | null = null
+    let sessionElements: cheerio.Cheerio<any> | null = null
     
     for (const selector of sessionSelectors) {
       const elements = $(selector)
@@ -128,7 +128,7 @@ export class WaveScraper {
     return uniqueSessions
   }
 
-  private parseSessionElement($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): ScrapedSession | null {
+  private parseSessionElement($: cheerio.CheerioAPI, element: cheerio.Cheerio<any>): ScrapedSession | null {
     const text = element.text().trim()
     const html = element.html() || ''
 
@@ -214,8 +214,8 @@ export class WaveScraper {
     const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/)
     if (!match) return timeStr
 
-    let [, hours, minutes, ampm] = match
-    let hour = parseInt(hours)
+    const [, hoursStr, minutes, ampm] = match
+    let hour = parseInt(hoursStr)
 
     if (ampm) {
       const isAM = ampm.toLowerCase() === 'am'

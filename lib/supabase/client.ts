@@ -28,7 +28,7 @@ export const createTelegramClient = (telegramId: number) => {
   const adminClient = createAdminClient()
   
   // Set telegram context for RLS
-  return adminClient.rpc('set_config', {
+  return (adminClient as any).rpc('set_config', {
     setting_name: 'app.telegram_id',
     setting_value: telegramId.toString(),
     is_local: true

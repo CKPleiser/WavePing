@@ -1,0 +1,6 @@
+# Exclude problematic files that might cause build trace issues
+src/worker.js
+wrangler.toml
+package-worker.json
+deploy-worker.sh
+railway.toml

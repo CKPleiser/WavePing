@@ -1,0 +1,17 @@
+{
+  "name": "waveping-worker",
+  "version": "1.0.0",
+  "description": "WavePing Telegram Bot on Cloudflare Workers",
+  "main": "src/worker.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
