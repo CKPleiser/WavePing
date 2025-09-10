@@ -117,36 +117,80 @@ bot.action('edit_levels', async (ctx) => {
   })
 })
 
-// Level selection handlers
+// Level selection handlers - just save directly to database
 bot.action(/level_(.+)/, async (ctx) => {
-  const level = ctx.match[1]
-  await ctx.answerCbQuery(`Selected: ${level}`)
-  
-  // Store level selection in session
-  if (!ctx.session.selectedLevels) ctx.session.selectedLevels = []
-  
-  if (ctx.session.selectedLevels.includes(level)) {
-    ctx.session.selectedLevels = ctx.session.selectedLevels.filter(l => l !== level)
-  } else {
-    ctx.session.selectedLevels.push(level)
+  try {
+    const level = ctx.match[1]
+    const telegramId = ctx.from.id
+    
+    await ctx.answerCbQuery(`Selected: ${level}`)
+    
+    // Get or create user profile
+    let userProfile = await getUserProfile(telegramId)
+    if (!userProfile) {
+      const { data } = await supabase
+        .from('profiles')
+        .insert({ telegram_id: telegramId, telegram_username: ctx.from.username })
+        .select()
+        .single()
+      userProfile = data
+    }
+    
+    // Check if level already exists
+    const { data: existingLevel } = await supabase
+      .from('user_levels')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('level', level)
+      .single()
+    
+    if (existingLevel) {
+      // Remove level
+      await supabase
+        .from('user_levels')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('level', level)
+    } else {
+      // Add level
+      await supabase
+        .from('user_levels')
+        .insert({ user_id: userProfile.id, level: level })
+    }
+    
+    // Get current levels and update message
+    const { data: userLevels } = await supabase
+      .from('user_levels')
+      .select('level')
+      .eq('user_id', userProfile.id)
+    
+    const currentLevels = userLevels?.map(ul => ul.level) || []
+    const selectedText = currentLevels.length > 0 
+      ? `\n\n*Currently selected*: ${currentLevels.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`⚙️ *Edit Session Levels*\n\nClick levels to toggle them:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentLevels.includes('beginner') ? '✅' : '🟢'} Beginner`, 'level_beginner')],
+        [Markup.button.callback(`${currentLevels.includes('improver') ? '✅' : '🔵'} Improver`, 'level_improver')],
+        [Markup.button.callback(`${currentLevels.includes('intermediate') ? '✅' : '🟡'} Intermediate`, 'level_intermediate')],
+        [Markup.button.callback(`${currentLevels.includes('advanced') ? '✅' : '🟠'} Advanced`, 'level_advanced')],
+        [Markup.button.callback(`${currentLevels.includes('expert') ? '✅' : '🔴'} Expert`, 'level_expert')],
+        [Markup.button.callback('✅ Done', 'levels_done')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in level selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
   }
-  
-  // Update message with selected levels
-  const selectedText = ctx.session.selectedLevels.length > 0 
-    ? `\n\n*Selected*: ${ctx.session.selectedLevels.join(', ')}`
-    : ''
-  
-  await ctx.editMessageText(`⚙️ *Edit Session Levels*\n\nSelect your session levels:${selectedText}`, {
-    parse_mode: 'Markdown',
-    reply_markup: Markup.inlineKeyboard([
-      [Markup.button.callback('🟢 Beginner', 'level_beginner')],
-      [Markup.button.callback('🔵 Improver', 'level_improver')],
-      [Markup.button.callback('🟡 Intermediate', 'level_intermediate')],
-      [Markup.button.callback('🟠 Advanced', 'level_advanced')],
-      [Markup.button.callback('🔴 Expert', 'level_expert')],
-      [Markup.button.callback('💾 Save Levels', 'save_levels')]
-    ]).reply_markup
-  })
+})
+
+// Done with levels
+bot.action('levels_done', async (ctx) => {
+  await ctx.answerCbQuery('Levels saved!')
+  await ctx.editMessageText('✅ *Levels saved!*\n\nUse /prefs to view all your preferences.')
 })
 
 // Save levels handler
