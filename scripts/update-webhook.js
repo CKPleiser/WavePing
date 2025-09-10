@@ -11,7 +11,7 @@ if (!railwayUrl) {
 }
 
 const TELEGRAM_BOT_TOKEN = '8498309436:AAF56MbM5aRXcTbYzcktNqLHJZRMtvm1Rwc';
-const webhookUrl = `${railwayUrl}/api/telegram/webhook`;
+const webhookUrl = `${railwayUrl}/webhook`;
 
 console.log('🔗 Setting Telegram webhook to:', webhookUrl);
 

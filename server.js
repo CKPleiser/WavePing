@@ -66,8 +66,39 @@ bot.command('today', async (ctx) => {
 })
 
 bot.command('setup', async (ctx) => {
-  ctx.reply('🚀 Let\'s set up your preferences! Use /prefs after setup.')
-  // Implementation for setup flow
+  try {
+    // Create user profile if doesn't exist
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        telegram_id: ctx.from.id,
+        telegram_username: ctx.from.username || null
+      }, { 
+        onConflict: 'telegram_id',
+        ignoreDuplicates: false 
+      })
+
+    if (error) {
+      console.error('Error creating profile:', error)
+      return ctx.reply('Error setting up profile. Try again later.')
+    }
+
+    // Start with level selection
+    await ctx.reply('⚙️ *Let\'s set up your preferences!*\n\nFirst, select your session levels:', {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🟢 Beginner', 'level_beginner')],
+        [Markup.button.callback('🔵 Improver', 'level_improver')],
+        [Markup.button.callback('🟡 Intermediate', 'level_intermediate')],
+        [Markup.button.callback('🟠 Advanced', 'level_advanced')],
+        [Markup.button.callback('🔴 Expert', 'level_expert')],
+        [Markup.button.callback('💾 Save Levels', 'save_levels')]
+      ]).reply_markup
+    })
+  } catch (error) {
+    console.error('Error in setup:', error)
+    ctx.reply('Error starting setup. Try again later.')
+  }
 })
 
 // Callback handlers
@@ -86,7 +117,91 @@ bot.action('edit_levels', async (ctx) => {
   })
 })
 
+// Level selection handlers
+bot.action(/level_(.+)/, async (ctx) => {
+  const level = ctx.match[1]
+  await ctx.answerCbQuery(`Selected: ${level}`)
+  
+  // Store level selection in session
+  if (!ctx.session.selectedLevels) ctx.session.selectedLevels = []
+  
+  if (ctx.session.selectedLevels.includes(level)) {
+    ctx.session.selectedLevels = ctx.session.selectedLevels.filter(l => l !== level)
+  } else {
+    ctx.session.selectedLevels.push(level)
+  }
+  
+  // Update message with selected levels
+  const selectedText = ctx.session.selectedLevels.length > 0 
+    ? `\n\n*Selected*: ${ctx.session.selectedLevels.join(', ')}`
+    : ''
+  
+  await ctx.editMessageText(`⚙️ *Edit Session Levels*\n\nSelect your session levels:${selectedText}`, {
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('🟢 Beginner', 'level_beginner')],
+      [Markup.button.callback('🔵 Improver', 'level_improver')],
+      [Markup.button.callback('🟡 Intermediate', 'level_intermediate')],
+      [Markup.button.callback('🟠 Advanced', 'level_advanced')],
+      [Markup.button.callback('🔴 Expert', 'level_expert')],
+      [Markup.button.callback('💾 Save Levels', 'save_levels')]
+    ]).reply_markup
+  })
+})
+
+// Save levels handler
+bot.action('save_levels', async (ctx) => {
+  await ctx.answerCbQuery('Saving levels...')
+  
+  if (!ctx.session.selectedLevels || ctx.session.selectedLevels.length === 0) {
+    return ctx.editMessageText('❌ Please select at least one level first!')
+  }
+  
+  try {
+    // Delete existing levels
+    await supabase
+      .from('user_levels')
+      .delete()
+      .eq('user_id', (await getUserProfile(ctx.from.id))?.id)
+    
+    // Insert new levels
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (userProfile) {
+      const levelInserts = ctx.session.selectedLevels.map(level => ({
+        user_id: userProfile.id,
+        level: level
+      }))
+      
+      await supabase.from('user_levels').insert(levelInserts)
+    }
+    
+    await ctx.editMessageText(`✅ *Levels saved!*\n\nYour selected levels: ${ctx.session.selectedLevels.join(', ')}\n\nUse /prefs to continue setting up other preferences.`)
+    
+    // Clear session
+    ctx.session.selectedLevels = []
+    
+  } catch (error) {
+    console.error('Error saving levels:', error)
+    ctx.editMessageText('❌ Error saving levels. Try again later.')
+  }
+})
+
 // Helper functions
+async function getUserProfile(telegramId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .single()
+  
+  if (error) {
+    console.error('Error fetching user profile:', error)
+    return null
+  }
+  
+  return data
+}
+
 async function getUserPreferences(telegramId) {
   const { data, error } = await supabase
     .from('profiles')
