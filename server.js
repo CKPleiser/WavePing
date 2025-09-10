@@ -139,7 +139,7 @@ if (process.env.NODE_ENV === 'production') {
     bot.handleUpdate(req.body, res)
   })
   
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`)
     
     // Set webhook
@@ -150,7 +150,7 @@ if (process.env.NODE_ENV === 'production') {
   })
 } else {
   // Development: use polling
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`)
     bot.launch()
     console.log('🤖 Bot started with polling')

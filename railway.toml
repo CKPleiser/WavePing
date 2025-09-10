@@ -2,5 +2,5 @@
 buildCommand = "npm install"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "node test-server.js"
 healthcheckPath = "/health"
