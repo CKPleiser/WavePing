@@ -206,11 +206,17 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
         const userDays = user.user_days?.map(ud => ud.day_of_week) || []
         const userTimeWindows = user.user_time_windows || []
         
-        // Filter sessions for user (including day preferences)
+        // Filter sessions for user (including day preferences and availability)
         const todayFiltered = scraper.filterSessionsForUser(todaySessions, userLevels, userSides, userDays, true, userTimeWindows)
-          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+          .filter(s => {
+            const availableSpots = s.spots_available || 0
+            return availableSpots > 0 && availableSpots >= user.min_spots
+          })
         const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows)
-          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+          .filter(s => {
+            const availableSpots = s.spots_available || 0
+            return availableSpots > 0 && availableSpots >= user.min_spots
+          })
 
         if (todayFiltered.length === 0 && tomorrowFiltered.length === 0) {
           continue // Skip if no matching sessions
@@ -223,11 +229,10 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
           message += `🌊 *TODAY'S SESSIONS* (${todayFiltered.length} match${todayFiltered.length === 1 ? '' : 'es'})\n\n`
           
           todayFiltered.slice(0, 5).forEach(session => {
-            const spots = session.spots_available || session.spots || 0
-            const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
             message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
           
@@ -240,11 +245,10 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
           message += `🌅 *TOMORROW'S PREVIEW* (${tomorrowFiltered.length} session${tomorrowFiltered.length === 1 ? '' : 's'})\n\n`
           
           tomorrowFiltered.slice(0, 3).forEach(session => {
-            const spots = session.spots_available || session.spots || 0
-            const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
             message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
         }
@@ -334,11 +338,17 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
         const userDays = user.user_days?.map(ud => ud.day_of_week) || []
         const userTimeWindows = user.user_time_windows || []
         
-        // Filter sessions for user (including day preferences)
+        // Filter sessions for user (including day preferences and availability)
         const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows)
-          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+          .filter(s => {
+            const availableSpots = s.spots_available || 0
+            return availableSpots > 0 && availableSpots >= user.min_spots
+          })
         const upcomingFiltered = scraper.filterSessionsForUser(upcomingSessions, userLevels, userSides, userDays, true, userTimeWindows)
-          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+          .filter(s => {
+            const availableSpots = s.spots_available || 0
+            return availableSpots > 0 && availableSpots >= user.min_spots
+          })
 
         if (tomorrowFiltered.length === 0 && upcomingFiltered.length === 0) {
           continue // Skip if no matching sessions
@@ -351,11 +361,10 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
           message += `🌅 *TOMORROW'S SESSIONS* (${tomorrowFiltered.length} match${tomorrowFiltered.length === 1 ? '' : 'es'})\n\n`
           
           tomorrowFiltered.slice(0, 6).forEach(session => {
-            const spots = session.spots_available || session.spots || 0
-            const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
             message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
           
@@ -371,11 +380,10 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
             message += `🗓️ *COMING UP* (Next few days)\n\n`
             
             weekendSessions.slice(0, 3).forEach(session => {
-              const spots = session.spots_available || session.spots || 0
-              const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+              const spots = session.spots_available || 0
               const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
               message += `📅 *${session.dateLabel}* ${session.time} - ${session.session_name}\n`
-              message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+              message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
               message += `   🔗 [Book Now](${bookingUrl})\n\n`
             })
           }
