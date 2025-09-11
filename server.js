@@ -232,7 +232,7 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
             const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎨 ${spots} max spots\n`
             message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
           
@@ -248,7 +248,7 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
             const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎨 ${spots} max spots\n`
             message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
         }
@@ -257,6 +257,7 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
         message += `• /today - See all today's sessions\n`  
         message += `• /tomorrow - Check tomorrow's lineup\n`
         message += `• /prefs - Update your preferences\n\n`
+        message += `⚠️ *Note*: Spots shown are capacity - check booking link for real-time availability\n\n`
         message += `🌊 Ready to catch some waves? 🤙`
 
         await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
@@ -364,7 +365,7 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
             const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎨 ${spots} max spots\n`
             message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
           
@@ -393,6 +394,7 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
         message += `• /tomorrow - Full tomorrow schedule\n`  
         message += `• /prefs - Update preferences\n`
         message += `• Book at [The Wave Ticketing](https://ticketing.thewave.com/)\n\n`
+        message += `⚠️ *Note*: Spots shown are capacity - check booking link for real-time availability\n\n`
         message += `🌙 Sweet dreams and may tomorrow bring perfect waves! 🤙`
 
         await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
