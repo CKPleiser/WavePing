@@ -231,9 +231,9 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
           todayFiltered.slice(0, 5).forEach(session => {
             const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
-            message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'} available\n`
-            message += `   🔗 [Book Now](${bookingUrl})\n\n`
+            message += `*${session.time}* - ${session.session_name}\n`
+            message += `${spots} spot${spots === 1 ? '' : 's'} available\n`
+            message += `[Book Now](${bookingUrl})\n\n`
           })
           
           if (todayFiltered.length > 5) {
@@ -247,9 +247,9 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
           tomorrowFiltered.slice(0, 3).forEach(session => {
             const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
-            message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'} available\n`
-            message += `   🔗 [Book Now](${bookingUrl})\n\n`
+            message += `*${session.time}* - ${session.session_name}\n`
+            message += `${spots} spot${spots === 1 ? '' : 's'} available\n`
+            message += `[Book Now](${bookingUrl})\n\n`
           })
         }
 
@@ -363,9 +363,9 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
           tomorrowFiltered.slice(0, 6).forEach(session => {
             const spots = session.spots_available || 0
             const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
-            message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'} available\n`
-            message += `   🔗 [Book Now](${bookingUrl})\n\n`
+            message += `*${session.time}* - ${session.session_name}\n`
+            message += `${spots} spot${spots === 1 ? '' : 's'} available\n`
+            message += `[Book Now](${bookingUrl})\n\n`
           })
           
           if (tomorrowFiltered.length > 6) {
@@ -382,9 +382,9 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
             weekendSessions.slice(0, 3).forEach(session => {
               const spots = session.spots_available || 0
               const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
-              message += `📅 *${session.dateLabel}* ${session.time} - ${session.session_name}\n`
-              message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spots} spot${spots === 1 ? '' : 's'}\n`
-              message += `   🔗 [Book Now](${bookingUrl})\n\n`
+              message += `*${session.dateLabel}* ${session.time} - ${session.session_name}\n`
+              message += `${spots} spot${spots === 1 ? '' : 's'}\n`
+              message += `[Book Now](${bookingUrl})\n\n`
             })
           }
         }
@@ -393,7 +393,7 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
         message += `• /tomorrow - Full tomorrow schedule\n`  
         message += `• /prefs - Update preferences\n`
         message += `• Book at [The Wave Ticketing](https://ticketing.thewave.com/)\n\n`
-        message += `🌙 Sweet dreams and may tomorrow bring perfect waves! 🤙`
+        message += `May tomorrow bring perfect waves to you! 🤙`
 
         await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
         results.push({ telegramId: user.telegram_id, status: 'sent', sessionsTomorrow: tomorrowFiltered.length, sessionsUpcoming: upcomingFiltered.length })
@@ -977,13 +977,27 @@ bot.command('today', async (ctx) => {
         }
         if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
         
-        const availableLevels = sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i)
-        const availableTimes = sessionsFormatted.map(s => s.time24).filter((v, i, a) => a.indexOf(v) === i).sort()
+        // Show available sessions with booking links
+        const availableSessions = sessionsFormatted.filter(s => s.spots_available > 0)
         
-        noSessionsMsg += `\n💡 *Available today:*\n`
-        if (availableLevels.length > 0) noSessionsMsg += `📊 Levels: ${availableLevels.join(', ')}\n`
-        if (availableTimes.length > 0) noSessionsMsg += `⏰ Times: ${availableTimes.join(', ')}\n`
-        noSessionsMsg += `\nTry adjusting your preferences with /prefs or /settime`
+        if (availableSessions.length > 0) {
+          noSessionsMsg += `\n🌊 *Available sessions today:*\n\n`
+          
+          availableSessions.slice(0, 8).forEach(session => {
+            noSessionsMsg += `⏰ *${session.time}* - ${session.session_name}\n`
+            noSessionsMsg += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${session.spots_available} spot${session.spots_available === 1 ? '' : 's'}\n`
+            if (session.booking_url) {
+              noSessionsMsg += `   🔗 [Book Now](${session.booking_url})\n`
+            }
+            noSessionsMsg += '\n'
+          })
+          
+          if (availableSessions.length > 8) {
+            noSessionsMsg += `... and ${availableSessions.length - 8} more! Use /today all to see everything.\n\n`
+          }
+        }
+        
+        noSessionsMsg += `Try adjusting your preferences with /prefs or /settime`
       } else {
         noSessionsMsg += `⚠️ You haven't set any preferences!\n`
         noSessionsMsg += `Use /setup to select your surf levels and preferences.`
@@ -3077,14 +3091,12 @@ bot.action('quick_today', async (ctx) => {
     } else {
       message += `Found ${filtered.length} session${filtered.length === 1 ? '' : 's'} for you! 🏄‍♂️\n\n`
       
-      filtered.slice(0, 8).forEach((session, i) => {
+      filtered.slice(0, 8).forEach((session) => {
         const spots = session.spots_available || session.spots || 0
         const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
-        const levelEmoji = getLevelEmoji(session.level)
-        const sideEmoji = getSideEmoji(session.side)
         
-        message += `${levelEmoji} ${session.time} - ${session.session_name}\n`
-        message += `   ${sideEmoji} ${session.level} | ${spotsText}\n\n`
+        message += `📊 ${session.time} - ${session.session_name}\n`
+        message += `   🏄 ${session.level} • ${session.side} • 🎯 ${spotsText}\n\n`
       })
       
       if (filtered.length > 8) {
