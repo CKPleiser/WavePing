@@ -204,6 +204,179 @@ async function handleTieredScrape(req, res, days, description, startDate = null)
   }
 }
 
+// Notification cron endpoint
+app.post('/api/cron/send-notifications', async (req, res) => {
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    const dayjs = require('dayjs')
+    const utc = require('dayjs/plugin/utc')
+    const timezone = require('dayjs/plugin/timezone')
+    dayjs.extend(utc)
+    dayjs.extend(timezone)
+
+    console.log('🔔 Starting notification check...')
+    const notificationsSent = []
+
+    // Check for each notification timing
+    const timings = ['1w', '48h', '24h', '12h', '2h']
+    
+    for (const timing of timings) {
+      const now = dayjs().tz('Europe/London')
+      let targetTime
+
+      // Calculate when to send notifications for each timing
+      switch (timing) {
+        case '1w':
+          targetTime = now.add(7, 'day')
+          break
+        case '48h':
+          targetTime = now.add(48, 'hour')
+          break
+        case '24h':
+          targetTime = now.add(24, 'hour')
+          break
+        case '12h':
+          targetTime = now.add(12, 'hour')
+          break
+        case '2h':
+          targetTime = now.add(2, 'hour')
+          break
+        default:
+          continue
+      }
+
+      // Find sessions that match the timing window (within 15 minutes tolerance)
+      const windowStart = targetTime.subtract(15, 'minute')
+      const windowEnd = targetTime.add(15, 'minute')
+
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('*')
+        .gte('date', windowStart.format('YYYY-MM-DD'))
+        .lte('date', windowEnd.format('YYYY-MM-DD'))
+        .eq('is_active', true)
+        .gt('spots_available', 0)
+
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError)
+        continue
+      }
+
+      // Filter sessions by actual date/time within window
+      const filteredSessions = sessions.filter(session => {
+        const sessionDateTime = dayjs.tz(`${session.date} ${session.start_time}`, 'Europe/London')
+        return sessionDateTime.isBetween(windowStart, windowEnd, null, '[]')
+      })
+
+      console.log(`Found ${filteredSessions.length} sessions for ${timing} timing`)
+
+      // For each session, find eligible users and send notifications
+      for (const session of filteredSessions) {
+        // Use the database function to get users who should be notified
+        const { data: eligibleUsers, error: usersError } = await supabase
+          .rpc('get_users_for_session_notification', {
+            session_record: {
+              level: session.level,
+              side: session.side,
+              date: session.date,
+              start_time: session.start_time,
+              spots_available: session.spots_available
+            }
+          })
+
+        if (usersError) {
+          console.error('Error getting eligible users:', usersError)
+          continue
+        }
+
+        for (const user of eligibleUsers) {
+          // Check if we already sent this notification
+          const { data: alreadySent, error: checkError } = await supabase
+            .from('notifications_sent')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('session_id', session.id)
+            .eq('timing', timing)
+            .single()
+
+          if (checkError && checkError.code !== 'PGRST116') {
+            console.error('Error checking notifications_sent:', checkError)
+            continue
+          }
+
+          if (alreadySent) {
+            continue // Already sent this notification
+          }
+
+          // Check if user has this timing preference
+          if (!user.notification_timings || !user.notification_timings.includes(timing)) {
+            continue
+          }
+
+          try {
+            // Send Telegram notification
+            const sessionDateTime = dayjs.tz(`${session.date} ${session.start_time}`, 'Europe/London')
+            const timeDescription = timing === '1w' ? 'next week' : timing === '48h' ? 'in 2 days' : timing === '24h' ? 'tomorrow' : timing === '12h' ? 'in 12 hours' : 'in 2 hours'
+            
+            const message = `🌊 *Wave Session Alert!*
+
+📅 ${sessionDateTime.format('ddd Do MMM')} at ${sessionDateTime.format('h:mm A')}
+🏄 *${session.session_name}*
+📊 Level: ${session.level}
+🏄‍♂️ Side: ${session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any'}
+👥 ${session.spots_available} spots available
+
+⏰ This session starts ${timeDescription}!
+
+[Book now](${session.book_url})`
+
+            await bot.telegram.sendMessage(user.telegram_id, message, { 
+              parse_mode: 'Markdown',
+              disable_web_page_preview: true 
+            })
+
+            // Record that we sent this notification
+            await supabase
+              .from('notifications_sent')
+              .insert({
+                user_id: user.id,
+                session_id: session.id,
+                timing: timing,
+                sent_at: new Date().toISOString()
+              })
+
+            notificationsSent.push({
+              telegram_id: user.telegram_id,
+              session: session.session_name,
+              timing: timing
+            })
+
+            console.log(`✅ Sent ${timing} notification to user ${user.telegram_id} for ${session.session_name}`)
+
+          } catch (error) {
+            console.error(`❌ Failed to send notification to user ${user.telegram_id}:`, error)
+          }
+        }
+      }
+    }
+
+    res.json({
+      ok: true,
+      notifications_sent: notificationsSent.length,
+      details: notificationsSent,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Notification system error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Basic bot commands
 bot.start((ctx) => {
   ctx.reply('🌊 Welcome to WavePing! Use /setup to get started.')
@@ -274,9 +447,15 @@ bot.command('today', async (ctx) => {
       .select('day_of_week')
       .eq('user_id', userProfile.id)
     
+    const { data: userTimeWindows } = await supabase
+      .from('user_time_windows')
+      .select('start_time, end_time')
+      .eq('user_id', userProfile.id)
+    
     const selectedLevels = userLevels?.map(ul => ul.level) || []
     const selectedSides = userSides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
+    const selectedTimeWindows = userTimeWindows || []
     
     // Get today's sessions from database (no scraping on-demand)
     const todayStr = today()
@@ -324,21 +503,31 @@ bot.command('today', async (ctx) => {
     // Filter sessions based on user preferences (skip day filter for /today)
     const scraper = new WaveScheduleScraper()
     let sessions = sessionsFormatted
-    if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
-      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true)
+    if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0 || selectedTimeWindows.length > 0) {
+      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true, selectedTimeWindows)
     }
     
     if (sessions.length === 0) {
       let noSessionsMsg = `📅 *No matching sessions for today*\n\n`
       
-      const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
+      const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0 || selectedTimeWindows.length > 0
       if (hasFilters) {
         noSessionsMsg += `🔍 *Your filters:*\n`
         if (selectedLevels.length > 0) noSessionsMsg += `📊 Levels: ${selectedLevels.join(', ')}\n`
         if (selectedSides.length > 0) noSessionsMsg += `🏄 Sides: ${selectedSides.join(', ')}\n`
+        if (selectedTimeWindows.length > 0) {
+          const timeRanges = selectedTimeWindows.map(tw => `${tw.start_time}-${tw.end_time}`).join(', ')
+          noSessionsMsg += `⏰ Times: ${timeRanges}\n`
+        }
         if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
-        noSessionsMsg += `\n💡 *Available today:* ${sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
-        noSessionsMsg += `Try adjusting your preferences with /prefs`
+        
+        const availableLevels = sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i)
+        const availableTimes = sessionsFormatted.map(s => s.time24).filter((v, i, a) => a.indexOf(v) === i).sort()
+        
+        noSessionsMsg += `\n💡 *Available today:*\n`
+        if (availableLevels.length > 0) noSessionsMsg += `📊 Levels: ${availableLevels.join(', ')}\n`
+        if (availableTimes.length > 0) noSessionsMsg += `⏰ Times: ${availableTimes.join(', ')}\n`
+        noSessionsMsg += `\nTry adjusting your preferences with /prefs or /settime`
       } else {
         noSessionsMsg += `⚠️ You haven't set any preferences!\n`
         noSessionsMsg += `Use /setup to select your surf levels and preferences.`
@@ -461,9 +650,15 @@ bot.command('tomorrow', async (ctx) => {
       .select('day_of_week')
       .eq('user_id', userProfile.id)
     
+    const { data: userTimeWindows } = await supabase
+      .from('user_time_windows')
+      .select('start_time, end_time')
+      .eq('user_id', userProfile.id)
+    
     const selectedLevels = userLevels?.map(ul => ul.level) || []
     const selectedSides = userSides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
+    const selectedTimeWindows = userTimeWindows || []
     
     // Get tomorrow's sessions from database (no scraping on-demand)
     const tomorrowStr = tomorrow()
@@ -509,21 +704,31 @@ bot.command('tomorrow', async (ctx) => {
     // Filter sessions based on user preferences (skip day filter for /tomorrow)
     const scraper = new WaveScheduleScraper()
     let sessions = sessionsFormatted
-    if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
-      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true)
+    if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0 || selectedTimeWindows.length > 0) {
+      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true, selectedTimeWindows)
     }
     
     if (sessions.length === 0) {
       let noSessionsMsg = `📅 *No matching sessions for tomorrow*\n\n`
       
-      const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
+      const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0 || selectedTimeWindows.length > 0
       if (hasFilters) {
         noSessionsMsg += `🔍 *Your filters:*\n`
         if (selectedLevels.length > 0) noSessionsMsg += `📊 Levels: ${selectedLevels.join(', ')}\n`
         if (selectedSides.length > 0) noSessionsMsg += `🏄 Sides: ${selectedSides.join(', ')}\n`
+        if (selectedTimeWindows.length > 0) {
+          const timeRanges = selectedTimeWindows.map(tw => `${tw.start_time}-${tw.end_time}`).join(', ')
+          noSessionsMsg += `⏰ Times: ${timeRanges}\n`
+        }
         if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
-        noSessionsMsg += `\n💡 *Available tomorrow:* ${sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
-        noSessionsMsg += `Try adjusting your preferences with /prefs`
+        
+        const availableLevels = sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i)
+        const availableTimes = sessionsFormatted.map(s => s.time24).filter((v, i, a) => a.indexOf(v) === i).sort()
+        
+        noSessionsMsg += `\n💡 *Available tomorrow:*\n`
+        if (availableLevels.length > 0) noSessionsMsg += `📊 Levels: ${availableLevels.join(', ')}\n`
+        if (availableTimes.length > 0) noSessionsMsg += `⏰ Times: ${availableTimes.join(', ')}\n`
+        noSessionsMsg += `\nTry adjusting your preferences with /prefs or /settime`
       } else {
         noSessionsMsg += `⚠️ You haven't set any preferences!\n`
         noSessionsMsg += `Use /setup to select your surf levels and preferences.`
@@ -842,17 +1047,20 @@ bot.action('edit_sides', async (ctx) => {
       .select('side')
       .eq('user_id', userProfile.id)
     
-    const currentSides = userSides?.map(us => us.side) || []
-    const selectedText = currentSides.length > 0 
-      ? `\n\n*Currently selected*: ${currentSides.join(', ')}`
+    // Convert database values to display names
+    const currentSidesDb = userSides?.map(us => us.side) || [] // ['L', 'R', 'A']
+    const currentSidesDisplay = currentSidesDb.map(s => s === 'L' ? 'Left' : s === 'R' ? 'Right' : 'Any')
+    
+    const selectedText = currentSidesDisplay.length > 0 
+      ? `\n\n*Currently selected*: ${currentSidesDisplay.join(', ')}`
       : ''
     
     await ctx.editMessageText(`🏄 *Edit Preferred Sides*\n\nClick sides to toggle them:${selectedText}`, {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback(`${currentSides.includes('Left') ? '✅ ' : ''}🏄‍♂️ Left Side`, 'side_Left')],
-        [Markup.button.callback(`${currentSides.includes('Right') ? '✅ ' : ''}🏄‍♀️ Right Side`, 'side_Right')],
-        [Markup.button.callback(`${currentSides.includes('Any') ? '✅ ' : ''}🤙 Any Side`, 'side_Any')],
+        [Markup.button.callback(`${currentSidesDb.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, 'side_Left')],
+        [Markup.button.callback(`${currentSidesDb.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, 'side_Right')],
+        [Markup.button.callback(`${currentSidesDb.includes('A') ? '✅ ' : ''}🤙 Any Side`, 'side_Any')],
         [Markup.button.callback('✅ Done', 'sides_done')]
       ]).reply_markup
     })
@@ -865,10 +1073,13 @@ bot.action('edit_sides', async (ctx) => {
 // Side selection handler
 bot.action(/side_(.+)/, async (ctx) => {
   try {
-    const side = ctx.match[1]
+    const sideDisplay = ctx.match[1] // 'Left', 'Right', 'Any'
     const telegramId = ctx.from.id
     
-    await ctx.answerCbQuery(`Selected: ${side}`)
+    // Convert display name to database value
+    const sideDbValue = sideDisplay === 'Left' ? 'L' : sideDisplay === 'Right' ? 'R' : 'A'
+    
+    await ctx.answerCbQuery(`Selected: ${sideDisplay}`)
     
     const userProfile = await getUserProfile(telegramId)
     if (!userProfile) return
@@ -878,7 +1089,7 @@ bot.action(/side_(.+)/, async (ctx) => {
       .from('user_sides')
       .select('*')
       .eq('user_id', userProfile.id)
-      .eq('side', side)
+      .eq('side', sideDbValue)
       .single()
     
     if (existingSide) {
@@ -887,12 +1098,12 @@ bot.action(/side_(.+)/, async (ctx) => {
         .from('user_sides')
         .delete()
         .eq('user_id', userProfile.id)
-        .eq('side', side)
+        .eq('side', sideDbValue)
     } else {
       // Add side
       await supabase
         .from('user_sides')
-        .insert({ user_id: userProfile.id, side: side })
+        .insert({ user_id: userProfile.id, side: sideDbValue })
     }
     
     // Get current sides and update message
@@ -901,17 +1112,20 @@ bot.action(/side_(.+)/, async (ctx) => {
       .select('side')
       .eq('user_id', userProfile.id)
     
-    const currentSides = userSides?.map(us => us.side) || []
-    const selectedText = currentSides.length > 0 
-      ? `\n\n*Currently selected*: ${currentSides.join(', ')}`
+    // Convert database values to display names
+    const currentSidesDb = userSides?.map(us => us.side) || [] // ['L', 'R', 'A']
+    const currentSidesDisplay = currentSidesDb.map(s => s === 'L' ? 'Left' : s === 'R' ? 'Right' : 'Any')
+    
+    const selectedText = currentSidesDisplay.length > 0 
+      ? `\n\n*Currently selected*: ${currentSidesDisplay.join(', ')}`
       : ''
     
     await ctx.editMessageText(`🏄 *Edit Preferred Sides*\n\nClick sides to toggle them:${selectedText}`, {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback(`${currentSides.includes('Left') ? '✅ ' : ''}🏄‍♂️ Left Side`, 'side_Left')],
-        [Markup.button.callback(`${currentSides.includes('Right') ? '✅ ' : ''}🏄‍♀️ Right Side`, 'side_Right')],
-        [Markup.button.callback(`${currentSides.includes('Any') ? '✅ ' : ''}🤙 Any Side`, 'side_Any')],
+        [Markup.button.callback(`${currentSidesDb.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, 'side_Left')],
+        [Markup.button.callback(`${currentSidesDb.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, 'side_Right')],
+        [Markup.button.callback(`${currentSidesDb.includes('A') ? '✅ ' : ''}🤙 Any Side`, 'side_Any')],
         [Markup.button.callback('✅ Done', 'sides_done')]
       ]).reply_markup
     })
@@ -1039,14 +1253,268 @@ bot.action('days_done', async (ctx) => {
 
 // Edit times handler
 bot.action('edit_times', async (ctx) => {
-  await ctx.answerCbQuery('Times feature coming soon!')
-  await ctx.editMessageText('🕐 *Time Preferences*\n\n⚠️ Time filtering is coming soon!\n\nFor now, we show all available sessions regardless of time.', { parse_mode: 'Markdown' })
+  await ctx.answerCbQuery()
+  
+  // Get current time preferences
+  const preferences = await getUserPreferences(ctx.from.id)
+  const currentTimes = preferences?.user_time_windows || []
+  
+  let message = '🕐 *Time Preferences*\n\n'
+  message += 'Select your preferred time windows for surf sessions:\n\n'
+  
+  if (currentTimes.length > 0) {
+    message += '✅ *Current preferences:*\n'
+    currentTimes.forEach((tw, i) => {
+      message += `   ${tw.start_time} - ${tw.end_time}\n`
+    })
+    message += '\n'
+  }
+  
+  const timeButtons = [
+    [
+      Markup.button.callback('🌅 Early (7-10am)', 'time_early'),
+      Markup.button.callback('🌞 Morning (10am-1pm)', 'time_morning')
+    ],
+    [
+      Markup.button.callback('☀️ Afternoon (1-5pm)', 'time_afternoon'),
+      Markup.button.callback('🌇 Evening (5-8pm)', 'time_evening')
+    ],
+    [
+      Markup.button.callback('🌙 Late (8-11pm)', 'time_late'),
+      Markup.button.callback('🔧 Custom Times', 'time_custom')
+    ],
+    [
+      Markup.button.callback('🗑️ Clear All', 'time_clear'),
+      Markup.button.callback('✅ Done', 'times_done')
+    ]
+  ]
+  
+  await ctx.editMessageText(message, {
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard(timeButtons).reply_markup
+  })
+})
+
+// Time preference handlers
+bot.action('time_early', async (ctx) => {
+  await saveTimeWindow(ctx, '07:00', '10:00', '🌅 Early (7-10am)')
+})
+
+bot.action('time_morning', async (ctx) => {
+  await saveTimeWindow(ctx, '10:00', '13:00', '🌞 Morning (10am-1pm)')
+})
+
+bot.action('time_afternoon', async (ctx) => {
+  await saveTimeWindow(ctx, '13:00', '17:00', '☀️ Afternoon (1-5pm)')
+})
+
+bot.action('time_evening', async (ctx) => {
+  await saveTimeWindow(ctx, '17:00', '20:00', '🌇 Evening (5-8pm)')
+})
+
+bot.action('time_late', async (ctx) => {
+  await saveTimeWindow(ctx, '20:00', '23:00', '🌙 Late (8-11pm)')
+})
+
+bot.action('time_custom', async (ctx) => {
+  await ctx.answerCbQuery()
+  await ctx.editMessageText(
+    '🔧 *Custom Time Window*\n\n' +
+    'To set custom times, use this format:\n' +
+    '`/settime 09:30 12:30`\n\n' +
+    'This will add 9:30am-12:30pm to your preferences.\n\n' +
+    'Multiple time windows are supported!',
+    { parse_mode: 'Markdown' }
+  )
+})
+
+bot.action('time_clear', async (ctx) => {
+  await ctx.answerCbQuery('Clearing time preferences...')
+  
+  try {
+    // Get user
+    const { data: user } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('telegram_id', ctx.from.id)
+      .single()
+    
+    if (user) {
+      // Clear all time windows
+      await supabase
+        .from('user_time_windows')
+        .delete()
+        .eq('user_id', user.id)
+    }
+    
+    await ctx.editMessageText('🗑️ *Time preferences cleared!*\n\nYou\'ll now see sessions at any time of day.', { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error clearing time preferences:', error)
+    await ctx.editMessageText('❌ Error clearing preferences. Try again later.')
+  }
+})
+
+bot.action('times_done', async (ctx) => {
+  await ctx.answerCbQuery('✅ Times saved!')
+  await ctx.editMessageText('✅ *Time Preferences Saved!*\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
+})
+
+// Custom time command
+bot.command('settime', async (ctx) => {
+  const args = ctx.message.text.split(' ').slice(1)
+  if (args.length !== 2) {
+    return ctx.reply('Usage: /settime 09:30 12:30\n\nThis adds a time window from 9:30am to 12:30pm.')
+  }
+  
+  const [startTime, endTime] = args
+  
+  // Validate time format
+  const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+  if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+    return ctx.reply('❌ Invalid time format. Use HH:MM format (24-hour).\n\nExample: /settime 09:30 17:00')
+  }
+  
+  // Validate time logic
+  if (startTime >= endTime) {
+    return ctx.reply('❌ Start time must be before end time.')
+  }
+  
+  try {
+    // Get or create user
+    const { data: user } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('telegram_id', ctx.from.id)
+      .single()
+    
+    if (!user) {
+      return ctx.reply('❌ User not found. Please use /setup first.')
+    }
+    
+    // Add time window
+    const { error } = await supabase
+      .from('user_time_windows')
+      .insert({
+        user_id: user.id,
+        start_time: startTime,
+        end_time: endTime
+      })
+    
+    if (error) throw error
+    
+    ctx.reply(`✅ *Custom time window added!*\n\n🕐 ${startTime} - ${endTime}\n\nUse /prefs to see all your preferences.`, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error saving custom time:', error)
+    ctx.reply('❌ Error saving time preference. Try again later.')
+  }
 })
 
 // Edit notifications handler  
 bot.action('edit_notifications', async (ctx) => {
-  await ctx.answerCbQuery('Notifications feature coming soon!')
-  await ctx.editMessageText('🔔 *Notification Preferences*\n\n⚠️ Push notifications are coming soon!\n\nCurrently you can check sessions manually with /today and /tomorrow.', { parse_mode: 'Markdown' })
+  try {
+    await ctx.answerCbQuery('Loading notifications...')
+    
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) {
+      return ctx.editMessageText('⚠️ Please run /setup first!')
+    }
+    
+    // Get current notification preferences
+    const { data: userNotifications } = await supabase
+      .from('user_notifications')
+      .select('timing')
+      .eq('user_id', userProfile.id)
+    
+    const currentTimings = userNotifications?.map(un => un.timing) || []
+    const selectedText = currentTimings.length > 0 
+      ? `\n\n*Currently selected*: ${currentTimings.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`🔔 *Edit Notification Preferences*\n\nSelect when you want to be notified about matching sessions:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentTimings.includes('1w') ? '✅ ' : ''}📅 1 week before`, 'notif_1w')],
+        [Markup.button.callback(`${currentTimings.includes('48h') ? '✅ ' : ''}⏰ 2 days before`, 'notif_48h')],
+        [Markup.button.callback(`${currentTimings.includes('24h') ? '✅ ' : ''}📆 24 hours before`, 'notif_24h')],
+        [Markup.button.callback(`${currentTimings.includes('12h') ? '✅ ' : ''}🌅 12 hours before`, 'notif_12h')],
+        [Markup.button.callback(`${currentTimings.includes('2h') ? '✅ ' : ''}⚡ 2 hours before`, 'notif_2h')],
+        [Markup.button.callback('✅ Done', 'notifications_done')]
+      ]).reply_markup
+    })
+  } catch (error) {
+    console.error('Error in edit_notifications:', error)
+    await ctx.answerCbQuery('Error loading notifications.')
+  }
+})
+
+// Notification timing selection handler
+bot.action(/notif_(.+)/, async (ctx) => {
+  try {
+    const timing = ctx.match[1]
+    const telegramId = ctx.from.id
+    
+    await ctx.answerCbQuery(`Selected: ${timing}`)
+    
+    const userProfile = await getUserProfile(telegramId)
+    if (!userProfile) return
+    
+    // Check if timing already exists
+    const { data: existingTiming } = await supabase
+      .from('user_notifications')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('timing', timing)
+      .single()
+    
+    if (existingTiming) {
+      // Remove timing
+      await supabase
+        .from('user_notifications')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('timing', timing)
+    } else {
+      // Add timing
+      await supabase
+        .from('user_notifications')
+        .insert({ user_id: userProfile.id, timing: timing })
+    }
+    
+    // Get current timings and update message
+    const { data: userNotifications } = await supabase
+      .from('user_notifications')
+      .select('timing')
+      .eq('user_id', userProfile.id)
+    
+    const currentTimings = userNotifications?.map(un => un.timing) || []
+    const selectedText = currentTimings.length > 0 
+      ? `\n\n*Currently selected*: ${currentTimings.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`🔔 *Edit Notification Preferences*\n\nSelect when you want to be notified about matching sessions:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentTimings.includes('1w') ? '✅ ' : ''}📅 1 week before`, 'notif_1w')],
+        [Markup.button.callback(`${currentTimings.includes('48h') ? '✅ ' : ''}⏰ 2 days before`, 'notif_48h')],
+        [Markup.button.callback(`${currentTimings.includes('24h') ? '✅ ' : ''}📆 24 hours before`, 'notif_24h')],
+        [Markup.button.callback(`${currentTimings.includes('12h') ? '✅ ' : ''}🌅 12 hours before`, 'notif_12h')],
+        [Markup.button.callback(`${currentTimings.includes('2h') ? '✅ ' : ''}⚡ 2 hours before`, 'notif_2h')],
+        [Markup.button.callback('✅ Done', 'notifications_done')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in notification selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+// Done with notifications
+bot.action('notifications_done', async (ctx) => {
+  await ctx.answerCbQuery('✅ Notifications saved!')
+  await ctx.editMessageText('✅ *Notifications Saved!*\n\nYou\'ll receive alerts for sessions matching your preferences.\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
 })
 
 // Save levels handler
@@ -1100,6 +1568,53 @@ async function getUserProfile(telegramId) {
   }
   
   return data
+}
+
+async function saveTimeWindow(ctx, startTime, endTime, description) {
+  await ctx.answerCbQuery(`Adding ${description}...`)
+  
+  try {
+    // Get or create user
+    const { data: user } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('telegram_id', ctx.from.id)
+      .single()
+    
+    if (!user) {
+      return ctx.editMessageText('❌ User not found. Please use /setup first.')
+    }
+    
+    // Check if this time window already exists
+    const { data: existing } = await supabase
+      .from('user_time_windows')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('start_time', startTime)
+      .eq('end_time', endTime)
+      .single()
+    
+    if (existing) {
+      return ctx.editMessageText(`⚠️ ${description} is already in your preferences!`, { parse_mode: 'Markdown' })
+    }
+    
+    // Add time window
+    const { error } = await supabase
+      .from('user_time_windows')
+      .insert({
+        user_id: user.id,
+        start_time: startTime,
+        end_time: endTime
+      })
+    
+    if (error) throw error
+    
+    await ctx.editMessageText(`✅ *${description} added!*\n\nTime window: ${startTime} - ${endTime}\n\nUse /prefs to see all your preferences.`, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error saving time window:', error)
+    await ctx.editMessageText('❌ Error saving time preference. Try again later.')
+  }
 }
 
 async function getUserPreferences(telegramId) {
