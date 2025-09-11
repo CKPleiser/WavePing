@@ -156,7 +156,7 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
     console.log('🌅 Sending morning digest notifications...')
     
     // Get users who want morning digest
-    const { data: users, error: usersError } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select(`
         id, 
@@ -164,18 +164,32 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
         min_spots,
         user_levels (level),
         user_sides (side),
+        user_days (day_of_week),
         user_time_windows (start_time, end_time),
         user_notifications (timing)
       `)
       .eq('notification_enabled', true)
     
-    if (usersError) throw usersError
+    if (profilesError) throw profilesError
 
-    const morningUsers = users.filter(user => 
-      user.user_notifications.some(n => n.timing === 'morning')
-    )
+    // Get users who have morning digest preference
+    const { data: morningDigestUsers, error: digestError } = await supabase
+      .from('user_digest_preferences')
+      .select('user_id')
+      .eq('digest_type', 'morning')
+    
+    if (digestError) throw digestError
+    
+    const morningUserIds = new Set(morningDigestUsers?.map(u => u.user_id) || [])
+    
+    // Filter profiles to only those who want morning digest AND have notification timing preferences
+    const users = profiles?.filter(user => 
+      morningUserIds.has(user.id) && 
+      user.user_notifications && 
+      user.user_notifications.length > 0
+    ) || []
 
-    console.log(`Found ${morningUsers.length} users subscribed to morning digest`)
+    console.log(`Found ${users.length} users subscribed to morning digest`)
 
     // Get today's and tomorrow's sessions
     const scraper = new WaveScheduleScraper()
@@ -184,17 +198,18 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
     
     const results = []
     
-    for (const user of morningUsers) {
+    for (const user of users) {
       try {
         // Get user preferences
         const userLevels = user.user_levels?.map(ul => ul.level) || []
         const userSides = user.user_sides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
+        const userDays = user.user_days?.map(ud => ud.day_of_week) || []
         const userTimeWindows = user.user_time_windows || []
         
-        // Filter sessions for user
-        const todayFiltered = scraper.filterSessionsForUser(todaySessions, userLevels, userSides, [], true, userTimeWindows)
+        // Filter sessions for user (including day preferences)
+        const todayFiltered = scraper.filterSessionsForUser(todaySessions, userLevels, userSides, userDays, true, userTimeWindows)
           .filter(s => (s.spots_available || s.spots) >= user.min_spots)
-        const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, [], true, userTimeWindows)
+        const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows)
           .filter(s => (s.spots_available || s.spots) >= user.min_spots)
 
         if (todayFiltered.length === 0 && tomorrowFiltered.length === 0) {
@@ -210,8 +225,10 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
           todayFiltered.slice(0, 5).forEach(session => {
             const spots = session.spots_available || session.spots || 0
             const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+            message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
           
           if (todayFiltered.length > 5) {
@@ -225,8 +242,10 @@ app.post('/api/cron/send-morning-digest', async (req, res) => {
           tomorrowFiltered.slice(0, 3).forEach(session => {
             const spots = session.spots_available || session.spots || 0
             const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+            message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
         }
 
@@ -265,7 +284,7 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
     console.log('🌇 Sending evening digest notifications...')
     
     // Get users who want evening digest
-    const { data: users, error: usersError } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select(`
         id, 
@@ -273,18 +292,32 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
         min_spots,
         user_levels (level),
         user_sides (side),
+        user_days (day_of_week),
         user_time_windows (start_time, end_time),
         user_notifications (timing)
       `)
       .eq('notification_enabled', true)
     
-    if (usersError) throw usersError
+    if (profilesError) throw profilesError
 
-    const eveningUsers = users.filter(user => 
-      user.user_notifications.some(n => n.timing === 'evening')
-    )
+    // Get users who have evening digest preference
+    const { data: eveningDigestUsers, error: digestError } = await supabase
+      .from('user_digest_preferences')
+      .select('user_id')
+      .eq('digest_type', 'evening')
+    
+    if (digestError) throw digestError
+    
+    const eveningUserIds = new Set(eveningDigestUsers?.map(u => u.user_id) || [])
+    
+    // Filter profiles to only those who want evening digest AND have notification timing preferences
+    const users = profiles?.filter(user => 
+      eveningUserIds.has(user.id) && 
+      user.user_notifications && 
+      user.user_notifications.length > 0
+    ) || []
 
-    console.log(`Found ${eveningUsers.length} users subscribed to evening digest`)
+    console.log(`Found ${users.length} users subscribed to evening digest`)
 
     // Get tomorrow's sessions and next few days for weekend preview
     const scraper = new WaveScheduleScraper()
@@ -293,17 +326,18 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
     
     const results = []
     
-    for (const user of eveningUsers) {
+    for (const user of users) {
       try {
         // Get user preferences
         const userLevels = user.user_levels?.map(ul => ul.level) || []
         const userSides = user.user_sides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
+        const userDays = user.user_days?.map(ud => ud.day_of_week) || []
         const userTimeWindows = user.user_time_windows || []
         
-        // Filter sessions for user
-        const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, [], true, userTimeWindows)
+        // Filter sessions for user (including day preferences)
+        const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows)
           .filter(s => (s.spots_available || s.spots) >= user.min_spots)
-        const upcomingFiltered = scraper.filterSessionsForUser(upcomingSessions, userLevels, userSides, [], true, userTimeWindows)
+        const upcomingFiltered = scraper.filterSessionsForUser(upcomingSessions, userLevels, userSides, userDays, true, userTimeWindows)
           .filter(s => (s.spots_available || s.spots) >= user.min_spots)
 
         if (tomorrowFiltered.length === 0 && upcomingFiltered.length === 0) {
@@ -319,8 +353,10 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
           tomorrowFiltered.slice(0, 6).forEach(session => {
             const spots = session.spots_available || session.spots || 0
             const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
             message += `⏰ *${session.time}* - ${session.session_name}\n`
-            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+            message += `   🔗 [Book Now](${bookingUrl})\n\n`
           })
           
           if (tomorrowFiltered.length > 6) {
@@ -337,8 +373,10 @@ app.post('/api/cron/send-evening-digest', async (req, res) => {
             weekendSessions.slice(0, 3).forEach(session => {
               const spots = session.spots_available || session.spots || 0
               const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+              const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
               message += `📅 *${session.dateLabel}* ${session.time} - ${session.session_name}\n`
-              message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+              message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n`
+              message += `   🔗 [Book Now](${bookingUrl})\n\n`
             })
           }
         }
@@ -1981,10 +2019,104 @@ bot.action(/notif_(.+)/, async (ctx) => {
   }
 })
 
-// Done with notifications
+// Done with notifications - now ask for digest delivery preferences
 bot.action('notifications_done', async (ctx) => {
-  await ctx.answerCbQuery('✅ Notifications saved!')
-  await ctx.editMessageText('✅ *Notifications Saved!*\n\nYou\'ll receive alerts for sessions matching your preferences.\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
+  await ctx.answerCbQuery('Moving to digest preferences...')
+  
+  try {
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) return
+    
+    // Get current digest preferences
+    const { data: digestPrefs } = await supabase
+      .from('user_digest_preferences')
+      .select('digest_type')
+      .eq('user_id', userProfile.id)
+    
+    const currentDigests = digestPrefs?.map(dp => dp.digest_type) || []
+    
+    await ctx.editMessageText('📬 *Digest Delivery*\n\nYour notification timing is saved! Now choose when to receive digest messages with your matching sessions:', {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${currentDigests.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'digest_morning'),
+          Markup.button.callback(`${currentDigests.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'digest_evening')
+        ],
+        [
+          Markup.button.callback('✅ All Done', 'digest_done'),
+          Markup.button.callback('🔙 Back to Timings', 'edit_notifications')
+        ]
+      ]).reply_markup
+    })
+  } catch (error) {
+    console.error('Error showing digest preferences:', error)
+    await ctx.editMessageText('✅ *Notifications Saved!*\n\nYou\'ll receive alerts for sessions matching your preferences.\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
+  }
+})
+
+// Digest delivery preference handlers
+bot.action(/digest_(morning|evening)/, async (ctx) => {
+  try {
+    const digestType = ctx.match[1]
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) return
+    
+    await ctx.answerCbQuery(`${digestType === 'morning' ? 'Morning' : 'Evening'} digest toggled`)
+    
+    // Check if preference exists
+    const { data: existingPref } = await supabase
+      .from('user_digest_preferences')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('digest_type', digestType)
+      .single()
+    
+    if (existingPref) {
+      // Remove preference
+      await supabase
+        .from('user_digest_preferences')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('digest_type', digestType)
+    } else {
+      // Add preference
+      await supabase
+        .from('user_digest_preferences')
+        .insert({ user_id: userProfile.id, digest_type: digestType })
+    }
+    
+    // Refresh the UI
+    const { data: digestPrefs } = await supabase
+      .from('user_digest_preferences')
+      .select('digest_type')
+      .eq('user_id', userProfile.id)
+    
+    const currentDigests = digestPrefs?.map(dp => dp.digest_type) || []
+    
+    await ctx.editMessageText('📬 *Digest Delivery*\n\nYour notification timing is saved! Now choose when to receive digest messages with your matching sessions:', {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${currentDigests.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'digest_morning'),
+          Markup.button.callback(`${currentDigests.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'digest_evening')
+        ],
+        [
+          Markup.button.callback('✅ All Done', 'digest_done'),
+          Markup.button.callback('🔙 Back to Timings', 'edit_notifications')
+        ]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error updating digest preferences:', error)
+    await ctx.answerCbQuery('Error updating digest preferences')
+  }
+})
+
+// Digest preferences done
+bot.action('digest_done', async (ctx) => {
+  await ctx.answerCbQuery('✅ All preferences saved!')
+  await ctx.editMessageText('✅ *All Preferences Saved!*\n\nYou\'ll receive digest messages for sessions matching your preferences.\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
 })
 
 // Save levels handler
