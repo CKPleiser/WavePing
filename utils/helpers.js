@@ -1,8 +1,11 @@
 // HTML escaping for Telegram messages
-const toHTML = (s = '') => s
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
+const toHTML = (s = '') => {
+  if (s === null || s === undefined) return ''
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
 
 // Safe message edit with fallback
 async function safeEdit(ctx, msgId, text, opts) {
