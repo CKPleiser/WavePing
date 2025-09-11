@@ -61,18 +61,41 @@ bot.command('prefs', async (ctx) => {
 })
 
 bot.command('today', async (ctx) => {
-  ctx.reply('🔍 Getting today\'s sessions...')
+  await ctx.reply('🔍 Getting your matched sessions for today...')
   
   try {
     const today = new Date().toISOString().split('T')[0]
+    const telegramId = ctx.from.id
+    
+    // Get user preferences
+    const userProfile = await getUserProfile(telegramId)
+    if (!userProfile) {
+      return ctx.reply('⚠️ Please run /setup first to set your preferences!')
+    }
+    
+    // Get user's selected levels
+    const { data: userLevels } = await supabase
+      .from('user_levels')
+      .select('level')
+      .eq('user_id', userProfile.id)
+    
+    const selectedLevels = userLevels?.map(ul => ul.level) || []
     
     // Get sessions for today
-    const { data: sessions, error } = await supabase
+    let query = supabase
       .from('sessions')
       .select('*')
       .gte('date_time', `${today}T00:00:00`)
       .lt('date_time', `${today}T23:59:59`)
+      .gt('available_spots', 0) // Only show sessions with spots
       .order('date_time')
+    
+    // Filter by user's levels if they have preferences
+    if (selectedLevels.length > 0) {
+      query = query.in('session_level', selectedLevels)
+    }
+    
+    const { data: sessions, error } = await query
     
     if (error) {
       console.error('Error fetching sessions:', error)
@@ -80,26 +103,23 @@ bot.command('today', async (ctx) => {
     }
     
     if (!sessions || sessions.length === 0) {
-      // Show sample data if no sessions in database
-      const sampleSessions = [
-        { time: '09:00', level: 'Beginner', side: 'Left', spots: 3 },
-        { time: '10:30', level: 'Intermediate', side: 'Right', spots: 1 },
-        { time: '14:00', level: 'Advanced', side: 'Any', spots: 5 },
-        { time: '16:30', level: 'Expert', side: 'Left', spots: 2 }
-      ]
+      let noSessionsMsg = `📅 *No matching sessions for today (${today})*\n\n`
       
-      let message = `🏄‍♂️ *Today's Sessions (${today})*\n\n`
-      message += `📝 *Sample data - real sessions coming soon*\n\n`
+      if (selectedLevels.length > 0) {
+        noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
+        noSessionsMsg += `💡 Try:\n`
+        noSessionsMsg += `• Checking /tomorrow instead\n`
+        noSessionsMsg += `• Adjusting your level preferences with /setup\n`
+      } else {
+        noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
+        noSessionsMsg += `Use /setup to select your surf levels.`
+      }
       
-      sampleSessions.forEach(session => {
-        message += `🕐 *${session.time}* - ${session.level}\n`
-        message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
-      })
-      
-      return ctx.reply(message, { parse_mode: 'Markdown' })
+      return ctx.reply(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
-    let message = `🏄‍♂️ *Today's Sessions (${today})*\n\n`
+    let message = `🏄‍♂️ *Your Sessions for Today (${today})*\n`
+    message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
     
     sessions.forEach(session => {
       const time = new Date(session.date_time).toLocaleTimeString('en-GB', { 
@@ -123,20 +143,43 @@ bot.command('today', async (ctx) => {
 })
 
 bot.command('tomorrow', async (ctx) => {
-  ctx.reply('🔍 Getting tomorrow\'s sessions...')
+  await ctx.reply('🔍 Getting your matched sessions for tomorrow...')
   
   try {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     const tomorrowStr = tomorrow.toISOString().split('T')[0]
+    const telegramId = ctx.from.id
+    
+    // Get user preferences
+    const userProfile = await getUserProfile(telegramId)
+    if (!userProfile) {
+      return ctx.reply('⚠️ Please run /setup first to set your preferences!')
+    }
+    
+    // Get user's selected levels
+    const { data: userLevels } = await supabase
+      .from('user_levels')
+      .select('level')
+      .eq('user_id', userProfile.id)
+    
+    const selectedLevels = userLevels?.map(ul => ul.level) || []
     
     // Get sessions for tomorrow
-    const { data: sessions, error } = await supabase
+    let query = supabase
       .from('sessions')
       .select('*')
       .gte('date_time', `${tomorrowStr}T00:00:00`)
       .lt('date_time', `${tomorrowStr}T23:59:59`)
+      .gt('available_spots', 0) // Only show sessions with spots
       .order('date_time')
+    
+    // Filter by user's levels if they have preferences
+    if (selectedLevels.length > 0) {
+      query = query.in('session_level', selectedLevels)
+    }
+    
+    const { data: sessions, error } = await query
     
     if (error) {
       console.error('Error fetching sessions:', error)
@@ -144,27 +187,23 @@ bot.command('tomorrow', async (ctx) => {
     }
     
     if (!sessions || sessions.length === 0) {
-      // Show sample data if no sessions in database
-      const sampleSessions = [
-        { time: '08:30', level: 'Improver', side: 'Right', spots: 4 },
-        { time: '11:00', level: 'Intermediate', side: 'Left', spots: 2 },
-        { time: '13:30', level: 'Advanced', side: 'Any', spots: 6 },
-        { time: '15:00', level: 'Expert', side: 'Right', spots: 1 },
-        { time: '17:30', level: 'Beginner', side: 'Any', spots: 8 }
-      ]
+      let noSessionsMsg = `📅 *No matching sessions for tomorrow (${tomorrowStr})*\n\n`
       
-      let message = `🏄‍♂️ *Tomorrow's Sessions (${tomorrowStr})*\n\n`
-      message += `📝 *Sample data - real sessions coming soon*\n\n`
+      if (selectedLevels.length > 0) {
+        noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
+        noSessionsMsg += `💡 Try:\n`
+        noSessionsMsg += `• Checking other days\n`
+        noSessionsMsg += `• Adjusting your level preferences with /setup\n`
+      } else {
+        noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
+        noSessionsMsg += `Use /setup to select your surf levels.`
+      }
       
-      sampleSessions.forEach(session => {
-        message += `🕐 *${session.time}* - ${session.level}\n`
-        message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
-      })
-      
-      return ctx.reply(message, { parse_mode: 'Markdown' })
+      return ctx.reply(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
-    let message = `🏄‍♂️ *Tomorrow's Sessions (${tomorrowStr})*\n\n`
+    let message = `🏄‍♂️ *Your Sessions for Tomorrow (${tomorrowStr})*\n`
+    message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
     
     sessions.forEach(session => {
       const time = new Date(session.date_time).toLocaleTimeString('en-GB', { 
@@ -314,8 +353,48 @@ bot.action(/level_(.+)/, async (ctx) => {
 
 // Done with levels
 bot.action('levels_done', async (ctx) => {
-  await ctx.answerCbQuery('Levels saved!')
-  await ctx.editMessageText('✅ *Levels saved!*\n\nUse /prefs to view all your preferences.')
+  try {
+    await ctx.answerCbQuery('✅ Saved successfully!')
+    
+    // Get user's saved levels for confirmation
+    const userProfile = await getUserProfile(ctx.from.id)
+    const { data: userLevels } = await supabase
+      .from('user_levels')
+      .select('level')
+      .eq('user_id', userProfile.id)
+    
+    const savedLevels = userLevels?.map(ul => ul.level) || []
+    
+    let confirmationMsg = '✅ *Preferences Saved Successfully!*\n\n'
+    confirmationMsg += '📊 *Your selected levels:*\n'
+    
+    if (savedLevels.length > 0) {
+      savedLevels.forEach(level => {
+        const emoji = {
+          'beginner': '🟢',
+          'improver': '🔵',
+          'intermediate': '🟡',
+          'advanced': '🟠',
+          'expert': '🔴'
+        }[level] || '⚪'
+        confirmationMsg += `${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}\n`
+      })
+    } else {
+      confirmationMsg += '_No levels selected_\n'
+    }
+    
+    confirmationMsg += '\n📱 *Next steps:*\n'
+    confirmationMsg += '• Use /today to see matching sessions\n'
+    confirmationMsg += '• Use /tomorrow for tomorrow\'s sessions\n'
+    confirmationMsg += '• Use /prefs to adjust preferences\n'
+    confirmationMsg += '\n🔔 You\'ll be notified when spots open up!'
+    
+    await ctx.editMessageText(confirmationMsg, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error in levels_done:', error)
+    await ctx.editMessageText('✅ Levels saved! Use /prefs to view.')
+  }
 })
 
 // Save levels handler
