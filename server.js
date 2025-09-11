@@ -1795,27 +1795,29 @@ bot.action('save_levels', async (ctx) => {
     const isInitialSetup = ctx.session.setup === true
     
     if (isInitialSetup) {
-      // Show welcome completion message for new users
-      const completionMessage = `🎉 *Awesome! You're all set up!* 🏄‍♂️
+      // Continue to next setup step: sides
+      ctx.session.step = 'sides'
+      ctx.session.selectedSides = [] // Initialize sides selection
+      
+      const sidesMessage = `✅ *Great! Levels saved: ${ctx.session.selectedLevels.join(', ')}*
 
-Your surf level preferences: *${ctx.session.selectedLevels.join(', ')}*
+🏄‍♂️ *Step 2: Choose Your Preferred Wave Side*
 
-*Ready to ride some waves?* Here's what you can do now:
+The Wave has both **Left** and **Right** breaking waves. Most surfers have a preference based on their stance:
 
-🌊 */today* - Check today's sessions that match your level
-🌅 */tomorrow* - See what's coming up tomorrow  
-⚙️ */prefs* - Fine-tune your preferences (sides, times, notifications)
+🏄‍♂️ **Left waves**: Better for regular foot surfers (left foot forward)
+🏄‍♀️ **Right waves**: Better for goofy foot surfers (right foot forward) 
+🌊 **Any side**: No preference, show me everything!
 
-*Pro tip:* Set up notifications in */prefs* so I can ping you when perfect sessions become available! 🔔
+*What's your preference?* (You can select multiple or choose Any) 🤙`
 
-*Let's see what waves are waiting for you...* 🤙`
-
-      await ctx.editMessageText(completionMessage, {
+      await ctx.editMessageText(sidesMessage, {
         parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('🌊 Check Today\'s Sessions', 'quick_today')],
-          [Markup.button.callback('⚙️ Set More Preferences', 'quick_prefs')],
-          [Markup.button.callback('🔔 Set Up Notifications', 'quick_notifications')]
+          [Markup.button.callback(`${ctx.session.selectedSides?.includes('Left') ? '✅ ' : ''}🏄‍♂️ Left Waves`, 'setup_side_Left')],
+          [Markup.button.callback(`${ctx.session.selectedSides?.includes('Right') ? '✅ ' : ''}🏄‍♀️ Right Waves`, 'setup_side_Right')],
+          [Markup.button.callback(`${ctx.session.selectedSides?.includes('Any') ? '✅ ' : ''}🌊 Any Side`, 'setup_side_Any')],
+          [Markup.button.callback('✅ Continue', 'save_sides')]
         ]).reply_markup
       })
     } else {
@@ -1979,6 +1981,721 @@ function formatPreferencesMessage(preferences) {
 👥 *Min spots*: ${preferences.min_spots || 1}
 🔔 *Notifications*: ${notifications}`
 }
+
+// Setup-specific side handlers (for guided setup flow)
+bot.action(/setup_side_(.+)/, async (ctx) => {
+  try {
+    const side = ctx.match[1]
+    await ctx.answerCbQuery(`Selected: ${side}`)
+    
+    if (!ctx.session.selectedSides) {
+      ctx.session.selectedSides = []
+    }
+    
+    // Toggle side selection
+    if (ctx.session.selectedSides.includes(side)) {
+      ctx.session.selectedSides = ctx.session.selectedSides.filter(s => s !== side)
+    } else {
+      // If "Any" is selected, clear other selections
+      if (side === 'Any') {
+        ctx.session.selectedSides = ['Any']
+      } else {
+        // If selecting Left/Right, remove "Any" first
+        ctx.session.selectedSides = ctx.session.selectedSides.filter(s => s !== 'Any')
+        ctx.session.selectedSides.push(side)
+      }
+    }
+    
+    // Update UI
+    const selectedText = ctx.session.selectedSides.length > 0 
+      ? `\n\n*Currently selected*: ${ctx.session.selectedSides.join(', ')}`
+      : ''
+    
+    const sidesMessage = `✅ *Great! Levels saved: ${ctx.session.selectedLevels.join(', ')}*
+
+🏄‍♂️ *Step 2: Choose Your Preferred Wave Side*
+
+The Wave has both **Left** and **Right** breaking waves. Most surfers have a preference based on their stance:
+
+🏄‍♂️ **Left waves**: Better for regular foot surfers (left foot forward)
+🏄‍♀️ **Right waves**: Better for goofy foot surfers (right foot forward) 
+🌊 **Any side**: No preference, show me everything!
+
+*What's your preference?* (You can select multiple or choose Any) 🤙${selectedText}`
+
+    await ctx.editMessageText(sidesMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${ctx.session.selectedSides?.includes('Left') ? '✅ ' : ''}🏄‍♂️ Left Waves`, 'setup_side_Left')],
+        [Markup.button.callback(`${ctx.session.selectedSides?.includes('Right') ? '✅ ' : ''}🏄‍♀️ Right Waves`, 'setup_side_Right')],
+        [Markup.button.callback(`${ctx.session.selectedSides?.includes('Any') ? '✅ ' : ''}🌊 Any Side`, 'setup_side_Any')],
+        [Markup.button.callback('✅ Continue', 'save_sides')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in setup side selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+bot.action('save_sides', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Saving sides...')
+    
+    // Use "Any" as default if nothing selected
+    const selectedSides = ctx.session.selectedSides?.length > 0 ? ctx.session.selectedSides : ['Any']
+    
+    // Save to database
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (userProfile) {
+      // Delete existing sides
+      await supabase
+        .from('user_sides')
+        .delete()
+        .eq('user_id', userProfile.id)
+      
+      // Insert new sides (convert display names to database values)
+      const sideInserts = selectedSides.map(side => ({
+        user_id: userProfile.id,
+        side: side === 'Left' ? 'L' : side === 'Right' ? 'R' : 'A'
+      }))
+      
+      await supabase.from('user_sides').insert(sideInserts)
+    }
+    
+    // Continue to next step: minimum spots
+    ctx.session.step = 'min_spots'
+    ctx.session.selectedMinSpots = 1 // Default to 1
+    
+    const minSpotsMessage = `✅ *Sides saved: ${selectedSides.join(', ')}*
+
+🎯 *Step 3: How Many Available Spots Do You Need?*
+
+Sessions fill up fast! Choose the minimum number of available spots you need to be interested:
+
+🤷 **I don't care**: Show me any session with spots
+🔟 **10+ spots**: Only sessions with plenty of availability  
+5️⃣ **5+ spots**: Sessions with good availability
+2️⃣ **2+ spots**: Sessions with at least a few spots
+
+💡 *Pro tip*: Lower numbers = more session opportunities, but they might fill up faster! 🤙`
+
+    await ctx.editMessageText(minSpotsMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 1 ? '✅ ' : ''}🤷 I don't care`, 'setup_min_spots_1'),
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 10 ? '✅ ' : ''}🔟 10+ spots`, 'setup_min_spots_10')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 5 ? '✅ ' : ''}5️⃣ 5+ spots`, 'setup_min_spots_5'),
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 2 ? '✅ ' : ''}2️⃣ 2+ spots`, 'setup_min_spots_2')
+        ],
+        [Markup.button.callback('✅ Continue', 'save_min_spots')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error saving sides:', error)
+    await ctx.editMessageText('❌ Error saving sides. Try /setup again.')
+  }
+})
+
+// Setup day handlers
+bot.action(/setup_day_(\d)/, async (ctx) => {
+  try {
+    const day = parseInt(ctx.match[1])
+    await ctx.answerCbQuery(`Selected: ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][day]}`)
+    
+    if (!ctx.session.selectedDays) {
+      ctx.session.selectedDays = []
+    }
+    
+    // Toggle day
+    if (ctx.session.selectedDays.includes(day)) {
+      ctx.session.selectedDays = ctx.session.selectedDays.filter(d => d !== day)
+    } else {
+      ctx.session.selectedDays.push(day)
+    }
+    
+    // Update UI
+    const selectedText = ctx.session.selectedDays.length > 0 
+      ? `\n\n*Currently selected*: ${ctx.session.selectedDays.map(d => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d]).join(', ')}`
+      : ''
+    
+    const daysMessage = `✅ *Sides saved: ${ctx.session.selectedSides?.join(', ') || 'Any'}*
+
+📅 *Step 3: Choose Your Surf Days*
+
+When are you typically free to surf? Select the days you'd like to receive notifications for:
+
+💡 *Pro tip*: You can always check sessions for any day using /today and /tomorrow, but notifications will only be sent for your selected days! 🤙${selectedText}`
+
+    await ctx.editMessageText(daysMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(0) ? '✅ ' : ''}Mon`, 'setup_day_0'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(1) ? '✅ ' : ''}Tue`, 'setup_day_1'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(2) ? '✅ ' : ''}Wed`, 'setup_day_2')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(3) ? '✅ ' : ''}Thu`, 'setup_day_3'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(4) ? '✅ ' : ''}Fri`, 'setup_day_4')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(5) ? '✅ ' : ''}Sat`, 'setup_day_5'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(6) ? '✅ ' : ''}Sun`, 'setup_day_6')
+        ],
+        [
+          Markup.button.callback('📅 All Days', 'setup_all_days'),
+          Markup.button.callback('⏭️ Skip', 'save_days')
+        ],
+        [Markup.button.callback('✅ Continue', 'save_days')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in setup day selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+bot.action('setup_all_days', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Selected all days')
+    ctx.session.selectedDays = [0, 1, 2, 3, 4, 5, 6]
+    
+    const daysMessage = `✅ *Sides saved: ${ctx.session.selectedSides?.join(', ') || 'Any'}*
+
+📅 *Step 3: Choose Your Surf Days*
+
+When are you typically free to surf? Select the days you'd like to receive notifications for:
+
+💡 *Pro tip*: You can always check sessions for any day using /today and /tomorrow, but notifications will only be sent for your selected days! 🤙
+
+*Currently selected*: All days`
+
+    await ctx.editMessageText(daysMessage, {
+      parse_mode: 'Markdown', 
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback('✅ Mon', 'setup_day_0'),
+          Markup.button.callback('✅ Tue', 'setup_day_1'),
+          Markup.button.callback('✅ Wed', 'setup_day_2')
+        ],
+        [
+          Markup.button.callback('✅ Thu', 'setup_day_3'),
+          Markup.button.callback('✅ Fri', 'setup_day_4')
+        ],
+        [
+          Markup.button.callback('✅ Sat', 'setup_day_5'),
+          Markup.button.callback('✅ Sun', 'setup_day_6')
+        ],
+        [
+          Markup.button.callback('📅 All Days', 'setup_all_days'),
+          Markup.button.callback('⏭️ Skip', 'save_days')
+        ],
+        [Markup.button.callback('✅ Continue', 'save_days')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error selecting all days:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+// Setup min spots handlers
+bot.action(/setup_min_spots_(\d+)/, async (ctx) => {
+  try {
+    const minSpots = parseInt(ctx.match[1])
+    await ctx.answerCbQuery(`Selected: ${minSpots === 1 ? "I don't care" : `${minSpots}+ spots`}`)
+    
+    ctx.session.selectedMinSpots = minSpots
+    
+    const minSpotsMessage = `✅ *Sides saved: ${ctx.session.selectedSides?.join(', ') || 'Any'}*
+
+🎯 *Step 3: How Many Available Spots Do You Need?*
+
+Sessions fill up fast! Choose the minimum number of available spots you need to be interested:
+
+🤷 **I don't care**: Show me any session with spots
+🔟 **10+ spots**: Only sessions with plenty of availability  
+5️⃣ **5+ spots**: Sessions with good availability
+2️⃣ **2+ spots**: Sessions with at least a few spots
+
+💡 *Pro tip*: Lower numbers = more session opportunities, but they might fill up faster! 🤙
+
+*Currently selected*: ${minSpots === 1 ? "I don't care" : `${minSpots}+ spots`}`
+
+    await ctx.editMessageText(minSpotsMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 1 ? '✅ ' : ''}🤷 I don't care`, 'setup_min_spots_1'),
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 10 ? '✅ ' : ''}🔟 10+ spots`, 'setup_min_spots_10')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 5 ? '✅ ' : ''}5️⃣ 5+ spots`, 'setup_min_spots_5'),
+          Markup.button.callback(`${ctx.session.selectedMinSpots === 2 ? '✅ ' : ''}2️⃣ 2+ spots`, 'setup_min_spots_2')
+        ],
+        [Markup.button.callback('✅ Continue', 'save_min_spots')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in setup min spots selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+bot.action('save_min_spots', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Saving minimum spots...')
+    
+    const selectedMinSpots = ctx.session.selectedMinSpots || 1
+    
+    // Save to database
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (userProfile) {
+      await supabase
+        .from('profiles')
+        .update({ min_spots: selectedMinSpots })
+        .eq('id', userProfile.id)
+    }
+    
+    // Continue to next step: days
+    ctx.session.step = 'days'
+    ctx.session.selectedDays = [] // Initialize days selection
+    
+    const daysMessage = `✅ *Minimum spots saved: ${selectedMinSpots === 1 ? "I don't care" : `${selectedMinSpots}+ spots`}*
+
+📅 *Step 4: Choose Your Surf Days*
+
+When are you typically free to surf? Select the days you'd like to receive notifications for:
+
+💡 *Pro tip*: You can always check sessions for any day using /today and /tomorrow, but notifications will only be sent for your selected days! 🤙`
+
+    await ctx.editMessageText(daysMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(0) ? '✅ ' : ''}Mon`, 'setup_day_0'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(1) ? '✅ ' : ''}Tue`, 'setup_day_1'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(2) ? '✅ ' : ''}Wed`, 'setup_day_2')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(3) ? '✅ ' : ''}Thu`, 'setup_day_3'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(4) ? '✅ ' : ''}Fri`, 'setup_day_4')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(5) ? '✅ ' : ''}Sat`, 'setup_day_5'),
+          Markup.button.callback(`${ctx.session.selectedDays?.includes(6) ? '✅ ' : ''}Sun`, 'setup_day_6')
+        ],
+        [
+          Markup.button.callback('📅 All Days', 'setup_all_days'),
+          Markup.button.callback('⏭️ Skip', 'save_days')
+        ],
+        [Markup.button.callback('✅ Continue', 'save_days')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error saving min spots:', error)
+    await ctx.editMessageText('❌ Error saving minimum spots. Try /setup again.')
+  }
+})
+
+bot.action('save_days', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Saving days...')
+    
+    const selectedDays = ctx.session.selectedDays || []
+    
+    // Save to database
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (userProfile) {
+      // Delete existing days
+      await supabase
+        .from('user_days')
+        .delete()
+        .eq('user_id', userProfile.id)
+      
+      // Insert new days if any selected
+      if (selectedDays.length > 0) {
+        const dayInserts = selectedDays.map(day => ({
+          user_id: userProfile.id,
+          day_of_week: day
+        }))
+        
+        await supabase.from('user_days').insert(dayInserts)
+      }
+    }
+    
+    // Continue to next step: times
+    ctx.session.step = 'times'
+    ctx.session.selectedTimeWindows = [] // Initialize time selection
+    
+    const timesMessage = `✅ *Days saved: ${selectedDays.length > 0 ? selectedDays.map(d => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d]).join(', ') : 'Any day'}*
+
+🕐 *Step 5: Choose Your Preferred Surf Times*
+
+When do you prefer to surf? Select your ideal time windows:
+
+🌅 **Early**: Perfect for those dawn patrol sessions
+🌞 **Morning**: Classic mid-morning surf  
+☀️ **Afternoon**: Post-lunch wave sessions
+🌇 **Evening**: After-work surf sessions
+🌙 **Late**: Night surfing under the lights
+
+💡 *Pro tip*: You can select multiple time windows or skip this to see all sessions! 🤙`
+
+    await ctx.editMessageText(timesMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '07:00' && tw.end_time === '10:00') ? '✅ ' : ''}🌅 Early (7-10am)`, 'setup_time_early'),
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '10:00' && tw.end_time === '13:00') ? '✅ ' : ''}🌞 Morning (10am-1pm)`, 'setup_time_morning')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '13:00' && tw.end_time === '17:00') ? '✅ ' : ''}☀️ Afternoon (1-5pm)`, 'setup_time_afternoon'),
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '17:00' && tw.end_time === '20:00') ? '✅ ' : ''}🌇 Evening (5-8pm)`, 'setup_time_evening')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '20:00' && tw.end_time === '23:00') ? '✅ ' : ''}🌙 Late (8-11pm)`, 'setup_time_late')
+        ],
+        [
+          Markup.button.callback('⏭️ Skip', 'save_times'),
+          Markup.button.callback('✅ Continue', 'save_times')
+        ]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error saving days:', error)
+    await ctx.editMessageText('❌ Error saving days. Try /setup again.')
+  }
+})
+
+// Setup time handlers
+bot.action(/setup_time_(.+)/, async (ctx) => {
+  try {
+    const timeSlot = ctx.match[1]
+    
+    // Define time windows
+    const timeWindows = {
+      early: { start_time: '07:00', end_time: '10:00', description: '🌅 Early (7-10am)' },
+      morning: { start_time: '10:00', end_time: '13:00', description: '🌞 Morning (10am-1pm)' },
+      afternoon: { start_time: '13:00', end_time: '17:00', description: '☀️ Afternoon (1-5pm)' },
+      evening: { start_time: '17:00', end_time: '20:00', description: '🌇 Evening (5-8pm)' },
+      late: { start_time: '20:00', end_time: '23:00', description: '🌙 Late (8-11pm)' }
+    }
+    
+    const selectedWindow = timeWindows[timeSlot]
+    if (!selectedWindow) return
+    
+    await ctx.answerCbQuery(`Selected: ${selectedWindow.description}`)
+    
+    if (!ctx.session.selectedTimeWindows) {
+      ctx.session.selectedTimeWindows = []
+    }
+    
+    // Toggle time window
+    const existingIndex = ctx.session.selectedTimeWindows.findIndex(tw => 
+      tw.start_time === selectedWindow.start_time && tw.end_time === selectedWindow.end_time
+    )
+    
+    if (existingIndex !== -1) {
+      ctx.session.selectedTimeWindows.splice(existingIndex, 1)
+    } else {
+      ctx.session.selectedTimeWindows.push(selectedWindow)
+    }
+    
+    // Update UI
+    const selectedText = ctx.session.selectedTimeWindows.length > 0 
+      ? `\n\n*Currently selected*: ${ctx.session.selectedTimeWindows.map(tw => tw.description).join(', ')}`
+      : ''
+    
+    const timesMessage = `✅ *Days saved: ${ctx.session.selectedDays?.length > 0 ? ctx.session.selectedDays.map(d => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d]).join(', ') : 'Any day'}*
+
+🕐 *Step 5: Choose Your Preferred Surf Times*
+
+When do you prefer to surf? Select your ideal time windows:
+
+🌅 **Early**: Perfect for those dawn patrol sessions
+🌞 **Morning**: Classic mid-morning surf  
+☀️ **Afternoon**: Post-lunch wave sessions
+🌇 **Evening**: After-work surf sessions
+🌙 **Late**: Night surfing under the lights
+
+💡 *Pro tip*: You can select multiple time windows or skip this to see all sessions! 🤙${selectedText}`
+
+    await ctx.editMessageText(timesMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '07:00' && tw.end_time === '10:00') ? '✅ ' : ''}🌅 Early (7-10am)`, 'setup_time_early'),
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '10:00' && tw.end_time === '13:00') ? '✅ ' : ''}🌞 Morning (10am-1pm)`, 'setup_time_morning')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '13:00' && tw.end_time === '17:00') ? '✅ ' : ''}☀️ Afternoon (1-5pm)`, 'setup_time_afternoon'),
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '17:00' && tw.end_time === '20:00') ? '✅ ' : ''}🌇 Evening (5-8pm)`, 'setup_time_evening')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedTimeWindows?.some(tw => tw.start_time === '20:00' && tw.end_time === '23:00') ? '✅ ' : ''}🌙 Late (8-11pm)`, 'setup_time_late')
+        ],
+        [
+          Markup.button.callback('⏭️ Skip', 'save_times'),
+          Markup.button.callback('✅ Continue', 'save_times')
+        ]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in setup time selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+bot.action('save_times', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Saving times...')
+    
+    const selectedTimeWindows = ctx.session.selectedTimeWindows || []
+    
+    // Save to database
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (userProfile) {
+      // Delete existing time windows
+      await supabase
+        .from('user_time_windows')
+        .delete()
+        .eq('user_id', userProfile.id)
+      
+      // Insert new time windows if any selected
+      if (selectedTimeWindows.length > 0) {
+        const timeInserts = selectedTimeWindows.map(tw => ({
+          user_id: userProfile.id,
+          start_time: tw.start_time,
+          end_time: tw.end_time
+        }))
+        
+        await supabase.from('user_time_windows').insert(timeInserts)
+      }
+    }
+    
+    // Final step: notifications
+    ctx.session.step = 'notifications'
+    ctx.session.selectedNotifications = ['24h'] // Default to 24h
+    
+    const notificationsMessage = `✅ *Times saved: ${selectedTimeWindows.length > 0 ? selectedTimeWindows.map(tw => tw.description).join(', ') : 'Any time'}*
+
+🔔 *Step 6: Set Up Notifications* (Final Step!)
+
+Get pinged when spots become available! Choose how many **hours before** the session you want to be notified:
+
+📅 **1 week (168h) before**: Early planning for popular sessions
+🗓️ **48 hours before**: Weekend planning notification  
+⏰ **24 hours before**: Perfect for day-ahead planning (recommended!)
+🕐 **12 hours before**: Half-day notice for flexibility
+⚡ **2 hours before**: Last-minute spot alerts
+
+*Example: If you choose "24h before", you'll get notified 24 hours before each session that matches your preferences starts.*
+
+💡 *The more notification times you choose, the better your chances of snagging a spot!* 🎯`
+
+    await ctx.editMessageText(notificationsMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('1w') ? '✅ ' : ''}📅 1 week before`, 'setup_notification_1w'),
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('48h') ? '✅ ' : ''}🗓️ 48h before`, 'setup_notification_48h')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('24h') ? '✅ ' : ''}⏰ 24h before`, 'setup_notification_24h'),
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('12h') ? '✅ ' : ''}🕐 12h before`, 'setup_notification_12h')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('2h') ? '✅ ' : ''}⚡ 2h before`, 'setup_notification_2h')
+        ],
+        [Markup.button.callback('🎉 Finish Setup', 'finish_setup')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error saving times:', error)
+    await ctx.editMessageText('❌ Error saving times. Try /setup again.')
+  }
+})
+
+// Setup notification handlers
+bot.action(/setup_notification_(.+)/, async (ctx) => {
+  try {
+    const timing = ctx.match[1]
+    await ctx.answerCbQuery(`Selected: ${timing} notifications`)
+    
+    if (!ctx.session.selectedNotifications) {
+      ctx.session.selectedNotifications = []
+    }
+    
+    // Toggle notification timing
+    if (ctx.session.selectedNotifications.includes(timing)) {
+      ctx.session.selectedNotifications = ctx.session.selectedNotifications.filter(n => n !== timing)
+    } else {
+      ctx.session.selectedNotifications.push(timing)
+    }
+    
+    const labels = {
+      '1w': '📅 1 week before',
+      '48h': '🗓️ 48h before',
+      '24h': '⏰ 24h before',
+      '12h': '🕐 12h before',
+      '2h': '⚡ 2h before'
+    }
+    
+    // Update UI
+    const selectedText = ctx.session.selectedNotifications.length > 0 
+      ? `\n\n*Currently selected*: ${ctx.session.selectedNotifications.map(n => labels[n] || n).join(', ')}`
+      : ''
+    
+    const notificationsMessage = `✅ *Times saved: ${ctx.session.selectedTimeWindows?.length > 0 ? ctx.session.selectedTimeWindows.map(tw => tw.description).join(', ') : 'Any time'}*
+
+🔔 *Step 6: Set Up Notifications* (Final Step!)
+
+Get pinged when spots become available! Choose how many **hours before** the session you want to be notified:
+
+📅 **1 week (168h) before**: Early planning for popular sessions
+🗓️ **48 hours before**: Weekend planning notification  
+⏰ **24 hours before**: Perfect for day-ahead planning (recommended!)
+🕐 **12 hours before**: Half-day notice for flexibility
+⚡ **2 hours before**: Last-minute spot alerts
+
+*Example: If you choose "24h before", you'll get notified 24 hours before each session that matches your preferences starts.*
+
+💡 *The more notification times you choose, the better your chances of snagging a spot!* 🎯${selectedText}`
+
+    await ctx.editMessageText(notificationsMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('1w') ? '✅ ' : ''}📅 1 week before`, 'setup_notification_1w'),
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('48h') ? '✅ ' : ''}🗓️ 48h before`, 'setup_notification_48h')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('24h') ? '✅ ' : ''}⏰ 24h before`, 'setup_notification_24h'),
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('12h') ? '✅ ' : ''}🕐 12h before`, 'setup_notification_12h')
+        ],
+        [
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('2h') ? '✅ ' : ''}⚡ 2h before`, 'setup_notification_2h')
+        ],
+        [Markup.button.callback('🎉 Finish Setup', 'finish_setup')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in setup notification selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+bot.action('finish_setup', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Finishing setup...')
+    
+    const selectedNotifications = ctx.session.selectedNotifications?.length > 0 ? ctx.session.selectedNotifications : ['24h']
+    
+    // Save notifications to database
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (userProfile) {
+      // Delete existing notifications
+      await supabase
+        .from('user_notifications')
+        .delete()
+        .eq('user_id', userProfile.id)
+      
+      // Insert new notifications
+      const notificationInserts = selectedNotifications.map(timing => ({
+        user_id: userProfile.id,
+        timing: timing
+      }))
+      
+      await supabase.from('user_notifications').insert(notificationInserts)
+    }
+    
+    // Clear setup session
+    ctx.session.setup = false
+    ctx.session.step = null
+    
+    // Show completion message with summary
+    const completionMessage = `🎉 *Setup Complete! You're Ready to Surf!* 🏄‍♂️
+
+*Here's your WavePing profile:*
+
+📊 **Levels**: ${ctx.session.selectedLevels?.join(', ') || 'Not set'}
+🏄 **Sides**: ${ctx.session.selectedSides?.join(', ') || 'Any'}
+🎯 **Min Spots**: ${ctx.session.selectedMinSpots === 1 ? "I don't care" : `${ctx.session.selectedMinSpots}+ spots`}
+📅 **Days**: ${ctx.session.selectedDays?.length > 0 ? ctx.session.selectedDays.map(d => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d]).join(', ') : 'Any day'}
+🕐 **Times**: ${ctx.session.selectedTimeWindows?.length > 0 ? ctx.session.selectedTimeWindows.map(tw => tw.description).join(', ') : 'Any time'}
+🔔 **Notifications**: ${selectedNotifications.map(n => ({ '1w': '1 week', '48h': '48h', '24h': '24h', '12h': '12h', '2h': '2h' }[n] || n)).join(', ')} before sessions
+
+*Ready to ride some waves?* Here's what you can do now:
+
+🌊 */today* - Check today's sessions that match your preferences
+🌅 */tomorrow* - See what's coming up tomorrow  
+⚙️ */prefs* - Fine-tune your preferences anytime
+🧪 */testnotif* - Test your notifications
+
+*Pro tip*: I'll automatically notify you when spots become available for sessions that match your preferences! 🔔
+
+*Let's see what waves are waiting for you...* 🤙`
+
+    await ctx.editMessageText(completionMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🌊 Check Today\'s Sessions', 'quick_today')],
+        [Markup.button.callback('⚙️ Edit Preferences', 'quick_prefs')],
+        [Markup.button.callback('🧪 Test Notifications', 'test_notifications_inline')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error finishing setup:', error)
+    await ctx.editMessageText('❌ Error finishing setup. Your preferences may have been partially saved. Try /prefs to check.')
+  }
+})
+
+bot.action('test_notifications_inline', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Sending test notification...')
+    
+    const testMessage = `🧪 *Test Notification* 🧪
+
+🌊 Hey! This is a test notification from WavePing.
+
+If you're seeing this, your notifications are working perfectly! 🎉
+
+*Next steps:*
+• Your setup is complete and notifications are active
+• I'll ping you when spots become available for sessions matching your preferences
+• Use /today to check what's available right now
+
+*Happy surfing!* 🤙`
+
+    await bot.telegram.sendMessage(ctx.from.id, testMessage, { parse_mode: 'Markdown' })
+    
+    await ctx.editMessageText('✅ *Test notification sent!* Check your messages above.\n\nYour WavePing setup is complete and ready to go! 🌊', {
+      parse_mode: 'Markdown'
+    })
+    
+  } catch (error) {
+    console.error('Error sending test notification:', error)
+    await ctx.editMessageText('❌ *Setup complete* but test notification failed.\n\nDon\'t worry - your preferences are saved and notifications should still work! Use /testnotif to try again.', {
+      parse_mode: 'Markdown'
+    })
+  }
+})
 
 // Quick action handlers for post-onboarding
 bot.action('quick_today', async (ctx) => {
