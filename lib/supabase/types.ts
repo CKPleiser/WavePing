@@ -310,6 +310,17 @@ export interface Database {
         }
         Returns: void
       }
+      save_preferences: {
+        Args: {
+          p_user_id: string
+          p_levels: string[]
+          p_sides: string[]
+          p_days: number[]
+          p_time_windows: Json
+          p_notifications: string[]
+        }
+        Returns: void
+      }
     }
     Enums: {
       session_level: SessionLevel

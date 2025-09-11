@@ -1,6 +1,8 @@
 import { Telegraf, Context, Markup, session } from 'telegraf'
 import { createAdminClient } from '../supabase/client'
 import type { SessionLevel, NotificationTiming, UserPreferences } from '../supabase/types'
+import { getCurrentDateInfo, getTomorrowDateInfo } from '../utils/timezone'
+import { replyChunked, safeEditText, safeEditMarkup, mdEscape, isSetupExpired, createSetupSession } from '../utils/telegram'
 
 export interface SessionData {
   setup?: {
@@ -52,13 +54,13 @@ export class WavePingBot {
         .single()
 
       if (!existingUser) {
-        // Create new user
+        // Create or update user (idempotent)
         const { error } = await this.supabase
           .from('profiles')
-          .insert({
+          .upsert({
             telegram_id: telegramId,
             telegram_username: username
-          })
+          }, { onConflict: 'telegram_id' })
 
         if (error) {
           console.error('Error creating user:', error)
@@ -125,7 +127,7 @@ export class WavePingBot {
     this.bot.command('tomorrow', async (ctx) => {
       const sessions = await this.getTomorrowsSessions(ctx.from?.id || 0)
       const msg = this.formatSessionsMessage(sessions, 'Tomorrow')
-      await ctx.reply(msg, { parse_mode: 'Markdown' })
+      await replyChunked(ctx, msg, { parse_mode: 'Markdown', disable_web_page_preview: true })
     })
 
     // Week view
@@ -183,15 +185,8 @@ Ready to catch some waves? 🏄‍♂️
       ctx.session = {}
     }
     
-    // Initialize session setup
-    ctx.session.setup = {
-      levels: [],
-      sides: [],
-      days: [],
-      timeWindows: [],
-      notifications: ['24h'], // Default notification
-      step: 'levels'
-    }
+    // Initialize session setup with TTL
+    ctx.session.setup = createSetupSession()
     
     const keyboard = this.buildLevelKeyboard([])
 
@@ -235,7 +230,7 @@ Ready to catch some waves? 🏄‍♂️
       }
 
       const keyboard = this.buildLevelKeyboard(ctx.session.setup.levels)
-      await ctx.editMessageReplyMarkup(keyboard)
+      await safeEditMarkup(ctx, keyboard)
       await ctx.answerCbQuery()
     })
 
@@ -360,7 +355,7 @@ Ready to catch some waves? 🏄‍♂️
     ]
 
     const keyboard = Markup.inlineKeyboard(buttons).reply_markup
-    await ctx.editMessageReplyMarkup(keyboard)
+    await safeEditMarkup(ctx, keyboard)
     await ctx.answerCbQuery()
   }
 
@@ -438,7 +433,7 @@ Ready to catch some waves? 🏄‍♂️
     ]
 
     const keyboard = Markup.inlineKeyboard(buttons).reply_markup
-    await ctx.editMessageReplyMarkup(keyboard)
+    await safeEditMarkup(ctx, keyboard)
     await ctx.answerCbQuery()
   }
 
@@ -534,7 +529,7 @@ Ready to catch some waves? 🏄‍♂️
     ]
 
     const keyboard = Markup.inlineKeyboard(buttons).reply_markup
-    await ctx.editMessageReplyMarkup(keyboard)
+    await safeEditMarkup(ctx, keyboard)
     await ctx.answerCbQuery()
   }
 
@@ -561,14 +556,32 @@ Ready to catch some waves? 🏄‍♂️
 
   private async handleNotificationSelection(ctx: WavePingContext) {
     const timing = (ctx as any).match[1] as NotificationTiming
-    const setup = ctx.session?.setup || { notifications: [] as NotificationTiming[] }
-    
-    if (setup.notifications.includes(timing)) {
-      setup.notifications = setup.notifications.filter(n => n !== timing)
-    } else {
-      setup.notifications.push(timing)
+    if (!ctx.session) ctx.session = {}
+    if (!ctx.session.setup) ctx.session.setup = createSetupSession()
+
+    // Check if setup is expired
+    if (isSetupExpired(ctx.session.setup)) {
+      delete ctx.session.setup
+      return ctx.reply('Setup expired. Run /setup again.')
     }
 
+    const arr = ctx.session.setup?.notifications || []
+    const i = arr.indexOf(timing)
+    if (i >= 0) arr.splice(i, 1)
+    else arr.push(timing)
+
+    // rebuild keyboard with current ticks
+    const has = (t: NotificationTiming) => arr.includes(t)
+
+    const buttons = [
+      [Markup.button.callback(`${has('1w') ? '✅' : '☐'} 1 week before`, 'notification_1w')],
+      [Markup.button.callback(`${has('48h') ? '✅' : '☐'} 48 hours before`, 'notification_48h')],
+      [Markup.button.callback(`${has('24h') ? '✅' : '☐'} 24 hours before`, 'notification_24h')],
+      [Markup.button.callback(`${has('12h') ? '✅' : '☐'} 12 hours before`, 'notification_12h')],
+      [Markup.button.callback(`${has('2h') ? '✅' : '☐'} 2 hours before`, 'notification_2h')],
+      [Markup.button.callback('✅ Finish Setup', 'finish_setup')]
+    ]
+    await safeEditMarkup(ctx, Markup.inlineKeyboard(buttons).reply_markup)
     await ctx.answerCbQuery()
   }
 
@@ -645,70 +658,20 @@ Ready to catch some waves? 🏄‍♂️
   }
 
   private async saveUserPreferences(telegramId: number, setup: any) {
-    // Get user ID
-    const { data: profile } = await this.supabase
-      .from('profiles')
-      .select('id')
-      .eq('telegram_id', telegramId)
-      .single()
-
-    if (!profile) throw new Error('User not found')
-
+    const { data: profile, error } = await this.supabase
+      .from('profiles').select('id').eq('telegram_id', telegramId).single()
+    if (error || !profile) throw new Error('User not found')
     const userId = profile.id
 
-    // Delete existing preferences
-    await Promise.all([
-      this.supabase.from('user_levels').delete().eq('user_id', userId),
-      this.supabase.from('user_sides').delete().eq('user_id', userId),
-      this.supabase.from('user_days').delete().eq('user_id', userId),
-      this.supabase.from('user_time_windows').delete().eq('user_id', userId),
-      this.supabase.from('user_notifications').delete().eq('user_id', userId)
-    ])
-
-    // Insert new preferences
-    const promises = []
-
-    if (setup.levels?.length) {
-      promises.push(
-        this.supabase.from('user_levels').insert(
-          setup.levels.map((level: any) => ({ user_id: userId, level }))
-        )
-      )
-    }
-
-    if (setup.sides?.length) {
-      promises.push(
-        this.supabase.from('user_sides').insert(
-          setup.sides.map((side: any) => ({ user_id: userId, side }))
-        )
-      )
-    }
-
-    if (setup.days?.length) {
-      promises.push(
-        this.supabase.from('user_days').insert(
-          setup.days.map((day_of_week: any) => ({ user_id: userId, day_of_week }))
-        )
-      )
-    }
-
-    if (setup.timeWindows?.length) {
-      promises.push(
-        this.supabase.from('user_time_windows').insert(
-          setup.timeWindows.map((tw: any) => ({ user_id: userId, ...tw }))
-        )
-      )
-    }
-
-    if (setup.notifications?.length) {
-      promises.push(
-        this.supabase.from('user_notifications').insert(
-          setup.notifications.map((timing: any) => ({ user_id: userId, timing }))
-        )
-      )
-    }
-
-    await Promise.all(promises)
+    const { error: rpcErr } = await this.supabase.rpc('save_preferences', {
+      p_user_id: userId,
+      p_levels: setup.levels || [],
+      p_sides: setup.sides || [],
+      p_days: setup.days || [],
+      p_time_windows: setup.timeWindows || [],
+      p_notifications: setup.notifications || []
+    })
+    if (rpcErr) throw rpcErr
   }
 
   private formatPreferencesMessage(prefs: UserPreferences): string {
@@ -1059,7 +1022,13 @@ Ready to catch some waves? 🏄‍♂️
       await ctx.answerCbQuery('Levels saved!')
       
       // Return to preferences view after 2 seconds
-      setTimeout(() => this.showPreferences(ctx), 2000)
+      setTimeout(() => {
+        try {
+          this.showPreferences(ctx)
+        } catch (e) {
+          console.error('Error showing preferences after timeout:', e)
+        }
+      }, 2000)
     } catch (error) {
       console.error('Error saving levels:', error)
       await ctx.answerCbQuery('Error saving levels')
@@ -1187,17 +1156,14 @@ Ready to catch some waves? 🏄‍♂️
 
   private async getTodaysSessions(telegramId: number) {
     try {
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0] // YYYY-MM-DD format
-      const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1 // Convert Sunday=0 to Monday=0 format
-      
-      console.log(`🔍 Getting sessions for ${todayStr} (day ${dayOfWeek}) for user ${telegramId}`)
+      const { dateIso, dayOfWeek } = getCurrentDateInfo() // Europe/London timezone
+      console.log(`🔍 Getting sessions for ${dateIso} (day ${dayOfWeek}) for user ${telegramId}`)
       
       // Get user preferences
       const { data: userPrefs } = await this.supabase
         .from('profiles')
         .select(`
-          *,
+          min_spots,
           user_levels (level),
           user_sides (side), 
           user_days (day_of_week),
@@ -1210,7 +1176,7 @@ Ready to catch some waves? 🏄‍♂️
       const { data: allSessions, error } = await this.supabase
         .from('sessions')
         .select('*')
-        .eq('date', todayStr)
+        .eq('date', dateIso)
         .order('start_time', { ascending: true })
       
       if (error) {
@@ -1219,12 +1185,9 @@ Ready to catch some waves? 🏄‍♂️
       }
 
       if (!allSessions?.length) {
-        console.log(`📅 No sessions found for ${todayStr}`)
+        console.log(`📅 No sessions found for ${dateIso}`)
         return []
       }
-
-      // Filter sessions based on user preferences
-      let filteredSessions = allSessions
 
       // Filter by user's available days
       if (userPrefs?.user_days?.length > 0) {
@@ -1235,45 +1198,55 @@ Ready to catch some waves? 🏄‍♂️
         }
       }
 
-      // Filter by user's preferred session levels (if any set)
+      let filtered = allSessions
+
+      // Filter by levels
       if (userPrefs?.user_levels?.length > 0) {
-        const userLevels = userPrefs.user_levels.map((l: any) => l.level)
-        console.log(`🎯 Filtering by user levels: [${userLevels.join(', ')}]`)
-        
-        filteredSessions = filteredSessions.filter((session: any) => {
-          const sessionName = session.session_name.toLowerCase()
-          return userLevels.some((level: any) => {
-            switch(level) {
-              case 'beginner': return sessionName.includes('beginner')
-              case 'improver': return sessionName.includes('improver') && !sessionName.includes('lesson')
-              case 'intermediate': return sessionName.includes('intermediate') && !sessionName.includes('lesson')
-              case 'advanced': return sessionName.includes('advanced')
-              case 'advanced_plus': return sessionName.includes('advanced plus')
-              case 'expert': return sessionName.includes('expert')
-              case 'expert_turns': return sessionName.includes('expert turns')
-              case 'expert_barrels': return sessionName.includes('expert barrels')
-              case 'women_only': return sessionName.includes('women')
-              case 'improver_lesson': return sessionName.includes('improver') && sessionName.includes('lesson')
-              case 'intermediate_lesson': return sessionName.includes('intermediate') && sessionName.includes('lesson')
+        const levels = userPrefs.user_levels.map((l: any) => l.level)
+        filtered = filtered.filter((s: any) => {
+          const n = s.session_name.toLowerCase()
+          return levels.some((lv: string) => {
+            switch(lv) {
+              case 'beginner': return n.includes('beginner')
+              case 'improver': return n.includes('improver') && !n.includes('lesson')
+              case 'intermediate': return n.includes('intermediate') && !n.includes('lesson')
+              case 'advanced_plus': return n.includes('advanced plus')
+              case 'advanced': return n.includes('advanced') && !n.includes('advanced plus')
+              case 'expert': return n.includes('expert') && !n.includes('turns') && !n.includes('barrels')
+              case 'expert_turns': return n.includes('expert turns')
+              case 'expert_barrels': return n.includes('expert barrels')
+              case 'women_only': return n.includes('women')
+              case 'improver_lesson': return n.includes('improver') && n.includes('lesson')
+              case 'intermediate_lesson': return n.includes('intermediate') && n.includes('lesson')
               default: return false
             }
           })
         })
       }
 
-      // Filter by user's time preferences (if any set)
-      if (userPrefs?.user_time_windows?.length > 0) {
-        filteredSessions = filteredSessions.filter((session: any) => {
-          const sessionTime = session.start_time
-          return userPrefs.user_time_windows.some((window: any) => {
-            return sessionTime >= window.start_time && sessionTime <= window.end_time
-          })
+      // Filter by sides
+      if (userPrefs?.user_sides?.length) {
+        const side = userPrefs.user_sides[0]?.side
+        if (side && side !== 'A') {
+          filtered = filtered.filter((s: any) => s.side === side)
+        }
+      }
+
+      // Filter by time windows
+      if (userPrefs?.user_time_windows?.length) {
+        const toNum = (t: string) => parseInt(String(t).slice(0, 5).replace(':', ''), 10)
+        filtered = filtered.filter((s: any) => {
+          const t = toNum(s.start_time)
+          return userPrefs.user_time_windows.some((w: any) => t >= toNum(w.start_time) && t <= toNum(w.end_time))
         })
       }
 
-      console.log(`🌊 Found ${allSessions.length} total sessions, ${filteredSessions.length} match user preferences`)
-      
-      return filteredSessions || []
+      // Filter by minimum spots
+      const minSpots = userPrefs?.min_spots ?? 1
+      filtered = filtered.filter((s: any) => (s.spots_available ?? 0) >= minSpots)
+
+      console.log(`🌊 Found ${allSessions.length} total sessions, ${filtered.length} match user preferences`)
+      return filtered
     } catch (error) {
       console.error('Error in getTodaysSessions:', error)
       return []
@@ -1281,8 +1254,90 @@ Ready to catch some waves? 🏄‍♂️
   }
 
   private async getTomorrowsSessions(telegramId: number) {
-    // TODO: Implement session fetching with user preferences
-    return []
+    try {
+      const { dateIso, dayOfWeek } = getTomorrowDateInfo() // Europe/London timezone
+      console.log(`🔍 Getting tomorrow's sessions for ${dateIso} (day ${dayOfWeek}) for user ${telegramId}`)
+      
+      // Get user preferences
+      const { data: userPrefs } = await this.supabase
+        .from('profiles')
+        .select(`
+          min_spots,
+          user_levels (level),
+          user_sides (side), 
+          user_days (day_of_week),
+          user_time_windows (start_time, end_time)
+        `)
+        .eq('telegram_id', telegramId)
+        .single()
+      
+      // Get all tomorrow's sessions
+      const { data: allSessions, error } = await this.supabase
+        .from('sessions')
+        .select('*')
+        .eq('date', dateIso)
+        .order('start_time', { ascending: true })
+      
+      if (error || !allSessions?.length) return []
+
+      // Filter by user's available days
+      if (userPrefs?.user_days?.length > 0) {
+        const userDays = userPrefs.user_days.map((d: any) => d.day_of_week)
+        if (!userDays.includes(dayOfWeek)) return []
+      }
+
+      let filtered = allSessions
+
+      // Apply same filtering logic as getTodaysSessions
+      if (userPrefs?.user_levels?.length > 0) {
+        const levels = userPrefs.user_levels.map((l: any) => l.level)
+        filtered = filtered.filter((s: any) => {
+          const n = s.session_name.toLowerCase()
+          return levels.some((lv: string) => {
+            switch(lv) {
+              case 'beginner': return n.includes('beginner')
+              case 'improver': return n.includes('improver') && !n.includes('lesson')
+              case 'intermediate': return n.includes('intermediate') && !n.includes('lesson')
+              case 'advanced_plus': return n.includes('advanced plus')
+              case 'advanced': return n.includes('advanced') && !n.includes('advanced plus')
+              case 'expert': return n.includes('expert') && !n.includes('turns') && !n.includes('barrels')
+              case 'expert_turns': return n.includes('expert turns')
+              case 'expert_barrels': return n.includes('expert barrels')
+              case 'women_only': return n.includes('women')
+              case 'improver_lesson': return n.includes('improver') && n.includes('lesson')
+              case 'intermediate_lesson': return n.includes('intermediate') && n.includes('lesson')
+              default: return false
+            }
+          })
+        })
+      }
+
+      // Filter by sides
+      if (userPrefs?.user_sides?.length) {
+        const side = userPrefs.user_sides[0]?.side
+        if (side && side !== 'A') {
+          filtered = filtered.filter((s: any) => s.side === side)
+        }
+      }
+
+      // Filter by time windows
+      if (userPrefs?.user_time_windows?.length) {
+        const toNum = (t: string) => parseInt(String(t).slice(0, 5).replace(':', ''), 10)
+        filtered = filtered.filter((s: any) => {
+          const t = toNum(s.start_time)
+          return userPrefs.user_time_windows.some((w: any) => t >= toNum(w.start_time) && t <= toNum(w.end_time))
+        })
+      }
+
+      // Filter by minimum spots
+      const minSpots = userPrefs?.min_spots ?? 1
+      filtered = filtered.filter((s: any) => (s.spots_available ?? 0) >= minSpots)
+
+      return filtered
+    } catch (error) {
+      console.error('Error in getTomorrowsSessions:', error)
+      return []
+    }
   }
 
   private async getWeekSessions(telegramId: number) {
@@ -1292,8 +1347,12 @@ Ready to catch some waves? 🏄‍♂️
 
   private formatSessionsMessage(sessions: any[], timeframe: string): string {
     if (!sessions.length) {
-      return `🌊 No matching sessions found for ${timeframe.toLowerCase()}.\n\n` +
-             `Try adjusting your preferences with /prefs to see more sessions.`
+      // Check if this is likely a "no sessions loaded yet" vs "no matches" scenario
+      const isToday = timeframe.toLowerCase() === 'today'
+      const message = isToday 
+        ? `🌊 No matching sessions found for ${timeframe.toLowerCase()}.\n\nThis could mean:\n• Sessions haven't been loaded yet - I'll ping you when they drop\n• No sessions match your preferences\n\nTry /prefs to adjust your settings.`
+        : `🌊 No matching sessions found for ${timeframe.toLowerCase()}.\n\nTry adjusting your preferences with /prefs to see more sessions.`
+      return message
     }
 
     const formatTime = (timeStr: string) => {
@@ -1330,10 +1389,10 @@ Ready to catch some waves? 🏄‍♂️
       return `✅ ${spots} spots available`
     }
 
-    return `🌊 *${timeframe}'s Sessions*\n\n` + 
+    return `🌊 *${mdEscape(timeframe)}'s Sessions*\n\n` + 
       sessions.map((session: any) => 
-        `${getSessionLevel(session.session_name)} *${formatTime(session.start_time)}*\n` +
-        `📅 ${formatDate(session.date)}\n` +
+        `${getSessionLevel(session.session_name)} *${mdEscape(formatTime(session.start_time))}*\n` +
+        `📅 ${mdEscape(formatDate(session.date))}\n` +
         `${formatSpots(session.spots_available)}\n` +
         (session.book_url ? `🔗 [Book Now](${session.book_url})` : '🔗 Booking link coming soon') +
         '\n\n'

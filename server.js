@@ -96,7 +96,14 @@ bot.command('today', async (ctx) => {
     
     // Scrape real Wave schedule
     const scraper = new WaveScheduleScraper()
-    const allSessions = await scraper.getTodaysSessions()
+    let allSessions = []
+    
+    try {
+      allSessions = await scraper.getTodaysSessions()
+    } catch (error) {
+      console.error('Scraping failed:', error.message)
+      return ctx.editMessageText(`❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, { parse_mode: 'Markdown' })
+    }
     
     if (!allSessions || allSessions.length === 0) {
       return ctx.editMessageText('🏄‍♂️ *No sessions found for today*\n\nThe Wave might be closed or no sessions are available.', { parse_mode: 'Markdown' })
@@ -204,7 +211,14 @@ bot.command('tomorrow', async (ctx) => {
     
     // Scrape real Wave schedule for tomorrow
     const scraper = new WaveScheduleScraper()
-    const allSessions = await scraper.getTomorrowsSessions()
+    let allSessions = []
+    
+    try {
+      allSessions = await scraper.getTomorrowsSessions()
+    } catch (error) {
+      console.error('Scraping failed:', error.message)
+      return ctx.editMessageText(`❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, { parse_mode: 'Markdown' })
+    }
     
     if (!allSessions || allSessions.length === 0) {
       return ctx.editMessageText('🏄‍♂️ *No sessions found for tomorrow*\n\nThe Wave might be closed or no sessions are scheduled yet.', { parse_mode: 'Markdown' })
