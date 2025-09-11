@@ -871,20 +871,26 @@ If you're seeing this, your notifications are working perfectly! 🎉
 })
 
 bot.command('today', async (ctx) => {
+  console.log(`📊 /today command triggered by user ${ctx.from.id}`)
   try {
     const telegramId = ctx.from.id
     
     // Rate limiting
     if (!checkRateLimit(`today:${telegramId}`)) {
+      console.log(`⏱ Rate limited user ${telegramId}`)
       return ctx.reply('⏱ Please wait a moment before requesting again...')
     }
+    
+    console.log(`✅ Rate limit passed for user ${telegramId}`)
     
     // Send loading message
     const loadingMsg = await ctx.reply('🌊 Loading today\'s Wave sessions...')
     
     // Get user preferences
+    console.log(`🔍 Getting user profile for ${telegramId}`)
     const userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
+      console.log(`❌ No user profile found for ${telegramId}`)
       return ctx.telegram.editMessageText(
         ctx.chat.id, 
         loadingMsg.message_id, 
@@ -892,6 +898,7 @@ bot.command('today', async (ctx) => {
         '⚠️ Please run /setup first to set your preferences!'
       )
     }
+    console.log(`✅ User profile found for ${telegramId}`)
     
     // Get user's selected levels and sides
     const { data: userLevels } = await supabase
@@ -922,6 +929,7 @@ bot.command('today', async (ctx) => {
     // Get today's sessions - try database first, fallback to scraper
     const todayStr = today()
     const currentTime = new Date().toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Europe/London' }).slice(0, 5) // HH:MM format
+    console.log(`🗓️ Getting sessions for ${todayStr}, current time: ${currentTime}`)
     let sessionsFormatted = []
     const scraper = new WaveScheduleScraper() // Create once, reuse
     
@@ -936,6 +944,7 @@ bot.command('today', async (ctx) => {
         .order('start_time')
       
       if (!sessionError && allSessions && allSessions.length > 0) {
+        console.log(`📊 Found ${allSessions.length} database sessions`)
         // Convert database format to scraper format for compatibility
         sessionsFormatted = allSessions.map(session => ({
           session_name: session.session_name,
@@ -948,10 +957,12 @@ bot.command('today', async (ctx) => {
         }))
       } else {
         // Fallback to scraper if no database sessions
-        console.log('No database sessions, falling back to scraper')
+        console.log('📡 No database sessions, falling back to scraper')
         const scrapedSessions = await scraper.getTodaysSessions()
+        console.log(`🔍 Scraper found ${scrapedSessions.length} sessions`)
         // Filter out past sessions like we do with database
         sessionsFormatted = scrapedSessions.filter(session => session.time24 >= currentTime)
+        console.log(`⏰ After time filtering: ${sessionsFormatted.length} sessions`)
       }
     } catch (error) {
       console.error('Error getting sessions:', error)
@@ -1095,7 +1106,11 @@ bot.command('today', async (ctx) => {
     
   } catch (error) {
     console.error('Error in today command:', error)
-    ctx.reply('❌ Error loading sessions. Try again later.')
+    try {
+      await ctx.reply('❌ Error loading sessions. Try again later.')
+    } catch (replyError) {
+      console.error('Failed to send error message:', replyError)
+    }
   }
 })
 
@@ -1305,7 +1320,11 @@ bot.command('tomorrow', async (ctx) => {
     
   } catch (error) {
     console.error('Error in tomorrow command:', error)
-    ctx.reply('❌ Error loading sessions. Try again later.')
+    try {
+      await ctx.reply('❌ Error loading sessions. Try again later.')
+    } catch (replyError) {
+      console.error('Failed to send error message:', replyError)
+    }
   }
 })
 
