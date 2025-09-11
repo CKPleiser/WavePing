@@ -1040,19 +1040,14 @@ function formatPreferencesMessage(preferences) {
 🔔 *Notifications*: ${notifications}`
 }
 
-// Start server
-const PORT = process.env.PORT || 3000
-const HOST = '0.0.0.0'
-
-// Production: use webhook
-app.use(express.json())
-
 // Webhook endpoint
 app.post('/webhook', (req, res) => {
   bot.handleUpdate(req.body, res)
 })
 
 // Start server
+const PORT = process.env.PORT || 3000
+const HOST = '0.0.0.0'
 const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on ${HOST}:${PORT}`)
   

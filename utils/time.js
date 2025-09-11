@@ -1,10 +1,18 @@
-const { DateTime } = require('luxon')
+const dayjs = require('dayjs')
+const utc = require('dayjs/plugin/utc')
+const timezone = require('dayjs/plugin/timezone')
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const TZ = 'Europe/London'
 
-exports.today = () => DateTime.now().setZone(TZ).toISODate()
-exports.tomorrow = () => DateTime.now().setZone(TZ).plus({ days: 1 }).toISODate()
+exports.today = () => dayjs().tz(TZ).format('YYYY-MM-DD')
+exports.tomorrow = () => dayjs().tz(TZ).add(1, 'day').format('YYYY-MM-DD')
 exports.formatTime = (time24) => {
-  const dt = DateTime.fromFormat(time24, 'HH:mm', { zone: TZ })
-  return dt.toFormat('h:mm a')
+  const [hours, minutes] = time24.split(':')
+  const hour = parseInt(hours)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+  return `${hour12}:${minutes} ${period}`
 }
