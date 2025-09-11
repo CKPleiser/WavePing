@@ -37,6 +37,114 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() })
 })
 
+// Test notification endpoint for development
+app.post('/api/test/notification', async (req, res) => {
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    const { telegramId, message } = req.body
+    
+    if (!telegramId || !message) {
+      return res.status(400).json({ error: 'telegramId and message required' })
+    }
+
+    // Send test notification
+    await bot.telegram.sendMessage(telegramId, message, { parse_mode: 'Markdown' })
+    
+    console.log(`📱 Test notification sent to ${telegramId}: ${message}`)
+    res.json({ success: true, message: 'Test notification sent' })
+    
+  } catch (error) {
+    console.error('❌ Test notification error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Test the full notification system with sample data
+app.post('/api/test/notification-system', async (req, res) => {
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    console.log('🧪 Testing notification system...')
+    
+    // Get all users with notifications enabled
+    const { data: users, error: usersError } = await supabase
+      .from('profiles')
+      .select(`
+        id, 
+        telegram_id,
+        user_levels (level),
+        user_sides (side),
+        user_time_windows (start_time, end_time),
+        user_notifications (timing)
+      `)
+      .eq('notification_enabled', true)
+    
+    if (usersError) {
+      throw usersError
+    }
+
+    console.log(`Found ${users.length} users with notifications enabled`)
+    
+    // Get some sample sessions to test with
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('sessions')
+      .select('*')
+      .gte('date', new Date().toISOString().split('T')[0])
+      .limit(5)
+    
+    if (sessionsError) {
+      throw sessionsError
+    }
+
+    console.log(`Found ${sessions.length} upcoming sessions`)
+    
+    // Send test notifications to each user
+    const results = []
+    for (const user of users) {
+      const testMessage = `🧪 *Notification Test* 🧪
+
+🌊 This is a test to make sure your WavePing notifications are working!
+
+*Your notification settings:*
+${user.user_notifications.map(n => `• ${n.timing} before sessions`).join('\n')}
+
+*Your level preferences:*
+${user.user_levels.map(l => `• ${l.level}`).join('\n')}
+
+If you're seeing this, notifications are working perfectly! 🎉
+
+Use /prefs to manage your notification settings.`
+
+      try {
+        await bot.telegram.sendMessage(user.telegram_id, testMessage, { parse_mode: 'Markdown' })
+        results.push({ telegramId: user.telegram_id, status: 'sent' })
+        console.log(`✅ Test notification sent to ${user.telegram_id}`)
+      } catch (error) {
+        results.push({ telegramId: user.telegram_id, status: 'failed', error: error.message })
+        console.error(`❌ Failed to send to ${user.telegram_id}:`, error.message)
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      usersFound: users.length,
+      sessionsFound: sessions.length,
+      results: results
+    })
+    
+  } catch (error) {
+    console.error('❌ Notification system test error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Cron endpoint for scraping schedule - improved with UPSERT strategy
 app.post('/api/cron/scrape-schedule', async (req, res) => {
   const authHeader = req.headers.authorization
@@ -461,6 +569,30 @@ bot.command('prefs', async (ctx) => {
   } catch (error) {
     console.error('Error showing preferences:', error)
     ctx.reply('Error loading preferences. Try again later.')
+  }
+})
+
+bot.command('testnotif', async (ctx) => {
+  try {
+    // Send a test notification to the user
+    const testMessage = `🧪 *Test Notification* 🧪
+
+🌊 Hey! This is a test notification from WavePing.
+
+If you're seeing this, your notifications are working perfectly! 🎉
+
+*Next steps:*
+• Set your notification preferences with /prefs
+• Check today's sessions with /today
+• Set up notification timing in preferences
+
+*Pro tip:* WavePing will automatically notify you when spots become available for sessions that match your preferences! 🤙`
+
+    await ctx.reply(testMessage, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Test notification error:', error)
+    await ctx.reply('❌ Test notification failed. Please try again.')
   }
 })
 
@@ -939,6 +1071,40 @@ bot.action(/level_(.+)/, async (ctx) => {
       }
     }
     
+    // Check if we're in setup mode - if so, just update session
+    if (ctx.session && ctx.session.setup === true) {
+      // Initialize selectedLevels array if not exists
+      if (!ctx.session.selectedLevels) {
+        ctx.session.selectedLevels = []
+      }
+      
+      // Toggle level in session
+      if (ctx.session.selectedLevels.includes(level)) {
+        ctx.session.selectedLevels = ctx.session.selectedLevels.filter(l => l !== level)
+      } else {
+        ctx.session.selectedLevels.push(level)
+      }
+      
+      // Update UI with session selections
+      const selectedText = ctx.session.selectedLevels.length > 0 
+        ? `\n\n*Currently selected*: ${ctx.session.selectedLevels.join(', ')}`
+        : ''
+      
+      await ctx.editMessageText(`🏄‍♂️ *Let's Set Up Your Wave Profile!*\n\nChoose all levels you're comfortable with:${selectedText}`, {
+        parse_mode: 'Markdown',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback(`${ctx.session.selectedLevels.includes('beginner') ? '✅ ' : ''}🌱 Beginner`, 'level_beginner'), 
+           Markup.button.callback(`${ctx.session.selectedLevels.includes('improver') ? '✅ ' : ''}📈 Improver`, 'level_improver')],
+          [Markup.button.callback(`${ctx.session.selectedLevels.includes('intermediate') ? '✅ ' : ''}🌊 Intermediate`, 'level_intermediate'), 
+           Markup.button.callback(`${ctx.session.selectedLevels.includes('advanced') ? '✅ ' : ''}🚀 Advanced`, 'level_advanced')],
+          [Markup.button.callback(`${ctx.session.selectedLevels.includes('expert') ? '✅ ' : ''}🔥 Expert`, 'level_expert')],
+          [Markup.button.callback('✅ Continue', 'save_levels')]
+        ]).reply_markup
+      })
+      return
+    }
+    
+    // Regular level editing (not in setup mode) - write to database directly
     // Get or create user profile
     let userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
@@ -1014,6 +1180,12 @@ bot.action(/level_(.+)/, async (ctx) => {
     
     console.log('Current levels from DB:', currentLevels)
     
+    // Check if we're in setup mode
+    const isSetupMode = ctx.session && ctx.session.setup === true
+    const continueButton = isSetupMode 
+      ? [Markup.button.callback('✅ Continue', 'save_levels')]
+      : [Markup.button.callback('✅ Done', 'levels_done')]
+    
     await ctx.editMessageText(`⚙️ *Edit Session Levels*\n\nClick levels to toggle them:${selectedText}`, {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
@@ -1022,7 +1194,7 @@ bot.action(/level_(.+)/, async (ctx) => {
         [Markup.button.callback(`${currentLevels.includes('intermediate') ? '✅ ' : ''}🟡 Intermediate`, 'level_intermediate')],
         [Markup.button.callback(`${currentLevels.includes('advanced') ? '✅ ' : ''}🟠 Advanced`, 'level_advanced')],
         [Markup.button.callback(`${currentLevels.includes('expert') ? '✅ ' : ''}🔴 Expert`, 'level_expert')],
-        [Markup.button.callback('✅ Done', 'levels_done')]
+        continueButton
       ]).reply_markup
     })
     
