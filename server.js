@@ -22,6 +22,11 @@ const supabase = createClient(
 // Add session middleware
 bot.use(session())
 
+// Helper function to capitalize level names for display
+function capitalizeLevel(level) {
+  return level.charAt(0).toUpperCase() + level.slice(1)
+}
+
 // Homepage
 app.get('/', (req, res) => {
   res.json({ 
@@ -702,7 +707,7 @@ app.post('/api/cron/send-notifications', async (req, res) => {
 
 📅 ${sessionDateTime.format('ddd Do MMM')} at ${sessionDateTime.format('h:mm A')}
 🏄 *${session.session_name}*
-📊 Level: ${session.level}
+📊 Level: ${capitalizeLevel(session.level)}
 🏄‍♂️ Side: ${session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any'}
 👥 ${session.spots_available} spots available
 
@@ -831,7 +836,8 @@ bot.command('prefs', async (ctx) => {
         [Markup.button.callback('🏄 Edit Sides', 'edit_sides')],
         [Markup.button.callback('📅 Edit Days', 'edit_days')],
         [Markup.button.callback('🕐 Edit Times', 'edit_times')],
-        [Markup.button.callback('🔔 Edit Notifications', 'edit_notifications')]
+        [Markup.button.callback('🔔 Edit Notifications', 'edit_notifications')],
+        [Markup.button.callback('📬 Edit Digest Settings', 'edit_digests')]
       ]).reply_markup
     })
   } catch (error) {
@@ -913,38 +919,45 @@ bot.command('today', async (ctx) => {
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     const selectedTimeWindows = userTimeWindows || []
     
-    // Get today's sessions from database (no scraping on-demand)
+    // Get today's sessions - try database first, fallback to scraper
     const todayStr = today()
     const currentTime = new Date().toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Europe/London' }).slice(0, 5) // HH:MM format
-    const { data: allSessions, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('date', todayStr)
-      .eq('is_active', true)
-      .gte('start_time', currentTime) // Only future sessions
-      .order('start_time')
+    let sessionsFormatted = []
     
-    if (sessionError) {
-      console.error('Database error:', sessionError)
-      return ctx.telegram.editMessageText(
-        ctx.chat.id, 
-        loadingMsg.message_id, 
-        undefined,
-        `❌ *Database error*\n\nPlease try again later.`, 
-        { parse_mode: 'Markdown' }
-      )
+    try {
+      // Try database first
+      const { data: allSessions, error: sessionError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('date', todayStr)
+        .eq('is_active', true)
+        .gte('start_time', currentTime) // Only future sessions
+        .order('start_time')
+      
+      if (!sessionError && allSessions && allSessions.length > 0) {
+        // Convert database format to scraper format for compatibility
+        sessionsFormatted = allSessions.map(session => ({
+          session_name: session.session_name,
+          level: session.level,
+          side: session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any',
+          time: session.start_time,
+          time24: session.start_time,
+          spots_available: session.spots_available,
+          booking_url: session.book_url || 'https://ticketing.thewave.com/'
+        }))
+      } else {
+        // Fallback to scraper if no database sessions
+        console.log('No database sessions, falling back to scraper')
+        const scraper = new WaveScheduleScraper()
+        const scrapedSessions = await scraper.getTodaysSessions()
+        sessionsFormatted = scrapedSessions
+      }
+    } catch (error) {
+      console.error('Error getting sessions:', error)
+      // Final fallback to scraper
+      const scraper = new WaveScheduleScraper()
+      sessionsFormatted = await scraper.getTodaysSessions()
     }
-    
-    // Convert database format to scraper format for compatibility
-    const sessionsFormatted = (allSessions || []).map(session => ({
-      session_name: session.session_name,
-      level: session.level,
-      side: session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any',
-      time: session.start_time,
-      time24: session.start_time,
-      spots_available: session.spots_available,
-      booking_url: session.book_url
-    }))
     
     if (!sessionsFormatted || sessionsFormatted.length === 0) {
       return ctx.telegram.editMessageText(
@@ -985,7 +998,7 @@ bot.command('today', async (ctx) => {
           
           availableSessions.slice(0, 8).forEach(session => {
             noSessionsMsg += `⏰ *${session.time}* - ${session.session_name}\n`
-            noSessionsMsg += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${session.spots_available} spot${session.spots_available === 1 ? '' : 's'}\n`
+            noSessionsMsg += `   📊 ${capitalizeLevel(session.level)} • 🏄 ${session.side} • 🎯 ${session.spots_available} spot${session.spots_available === 1 ? '' : 's'}\n`
             if (session.booking_url) {
               noSessionsMsg += `   🔗 [Book Now](${session.booking_url})\n`
             }
@@ -1521,7 +1534,7 @@ bot.action('levels_done', async (ctx) => {
           'advanced': '🟠',
           'expert': '🔴'
         }[level] || '⚪'
-        confirmationMsg += `${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}\n`
+        confirmationMsg += `${emoji} ${capitalizeLevel(level)}\n`
       })
     } else {
       confirmationMsg += '_No levels selected_\n'
@@ -3096,7 +3109,7 @@ bot.action('quick_today', async (ctx) => {
         const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
         
         message += `📊 ${session.time} - ${session.session_name}\n`
-        message += `   🏄 ${session.level} • ${session.side} • 🎯 ${spotsText}\n\n`
+        message += `   🏄 ${capitalizeLevel(session.level)} • ${session.side} • 🎯 ${spotsText}\n\n`
       })
       
       if (filtered.length > 8) {
@@ -3144,7 +3157,8 @@ bot.action('quick_prefs', async (ctx) => {
         Markup.button.callback('🕐 Edit Times', 'edit_times')
       ],
       [
-        Markup.button.callback('🔔 Edit Notifications', 'edit_notifications')
+        Markup.button.callback('🔔 Edit Notifications', 'edit_notifications'),
+        Markup.button.callback('📬 Edit Digests', 'edit_digests')
       ],
       [
         Markup.button.callback('🔙 Back to Welcome', 'start_setup')
@@ -3230,6 +3244,199 @@ bot.action('quick_notifications', async (ctx) => {
 // Webhook endpoint
 app.post('/webhook', (req, res) => {
   bot.handleUpdate(req.body, res)
+})
+
+// Edit digest preferences handler
+bot.action('edit_digests', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Loading digest settings...')
+    
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) {
+      return ctx.editMessageText('⚠️ Please run /setup first!')
+    }
+    
+    // Get current digest preferences
+    const { data: currentDigests } = await supabase
+      .from('user_digest_preferences')
+      .select('digest_type')
+      .eq('user_id', userProfile.id)
+    
+    const currentTypes = currentDigests?.map(d => d.digest_type) || []
+    const selectedText = currentTypes.length > 0 
+      ? `\n\n*Currently enabled*: ${currentTypes.map(t => t === 'morning' ? '🌅 Morning' : '🌇 Evening').join(', ')}`
+      : '\n\n*No digests enabled*'
+    
+    await ctx.editMessageText(`📬 *Edit Digest Settings*\n\nChoose when you want to receive daily surf digests:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentTypes.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'digest_morning')],
+        [Markup.button.callback(`${currentTypes.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'digest_evening')],
+        [Markup.button.callback('✅ Done', 'digests_done')]
+      ]).reply_markup
+    })
+  } catch (error) {
+    console.error('Error in edit_digests:', error)
+    await ctx.answerCbQuery('Error loading digest settings.')
+  }
+})
+
+// Digest toggle handlers
+bot.action('digest_morning', async (ctx) => {
+  try {
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) return
+    
+    // Check if morning digest exists
+    const { data: existing } = await supabase
+      .from('user_digest_preferences')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('digest_type', 'morning')
+      .single()
+    
+    if (existing) {
+      // Remove morning digest
+      await supabase
+        .from('user_digest_preferences')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('digest_type', 'morning')
+      
+      await ctx.answerCbQuery('Morning digest disabled')
+    } else {
+      // Add morning digest
+      await supabase
+        .from('user_digest_preferences')
+        .insert({
+          user_id: userProfile.id,
+          digest_type: 'morning'
+        })
+      
+      await ctx.answerCbQuery('Morning digest enabled')
+    }
+    
+    // Update UI
+    const { data: currentDigests } = await supabase
+      .from('user_digest_preferences')
+      .select('digest_type')
+      .eq('user_id', userProfile.id)
+    
+    const currentTypes = currentDigests?.map(d => d.digest_type) || []
+    const selectedText = currentTypes.length > 0 
+      ? `\n\n*Currently enabled*: ${currentTypes.map(t => t === 'morning' ? '🌅 Morning' : '🌇 Evening').join(', ')}`
+      : '\n\n*No digests enabled*'
+    
+    await ctx.editMessageText(`📬 *Edit Digest Settings*\n\nChoose when you want to receive daily surf digests:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentTypes.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'digest_morning')],
+        [Markup.button.callback(`${currentTypes.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'digest_evening')],
+        [Markup.button.callback('✅ Done', 'digests_done')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error toggling morning digest:', error)
+    await ctx.answerCbQuery('Error updating setting.')
+  }
+})
+
+bot.action('digest_evening', async (ctx) => {
+  try {
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) return
+    
+    // Check if evening digest exists
+    const { data: existing } = await supabase
+      .from('user_digest_preferences')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('digest_type', 'evening')
+      .single()
+    
+    if (existing) {
+      // Remove evening digest
+      await supabase
+        .from('user_digest_preferences')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('digest_type', 'evening')
+      
+      await ctx.answerCbQuery('Evening digest disabled')
+    } else {
+      // Add evening digest
+      await supabase
+        .from('user_digest_preferences')
+        .insert({
+          user_id: userProfile.id,
+          digest_type: 'evening'
+        })
+      
+      await ctx.answerCbQuery('Evening digest enabled')
+    }
+    
+    // Update UI
+    const { data: currentDigests } = await supabase
+      .from('user_digest_preferences')
+      .select('digest_type')
+      .eq('user_id', userProfile.id)
+    
+    const currentTypes = currentDigests?.map(d => d.digest_type) || []
+    const selectedText = currentTypes.length > 0 
+      ? `\n\n*Currently enabled*: ${currentTypes.map(t => t === 'morning' ? '🌅 Morning' : '🌇 Evening').join(', ')}`
+      : '\n\n*No digests enabled*'
+    
+    await ctx.editMessageText(`📬 *Edit Digest Settings*\n\nChoose when you want to receive daily surf digests:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentTypes.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'digest_morning')],
+        [Markup.button.callback(`${currentTypes.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'digest_evening')],
+        [Markup.button.callback('✅ Done', 'digests_done')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error toggling evening digest:', error)
+    await ctx.answerCbQuery('Error updating setting.')
+  }
+})
+
+bot.action('digests_done', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('✅ Digest settings saved!')
+    
+    // Get updated digest preferences for confirmation
+    const userProfile = await getUserProfile(ctx.from.id)
+    const { data: digestPrefs } = await supabase
+      .from('user_digest_preferences')
+      .select('digest_type')
+      .eq('user_id', userProfile.id)
+    
+    const enabledDigests = digestPrefs?.map(d => d.digest_type) || []
+    
+    let confirmationMsg = '✅ *Digest Settings Saved!*\n\n'
+    
+    if (enabledDigests.length > 0) {
+      confirmationMsg += '📬 *Your active digests:*\n'
+      enabledDigests.forEach(type => {
+        const emoji = type === 'morning' ? '🌅' : '🌇'
+        const time = type === 'morning' ? '8:00 AM' : '6:00 PM'
+        const title = type === 'morning' ? 'Morning' : 'Evening'
+        confirmationMsg += `${emoji} ${title} Digest (${time})\n`
+      })
+    } else {
+      confirmationMsg += '📭 *No digests enabled*\n\nYou won\'t receive daily surf reports, but you can still use commands like /today and /tomorrow.'
+    }
+    
+    confirmationMsg += '\n💡 *You can always change these settings using /prefs*'
+    
+    await ctx.editMessageText(confirmationMsg, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    console.error('Error in digests_done:', error)
+    await ctx.editMessageText('✅ Digest settings saved! Use /prefs to view.')
+  }
 })
 
 // Start server
