@@ -37,29 +37,46 @@ async function refreshDatabase() {
     
     console.log(`📊 Found ${sessions.length} sessions for next 14 days`);
 
-    // 3. Insert fresh sessions
+    // 3. Insert fresh sessions with validation
     console.log('💾 Inserting fresh sessions...');
-    const dbSessions = sessions.map(session => ({
-      id: `${session.dateISO}_${session.time24}_${session.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
-      date: session.dateISO,
-      start_time: session.time24,
-      end_time: null,
-      session_name: session.session_name,
-      level: session.level,
-      side: session.side === 'Left' ? 'L' : session.side === 'Right' ? 'R' : 'A',
-      total_spots: session.spots,
-      spots_available: session.spots_available,
-      book_url: session.booking_url,
-      instructor: null,
-      is_active: true,
-      last_updated: new Date().toISOString()
-    }));
+    const dbSessions = sessions.map(session => {
+      // Validate required fields
+      if (!session.spots_available && session.spots_available !== 0) {
+        console.warn(`⚠️  Session ${session.session_name} has invalid spots_available:`, session.spots_available);
+      }
+      
+      return {
+        id: `${session.dateISO}_${session.time24}_${session.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
+        date: session.dateISO,
+        start_time: session.time24,
+        end_time: null,
+        session_name: session.session_name,
+        level: session.level,
+        side: session.side === 'Left' ? 'L' : session.side === 'Right' ? 'R' : 'A',
+        total_spots: session.spots || 0,
+        spots_available: session.spots_available || 0,
+        book_url: session.booking_url,
+        instructor: null,
+        is_active: true,
+        last_updated: new Date().toISOString()
+      };
+    });
+
+    // Show sample before insertion for debugging
+    console.log('📋 Sample session for verification:');
+    const sample = dbSessions.find(s => s.start_time === '15:00');
+    if (sample) {
+      console.log(`   ${sample.start_time} | ${sample.session_name} | spots_available: ${sample.spots_available} (${typeof sample.spots_available})`);
+    }
 
     const { error: insertError } = await supabase
       .from('sessions')
       .insert(dbSessions);
     
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('❌ Insert error details:', insertError);
+      throw insertError;
+    }
 
     // 4. Show sample of today's sessions for verification
     const todaySessions = dbSessions.filter(s => s.date === today);
