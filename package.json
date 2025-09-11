@@ -12,6 +12,7 @@
     "tunnel": "ngrok http 3000",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
+    "db:refresh": "node scripts/refresh-database.js",
     "telegram:webhook": "node scripts/setup-webhook.js"
   },
   "keywords": [
