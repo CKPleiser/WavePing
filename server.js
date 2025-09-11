@@ -3274,8 +3274,13 @@ bot.action('quick_notifications', async (ctx) => {
   }
 })
 
-// Webhook endpoint
+// Webhook endpoints - support both paths for compatibility
 app.post('/webhook', (req, res) => {
+  bot.handleUpdate(req.body, res)
+})
+
+app.post('/api/telegram/webhook', (req, res) => {
+  console.log('📨 Webhook received at /api/telegram/webhook')
   bot.handleUpdate(req.body, res)
 })
 
