@@ -379,7 +379,63 @@ app.post('/api/cron/send-notifications', async (req, res) => {
 
 // Basic bot commands
 bot.start((ctx) => {
-  ctx.reply('🌊 Welcome to WavePing! Use /setup to get started.')
+  const welcomeMessage = `🌊 *Welcome to WavePing!* 🏄‍♂️
+
+Hey there, fellow wave rider! 👋 
+
+*WavePing* is your personal surf session assistant for The Wave Bristol. Here's what I can do for you:
+
+🔔 *Smart Notifications* - Get alerts for sessions that match your level, preferred side, and times
+⏰ *Perfect Timing* - Choose when to be notified (1 week, 24 hours, 2 hours before, etc.)
+🎯 *Personalized Filtering* - Only see sessions for your skill level and preferences
+🌅 *Time Windows* - Set your preferred surf times (early morning, evening sessions, etc.)
+📅 *Quick Checks* - Instantly see what's available today or tomorrow
+
+*Ready to catch some waves?* 🏄‍♀️
+
+Let's get you set up with your surf preferences so I can find the perfect sessions for you!`
+
+  ctx.reply(welcomeMessage, { 
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('🏄‍♂️ Let\'s Get Started!', 'start_setup')]
+    ]).reply_markup
+  })
+})
+
+// Handle the "Let's Get Started!" button
+bot.action('start_setup', async (ctx) => {
+  await ctx.answerCbQuery('🏄‍♂️ Starting setup...')
+  
+  const setupMessage = `🏄‍♂️ *Let's Set Up Your Wave Profile!*
+
+I'll walk you through a quick setup to personalize your surf experience. This will help me:
+
+✨ Show you only the sessions that match your skill level
+🎯 Filter by your preferred wave side (left, right, or any)
+⏰ Send notifications at the perfect times for you
+🌅 Match your preferred surf times
+
+*First up: What's your surf level?*
+
+Choose all levels you're comfortable with - you can always change this later! 🤙`
+
+  // Initialize session and redirect to existing setup
+  ctx.session = { 
+    setup: true,
+    step: 'levels',
+    selectedLevels: []
+  }
+
+  await ctx.editMessageText(setupMessage, {
+    parse_mode: 'Markdown',
+    reply_markup: Markup.inlineKeyboard([
+      [Markup.button.callback('🌱 Beginner', 'level_beginner'), Markup.button.callback('📈 Improver', 'level_improver')],
+      [Markup.button.callback('🌊 Intermediate', 'level_intermediate'), Markup.button.callback('🚀 Advanced', 'level_advanced')],
+      [Markup.button.callback('🔥 Expert', 'level_expert')],
+      [Markup.button.callback('✅ Continue', 'save_levels')]
+    ]).reply_markup
+  })
 })
 
 bot.command('prefs', async (ctx) => {
@@ -1253,67 +1309,87 @@ bot.action('days_done', async (ctx) => {
 
 // Edit times handler
 bot.action('edit_times', async (ctx) => {
-  await ctx.answerCbQuery()
-  
-  // Get current time preferences
-  const preferences = await getUserPreferences(ctx.from.id)
-  const currentTimes = preferences?.user_time_windows || []
-  
-  let message = '🕐 *Time Preferences*\n\n'
-  message += 'Select your preferred time windows for surf sessions:\n\n'
-  
-  if (currentTimes.length > 0) {
-    message += '✅ *Current preferences:*\n'
-    currentTimes.forEach((tw, i) => {
-      message += `   ${tw.start_time} - ${tw.end_time}\n`
-    })
-    message += '\n'
-  }
-  
-  const timeButtons = [
-    [
-      Markup.button.callback('🌅 Early (7-10am)', 'time_early'),
-      Markup.button.callback('🌞 Morning (10am-1pm)', 'time_morning')
-    ],
-    [
-      Markup.button.callback('☀️ Afternoon (1-5pm)', 'time_afternoon'),
-      Markup.button.callback('🌇 Evening (5-8pm)', 'time_evening')
-    ],
-    [
-      Markup.button.callback('🌙 Late (8-11pm)', 'time_late'),
-      Markup.button.callback('🔧 Custom Times', 'time_custom')
-    ],
-    [
-      Markup.button.callback('🗑️ Clear All', 'time_clear'),
-      Markup.button.callback('✅ Done', 'times_done')
+  try {
+    await ctx.answerCbQuery('Loading times...')
+    
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) {
+      return ctx.editMessageText('⚠️ Please run /setup first!')
+    }
+    
+    // Get current time preferences
+    const { data: userTimeWindows } = await supabase
+      .from('user_time_windows')
+      .select('start_time, end_time')
+      .eq('user_id', userProfile.id)
+    
+    const currentTimes = userTimeWindows || []
+    
+    // Helper function to check if a time window exists
+    const hasTimeWindow = (startTime, endTime) => {
+      return currentTimes.some(tw => tw.start_time === startTime && tw.end_time === endTime)
+    }
+    
+    let message = '🕐 *Time Preferences*\n\n'
+    message += 'Click to toggle your preferred time windows:\n\n'
+    
+    if (currentTimes.length > 0) {
+      message += '✅ *Currently selected:*\n'
+      currentTimes.forEach((tw, i) => {
+        message += `   ${tw.start_time} - ${tw.end_time}\n`
+      })
+      message += '\n'
+    }
+    
+    const timeButtons = [
+      [
+        Markup.button.callback(`${hasTimeWindow('07:00', '10:00') ? '✅ ' : ''}🌅 Early (7-10am)`, 'time_early'),
+        Markup.button.callback(`${hasTimeWindow('10:00', '13:00') ? '✅ ' : ''}🌞 Morning (10am-1pm)`, 'time_morning')
+      ],
+      [
+        Markup.button.callback(`${hasTimeWindow('13:00', '17:00') ? '✅ ' : ''}☀️ Afternoon (1-5pm)`, 'time_afternoon'),
+        Markup.button.callback(`${hasTimeWindow('17:00', '20:00') ? '✅ ' : ''}🌇 Evening (5-8pm)`, 'time_evening')
+      ],
+      [
+        Markup.button.callback(`${hasTimeWindow('20:00', '23:00') ? '✅ ' : ''}🌙 Late (8-11pm)`, 'time_late'),
+        Markup.button.callback('🔧 Custom Times', 'time_custom')
+      ],
+      [
+        Markup.button.callback('🗑️ Clear All', 'time_clear'),
+        Markup.button.callback('✅ Done', 'times_done')
+      ]
     ]
-  ]
-  
-  await ctx.editMessageText(message, {
-    parse_mode: 'Markdown',
-    reply_markup: Markup.inlineKeyboard(timeButtons).reply_markup
-  })
+    
+    await ctx.editMessageText(message, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard(timeButtons).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in edit_times:', error)
+    await ctx.answerCbQuery('Error loading times.')
+  }
 })
 
-// Time preference handlers
+// Time preference handlers - now with toggle functionality
 bot.action('time_early', async (ctx) => {
-  await saveTimeWindow(ctx, '07:00', '10:00', '🌅 Early (7-10am)')
+  await toggleTimeWindow(ctx, '07:00', '10:00', '🌅 Early (7-10am)')
 })
 
 bot.action('time_morning', async (ctx) => {
-  await saveTimeWindow(ctx, '10:00', '13:00', '🌞 Morning (10am-1pm)')
+  await toggleTimeWindow(ctx, '10:00', '13:00', '🌞 Morning (10am-1pm)')
 })
 
 bot.action('time_afternoon', async (ctx) => {
-  await saveTimeWindow(ctx, '13:00', '17:00', '☀️ Afternoon (1-5pm)')
+  await toggleTimeWindow(ctx, '13:00', '17:00', '☀️ Afternoon (1-5pm)')
 })
 
 bot.action('time_evening', async (ctx) => {
-  await saveTimeWindow(ctx, '17:00', '20:00', '🌇 Evening (5-8pm)')
+  await toggleTimeWindow(ctx, '17:00', '20:00', '🌇 Evening (5-8pm)')
 })
 
 bot.action('time_late', async (ctx) => {
-  await saveTimeWindow(ctx, '20:00', '23:00', '🌙 Late (8-11pm)')
+  await toggleTimeWindow(ctx, '20:00', '23:00', '🌙 Late (8-11pm)')
 })
 
 bot.action('time_custom', async (ctx) => {
@@ -1542,11 +1618,42 @@ bot.action('save_levels', async (ctx) => {
       
       await supabase.from('user_levels').insert(levelInserts)
     }
+
+    // Check if this is initial setup or just editing levels
+    const isInitialSetup = ctx.session.setup === true
     
-    await ctx.editMessageText(`✅ *Levels saved!*\n\nYour selected levels: ${ctx.session.selectedLevels.join(', ')}\n\nUse /prefs to continue setting up other preferences.`)
+    if (isInitialSetup) {
+      // Show welcome completion message for new users
+      const completionMessage = `🎉 *Awesome! You're all set up!* 🏄‍♂️
+
+Your surf level preferences: *${ctx.session.selectedLevels.join(', ')}*
+
+*Ready to ride some waves?* Here's what you can do now:
+
+🌊 */today* - Check today's sessions that match your level
+🌅 */tomorrow* - See what's coming up tomorrow  
+⚙️ */prefs* - Fine-tune your preferences (sides, times, notifications)
+
+*Pro tip:* Set up notifications in */prefs* so I can ping you when perfect sessions become available! 🔔
+
+*Let's see what waves are waiting for you...* 🤙`
+
+      await ctx.editMessageText(completionMessage, {
+        parse_mode: 'Markdown',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🌊 Check Today\'s Sessions', 'quick_today')],
+          [Markup.button.callback('⚙️ Set More Preferences', 'quick_prefs')],
+          [Markup.button.callback('🔔 Set Up Notifications', 'quick_notifications')]
+        ]).reply_markup
+      })
+    } else {
+      // Regular edit mode
+      await ctx.editMessageText(`✅ *Levels saved!*\n\nYour selected levels: ${ctx.session.selectedLevels.join(', ')}\n\nUse /prefs to continue setting up other preferences.`, { parse_mode: 'Markdown' })
+    }
     
     // Clear session
     ctx.session.selectedLevels = []
+    ctx.session.setup = false
     
   } catch (error) {
     console.error('Error saving levels:', error)
@@ -1570,50 +1677,92 @@ async function getUserProfile(telegramId) {
   return data
 }
 
-async function saveTimeWindow(ctx, startTime, endTime, description) {
-  await ctx.answerCbQuery(`Adding ${description}...`)
-  
+async function toggleTimeWindow(ctx, startTime, endTime, description) {
   try {
-    // Get or create user
-    const { data: user } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('telegram_id', ctx.from.id)
-      .single()
-    
-    if (!user) {
-      return ctx.editMessageText('❌ User not found. Please use /setup first.')
-    }
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) return
     
     // Check if this time window already exists
     const { data: existing } = await supabase
       .from('user_time_windows')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userProfile.id)
       .eq('start_time', startTime)
       .eq('end_time', endTime)
       .single()
     
     if (existing) {
-      return ctx.editMessageText(`⚠️ ${description} is already in your preferences!`, { parse_mode: 'Markdown' })
+      // Remove time window
+      await ctx.answerCbQuery(`Removed ${description}`)
+      await supabase
+        .from('user_time_windows')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('start_time', startTime)
+        .eq('end_time', endTime)
+    } else {
+      // Add time window
+      await ctx.answerCbQuery(`Added ${description}`)
+      await supabase
+        .from('user_time_windows')
+        .insert({
+          user_id: userProfile.id,
+          start_time: startTime,
+          end_time: endTime
+        })
     }
     
-    // Add time window
-    const { error } = await supabase
+    // Refresh the UI with updated selections
+    const { data: userTimeWindows } = await supabase
       .from('user_time_windows')
-      .insert({
-        user_id: user.id,
-        start_time: startTime,
-        end_time: endTime
+      .select('start_time, end_time')
+      .eq('user_id', userProfile.id)
+    
+    const currentTimes = userTimeWindows || []
+    
+    // Helper function to check if a time window exists
+    const hasTimeWindow = (startTime, endTime) => {
+      return currentTimes.some(tw => tw.start_time === startTime && tw.end_time === endTime)
+    }
+    
+    let message = '🕐 *Time Preferences*\n\n'
+    message += 'Click to toggle your preferred time windows:\n\n'
+    
+    if (currentTimes.length > 0) {
+      message += '✅ *Currently selected:*\n'
+      currentTimes.forEach((tw, i) => {
+        message += `   ${tw.start_time} - ${tw.end_time}\n`
       })
+      message += '\n'
+    }
     
-    if (error) throw error
+    const timeButtons = [
+      [
+        Markup.button.callback(`${hasTimeWindow('07:00', '10:00') ? '✅ ' : ''}🌅 Early (7-10am)`, 'time_early'),
+        Markup.button.callback(`${hasTimeWindow('10:00', '13:00') ? '✅ ' : ''}🌞 Morning (10am-1pm)`, 'time_morning')
+      ],
+      [
+        Markup.button.callback(`${hasTimeWindow('13:00', '17:00') ? '✅ ' : ''}☀️ Afternoon (1-5pm)`, 'time_afternoon'),
+        Markup.button.callback(`${hasTimeWindow('17:00', '20:00') ? '✅ ' : ''}🌇 Evening (5-8pm)`, 'time_evening')
+      ],
+      [
+        Markup.button.callback(`${hasTimeWindow('20:00', '23:00') ? '✅ ' : ''}🌙 Late (8-11pm)`, 'time_late'),
+        Markup.button.callback('🔧 Custom Times', 'time_custom')
+      ],
+      [
+        Markup.button.callback('🗑️ Clear All', 'time_clear'),
+        Markup.button.callback('✅ Done', 'times_done')
+      ]
+    ]
     
-    await ctx.editMessageText(`✅ *${description} added!*\n\nTime window: ${startTime} - ${endTime}\n\nUse /prefs to see all your preferences.`, { parse_mode: 'Markdown' })
+    await ctx.editMessageText(message, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard(timeButtons).reply_markup
+    })
     
   } catch (error) {
-    console.error('Error saving time window:', error)
-    await ctx.editMessageText('❌ Error saving time preference. Try again later.')
+    console.error('Error toggling time window:', error)
+    await ctx.answerCbQuery('Error. Try again.')
   }
 }
 
@@ -1658,6 +1807,175 @@ function formatPreferencesMessage(preferences) {
 👥 *Min spots*: ${preferences.min_spots || 1}
 🔔 *Notifications*: ${notifications}`
 }
+
+// Quick action handlers for post-onboarding
+bot.action('quick_today', async (ctx) => {
+  try {
+    await ctx.answerCbQuery()
+    
+    const scraper = new WaveScheduleScraper()
+    const sessions = await scraper.getTodaysSessions()
+    
+    const userProfile = await getUserPreferences(ctx.from.id)
+    if (!userProfile) {
+      await ctx.editMessageText('❌ Please run /start first to set up your preferences.')
+      return
+    }
+    
+    const userLevels = userProfile.user_levels?.map(ul => ul.level) || []
+    const userSides = userProfile.user_sides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
+    const userTimeWindows = userProfile.user_time_windows || []
+    
+    const filtered = scraper.filterSessionsForUser(sessions, userLevels, userSides, [], true, userTimeWindows)
+    
+    let message = '🌊 *Today\'s Sessions*\n\n'
+    
+    if (filtered.length === 0) {
+      message += '😔 No sessions match your preferences today.\n\n'
+      message += 'Try:\n'
+      message += '• /tomorrow - Check tomorrow\'s sessions\n'
+      message += '• /prefs - Adjust your preferences\n'
+      message += '• /today all - See all sessions'
+    } else {
+      message += `Found ${filtered.length} session${filtered.length === 1 ? '' : 's'} for you! 🏄‍♂️\n\n`
+      
+      filtered.slice(0, 8).forEach((session, i) => {
+        const spots = session.spots_available || session.spots || 0
+        const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+        const levelEmoji = getLevelEmoji(session.level)
+        const sideEmoji = getSideEmoji(session.side)
+        
+        message += `${levelEmoji} ${session.time} - ${session.session_name}\n`
+        message += `   ${sideEmoji} ${session.level} | ${spotsText}\n\n`
+      })
+      
+      if (filtered.length > 8) {
+        message += `... and ${filtered.length - 8} more! Use /today for the full list.\n\n`
+      }
+      
+      message += '🎯 Want to book? Visit [The Wave Ticketing](https://ticketing.thewave.com/)'
+    }
+    
+    const backButtons = [
+      [Markup.button.callback('🔙 Back to Setup', 'start_setup')],
+      [Markup.button.callback('⚙️ Edit Preferences', 'quick_prefs')]
+    ]
+    
+    await ctx.editMessageText(message, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard(backButtons).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in quick_today:', error)
+    await ctx.editMessageText('❌ Sorry, there was an error getting today\'s sessions. Try /today')
+  }
+})
+
+bot.action('quick_prefs', async (ctx) => {
+  try {
+    await ctx.answerCbQuery()
+    
+    const userPrefs = await getUserPreferences(ctx.from.id)
+    if (!userPrefs) {
+      await ctx.editMessageText('❌ Please run /start first to set up your preferences.')
+      return
+    }
+    
+    const prefsMessage = formatPreferencesMessage(userPrefs)
+    
+    const prefButtons = [
+      [
+        Markup.button.callback('📊 Edit Levels', 'edit_levels'),
+        Markup.button.callback('🏄 Edit Sides', 'edit_sides')
+      ],
+      [
+        Markup.button.callback('📅 Edit Days', 'edit_days'),
+        Markup.button.callback('🕐 Edit Times', 'edit_times')
+      ],
+      [
+        Markup.button.callback('🔔 Edit Notifications', 'edit_notifications')
+      ],
+      [
+        Markup.button.callback('🔙 Back to Welcome', 'start_setup')
+      ]
+    ]
+    
+    await ctx.editMessageText(`${prefsMessage}\n\n*What would you like to change?*`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard(prefButtons).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in quick_prefs:', error)
+    await ctx.editMessageText('❌ Sorry, there was an error loading preferences. Try /prefs')
+  }
+})
+
+bot.action('quick_notifications', async (ctx) => {
+  try {
+    await ctx.answerCbQuery()
+    
+    // Redirect to the full notification setup
+    const userProfile = await getOrCreateUserProfile(ctx.from.id, ctx.from.username)
+    
+    // Get current notification preferences
+    const { data: userNotifications } = await supabase
+      .from('user_notifications')
+      .select('timing')
+      .eq('user_id', userProfile.id)
+    
+    const currentNotifications = userNotifications?.map(un => un.timing) || []
+    
+    // Helper function to check if notification timing exists
+    const hasNotification = (timing) => currentNotifications.includes(timing)
+    
+    let message = '🔔 *Notification Preferences*\n\n'
+    message += 'Get notified when spots open up! Choose when:\n\n'
+    
+    if (currentNotifications.length > 0) {
+      message += '✅ *Currently enabled:*\n'
+      currentNotifications.forEach(timing => {
+        const labels = {
+          '1w': '1 week before',
+          '48h': '48 hours before', 
+          '24h': '24 hours before',
+          '12h': '12 hours before',
+          '2h': '2 hours before'
+        }
+        message += `   • ${labels[timing]}\n`
+      })
+      message += '\n'
+    }
+    
+    const notificationButtons = [
+      [
+        Markup.button.callback(`${hasNotification('1w') ? '✅ ' : ''}1 week before`, 'notification_1w'),
+        Markup.button.callback(`${hasNotification('48h') ? '✅ ' : ''}48h before`, 'notification_48h')
+      ],
+      [
+        Markup.button.callback(`${hasNotification('24h') ? '✅ ' : ''}24h before`, 'notification_24h'),
+        Markup.button.callback(`${hasNotification('12h') ? '✅ ' : ''}12h before`, 'notification_12h')
+      ],
+      [
+        Markup.button.callback(`${hasNotification('2h') ? '✅ ' : ''}2h before`, 'notification_2h')
+      ],
+      [
+        Markup.button.callback('✅ Done', 'notifications_done'),
+        Markup.button.callback('🔙 Back', 'start_setup')
+      ]
+    ]
+    
+    await ctx.editMessageText(message, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard(notificationButtons).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in quick_notifications:', error)
+    await ctx.editMessageText('❌ Sorry, there was an error setting up notifications. Try /notifications')
+  }
+})
 
 // Webhook endpoint
 app.post('/webhook', (req, res) => {
