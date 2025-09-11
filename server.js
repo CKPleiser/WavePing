@@ -159,7 +159,21 @@ bot.command('today', async (ctx) => {
       )
     }
     
+    // Get weather data for today
+    const today = new Date().toISOString().split('T')[0]
+    const { data: weather } = await supabase
+      .from('weather_cache')
+      .select('*')
+      .eq('date', today)
+      .maybeSingle()
+    
     let message = `🏄‍♂️ *Today's Wave Sessions*\n`
+    
+    // Add weather info at the top if available
+    if (weather) {
+      message += `🌡️ *Weather:* ${weather.air_temp}°C | 💧 Water: ${weather.water_temp}°C | 💨 Wind: ${weather.wind_speed}mph ${weather.wind_direction}\n\n`
+    }
+    
     const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
     if (hasFilters) {
       message += `🔍 *Your filters:* `
@@ -180,15 +194,19 @@ bot.command('today', async (ctx) => {
         'expert': '🔴'
       }[session.level] || '⚪'
       
-      message += `🕐 *${session.time}* - ${levelEmoji} ${session.session_name}\n`
-      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n`
+      // Clean format: 1. Title, 2. Time, 3. Weather, 4. Book Link
+      message += `${levelEmoji} *${session.session_name}*\n`
+      message += `⏰ ${session.time} | 🎫 ${session.spots_available} spots\n`
+      if (weather) {
+        message += `🌡️ ${weather.air_temp}°C, ${weather.conditions}\n`
+      }
       if (session.booking_url) {
-        message += `🔗 [Book this session](${session.booking_url})\n`
+        message += `🔗 [Book Now](${session.booking_url})\n`
       }
       message += `\n`
     })
     
-    message += `\n📱 *Updated live from The Wave*`
+    message += `📱 *Live from The Wave*`
     
     ctx.telegram.editMessageText(
       ctx.chat.id, 
@@ -303,7 +321,21 @@ bot.command('tomorrow', async (ctx) => {
       )
     }
     
+    // Get weather data for tomorrow
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const { data: weather } = await supabase
+      .from('weather_cache')
+      .select('*')
+      .eq('date', tomorrow)
+      .maybeSingle()
+    
     let message = `🏄‍♂️ *Tomorrow's Wave Sessions*\n`
+    
+    // Add weather info at the top if available
+    if (weather) {
+      message += `🌡️ *Weather:* ${weather.air_temp}°C | 💧 Water: ${weather.water_temp}°C | 💨 Wind: ${weather.wind_speed}mph ${weather.wind_direction}\n\n`
+    }
+    
     const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
     if (hasFilters) {
       message += `🔍 *Your filters:* `
@@ -324,15 +356,19 @@ bot.command('tomorrow', async (ctx) => {
         'expert': '🔴'
       }[session.level] || '⚪'
       
-      message += `🕐 *${session.time}* - ${levelEmoji} ${session.session_name}\n`
-      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n`
+      // Clean format: 1. Title, 2. Time, 3. Weather, 4. Book Link
+      message += `${levelEmoji} *${session.session_name}*\n`
+      message += `⏰ ${session.time} | 🎫 ${session.spots_available} spots\n`
+      if (weather) {
+        message += `🌡️ ${weather.air_temp}°C, ${weather.conditions}\n`
+      }
       if (session.booking_url) {
-        message += `🔗 [Book this session](${session.booking_url})\n`
+        message += `🔗 [Book Now](${session.booking_url})\n`
       }
       message += `\n`
     })
     
-    message += `\n📱 *Updated live from The Wave*`
+    message += `📱 *Live from The Wave*`
     
     ctx.telegram.editMessageText(
       ctx.chat.id, 
