@@ -1,6 +1,7 @@
 const express = require('express')
 const { Telegraf, session, Markup } = require('telegraf')
 const { createClient } = require('@supabase/supabase-js')
+const { SimpleWaveScraper } = require('./lib/wave-scraper-simple.js')
 
 const app = express()
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
@@ -62,13 +63,15 @@ bot.command('prefs', async (ctx) => {
 
 bot.command('today', async (ctx) => {
   try {
-    const today = new Date().toISOString().split('T')[0]
     const telegramId = ctx.from.id
+    
+    // Send loading message
+    const loadingMsg = await ctx.reply('🌊 Loading today\'s Wave sessions...')
     
     // Get user preferences
     const userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
-      return ctx.reply('⚠️ Please run /setup first to set your preferences!')
+      return ctx.editMessageText('⚠️ Please run /setup first to set your preferences!')
     }
     
     // Get user's selected levels
@@ -79,22 +82,18 @@ bot.command('today', async (ctx) => {
     
     const selectedLevels = userLevels?.map(ul => ul.level) || []
     
-    // For now, show sample data based on user preferences
-    const allSessions = [
-      { time: '09:00', level: 'beginner', side: 'Left', spots: 3 },
-      { time: '09:30', level: 'improver', side: 'Right', spots: 2 },
-      { time: '10:00', level: 'intermediate', side: 'Any', spots: 5 },
-      { time: '11:30', level: 'beginner', side: 'Left', spots: 1 },
-      { time: '14:00', level: 'advanced', side: 'Right', spots: 4 },
-      { time: '15:30', level: 'intermediate', side: 'Any', spots: 2 },
-      { time: '16:00', level: 'expert', side: 'Left', spots: 6 },
-      { time: '17:30', level: 'improver', side: 'Any', spots: 3 }
-    ]
+    // Scrape real Wave schedule
+    const scraper = new SimpleWaveScraper()
+    const allSessions = await scraper.getTodaysSessions()
+    
+    if (!allSessions || allSessions.length === 0) {
+      return ctx.editMessageText('🏄‍♂️ *No sessions found for today*\n\nThe Wave might be closed or no sessions are available.', { parse_mode: 'Markdown' })
+    }
     
     // Filter sessions based on user preferences
     let sessions = allSessions
     if (selectedLevels.length > 0) {
-      sessions = allSessions.filter(s => selectedLevels.includes(s.level))
+      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels)
     }
     
     if (sessions.length === 0) {
@@ -102,38 +101,46 @@ bot.command('today', async (ctx) => {
       
       if (selectedLevels.length > 0) {
         noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
-        noSessionsMsg += `💡 Try:\n`
-        noSessionsMsg += `• Checking /tomorrow instead\n`
-        noSessionsMsg += `• Adjusting your level preferences with /setup\n`
+        noSessionsMsg += `💡 *Available today:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
+        noSessionsMsg += `Try adjusting your level preferences with /setup`
       } else {
         noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
         noSessionsMsg += `Use /setup to select your surf levels.`
       }
       
-      return ctx.reply(noSessionsMsg, { parse_mode: 'Markdown' })
+      return ctx.editMessageText(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
-    let message = `🏄‍♂️ *Your Sessions for Today*\n`
+    let message = `🏄‍♂️ *Today's Wave Sessions*\n`
     if (selectedLevels.length > 0) {
       message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
     } else {
-      message += `📋 *Showing all levels*\n\n`
+      message += `📋 *All available sessions*\n\n`
     }
     
     sessions.forEach(session => {
       const levelEmoji = {
         'beginner': '🟢',
-        'improver': '🔵',
+        'improver': '🔵', 
         'intermediate': '🟡',
         'advanced': '🟠',
         'expert': '🔴'
       }[session.level] || '⚪'
       
-      message += `🕐 *${session.time}* - ${levelEmoji} ${session.level.charAt(0).toUpperCase() + session.level.slice(1)}\n`
-      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
+      message += `🕐 *${session.time}* - ${levelEmoji} ${session.session_name}\n`
+      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n`
+      if (session.booking_url) {
+        message += `🔗 [Book this session](${session.booking_url})\n`
+      }
+      message += `\n`
     })
     
-    ctx.reply(message, { parse_mode: 'Markdown' })
+    message += `\n📱 *Updated live from The Wave*`
+    
+    ctx.editMessageText(message, { 
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true
+    })
     
   } catch (error) {
     console.error('Error in today command:', error)
@@ -143,15 +150,15 @@ bot.command('today', async (ctx) => {
 
 bot.command('tomorrow', async (ctx) => {
   try {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().split('T')[0]
     const telegramId = ctx.from.id
+    
+    // Send loading message
+    const loadingMsg = await ctx.reply('🌊 Loading tomorrow\'s Wave sessions...')
     
     // Get user preferences
     const userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
-      return ctx.reply('⚠️ Please run /setup first to set your preferences!')
+      return ctx.editMessageText('⚠️ Please run /setup first to set your preferences!')
     }
     
     // Get user's selected levels
@@ -162,23 +169,18 @@ bot.command('tomorrow', async (ctx) => {
     
     const selectedLevels = userLevels?.map(ul => ul.level) || []
     
-    // For now, show sample data for tomorrow
-    const allSessions = [
-      { time: '08:00', level: 'beginner', side: 'Left', spots: 5 },
-      { time: '09:00', level: 'intermediate', side: 'Right', spots: 1 },
-      { time: '10:30', level: 'improver', side: 'Any', spots: 4 },
-      { time: '11:00', level: 'expert', side: 'Left', spots: 2 },
-      { time: '13:30', level: 'beginner', side: 'Any', spots: 6 },
-      { time: '14:00', level: 'advanced', side: 'Right', spots: 3 },
-      { time: '15:30', level: 'intermediate', side: 'Left', spots: 2 },
-      { time: '17:00', level: 'improver', side: 'Right', spots: 4 },
-      { time: '18:30', level: 'beginner', side: 'Any', spots: 1 }
-    ]
+    // Scrape real Wave schedule for tomorrow
+    const scraper = new SimpleWaveScraper()
+    const allSessions = await scraper.getTomorrowsSessions()
+    
+    if (!allSessions || allSessions.length === 0) {
+      return ctx.editMessageText('🏄‍♂️ *No sessions found for tomorrow*\n\nThe Wave might be closed or no sessions are scheduled yet.', { parse_mode: 'Markdown' })
+    }
     
     // Filter sessions based on user preferences
     let sessions = allSessions
     if (selectedLevels.length > 0) {
-      sessions = allSessions.filter(s => selectedLevels.includes(s.level))
+      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels)
     }
     
     if (sessions.length === 0) {
@@ -186,22 +188,21 @@ bot.command('tomorrow', async (ctx) => {
       
       if (selectedLevels.length > 0) {
         noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
-        noSessionsMsg += `💡 Try:\n`
-        noSessionsMsg += `• Checking /today instead\n`
-        noSessionsMsg += `• Adjusting your level preferences with /setup\n`
+        noSessionsMsg += `💡 *Available tomorrow:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
+        noSessionsMsg += `Try adjusting your level preferences with /setup`
       } else {
         noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
         noSessionsMsg += `Use /setup to select your surf levels.`
       }
       
-      return ctx.reply(noSessionsMsg, { parse_mode: 'Markdown' })
+      return ctx.editMessageText(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
-    let message = `🏄‍♂️ *Your Sessions for Tomorrow*\n`
+    let message = `🏄‍♂️ *Tomorrow's Wave Sessions*\n`
     if (selectedLevels.length > 0) {
       message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
     } else {
-      message += `📋 *Showing all levels*\n\n`
+      message += `📋 *All scheduled sessions*\n\n`
     }
     
     sessions.forEach(session => {
@@ -213,11 +214,20 @@ bot.command('tomorrow', async (ctx) => {
         'expert': '🔴'
       }[session.level] || '⚪'
       
-      message += `🕐 *${session.time}* - ${levelEmoji} ${session.level.charAt(0).toUpperCase() + session.level.slice(1)}\n`
-      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
+      message += `🕐 *${session.time}* - ${levelEmoji} ${session.session_name}\n`
+      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n`
+      if (session.booking_url) {
+        message += `🔗 [Book this session](${session.booking_url})\n`
+      }
+      message += `\n`
     })
     
-    ctx.reply(message, { parse_mode: 'Markdown' })
+    message += `\n📱 *Updated live from The Wave*`
+    
+    ctx.editMessageText(message, { 
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true
+    })
     
   } catch (error) {
     console.error('Error in tomorrow command:', error)
