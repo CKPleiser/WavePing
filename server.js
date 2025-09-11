@@ -70,6 +70,7 @@ app.post('/api/cron/scrape-schedule', async (req, res) => {
     
     // Update database
     if (sessions.length > 0) {
+      console.log('Updating database with sessions...')
       // Mark all existing sessions as inactive
       await supabase
         .from('sessions')
@@ -91,14 +92,33 @@ app.post('/api/cron/scrape-schedule', async (req, res) => {
         is_active: true
       }))
       
+      // First, delete existing sessions for these dates
+      const uniqueDates = [...new Set(dbSessions.map(s => s.date))]
+      console.log(`Deleting existing sessions for dates: ${uniqueDates.join(', ')}`)
+      
+      for (const date of uniqueDates) {
+        const { error: deleteError } = await supabase
+          .from('sessions')
+          .delete()
+          .eq('date', date)
+        
+        if (deleteError) {
+          console.error(`Error deleting sessions for ${date}:`, deleteError)
+        }
+      }
+      
+      // Then insert new sessions
+      console.log(`Inserting ${dbSessions.length} new sessions...`)
       const { error } = await supabase
         .from('sessions')
-        .upsert(dbSessions, { onConflict: 'date,start_time,session_name' })
+        .insert(dbSessions)
       
       if (error) {
         console.error('Database error:', error)
         return res.status(500).json({ error: 'Database error', details: error.message })
       }
+      
+      console.log('Database update complete!')
     }
     
     res.json({ success: true, sessions: sessions.length, timestamp: new Date().toISOString() })
