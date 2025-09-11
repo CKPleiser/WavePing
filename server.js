@@ -79,6 +79,7 @@ app.post('/api/cron/scrape-schedule', async (req, res) => {
       
       // Insert new sessions
       const dbSessions = sessions.map(session => ({
+        id: `${session.dateISO}_${session.time24}_${session.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
         date: session.dateISO,
         start_time: session.time24,
         end_time: null,
@@ -1085,5 +1086,17 @@ const server = app.listen(PORT, HOST, () => {
 })
 
 // Graceful shutdown
-process.once('SIGINT', () => bot.stop('SIGINT'))
-process.once('SIGTERM', () => bot.stop('SIGTERM'))
+process.once('SIGINT', () => {
+  if (process.env.NODE_ENV !== 'production') {
+    bot.stop('SIGINT')
+  }
+  server.close()
+  process.exit(0)
+})
+process.once('SIGTERM', () => {
+  if (process.env.NODE_ENV !== 'production') {
+    bot.stop('SIGTERM')
+  }
+  server.close()
+  process.exit(0)
+})
