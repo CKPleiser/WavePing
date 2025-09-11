@@ -4,6 +4,8 @@ const express = require('express')
 const { Telegraf, session, Markup } = require('telegraf')
 const { createClient } = require('@supabase/supabase-js')
 const { WaveScheduleScraper } = require('./lib/wave-scraper-final.js')
+const { today, tomorrow } = require('./utils/time')
+const { toHTML, safeEdit, checkRateLimit } = require('./utils/helpers')
 
 const app = express()
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
@@ -67,6 +69,11 @@ bot.command('today', async (ctx) => {
   try {
     const telegramId = ctx.from.id
     
+    // Rate limiting
+    if (!checkRateLimit(`today:${telegramId}`)) {
+      return ctx.reply('⏱ Please wait a moment before requesting again...')
+    }
+    
     // Send loading message
     const loadingMsg = await ctx.reply('🌊 Loading today\'s Wave sessions...')
     
@@ -102,11 +109,11 @@ bot.command('today', async (ctx) => {
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Get today's sessions from database (no scraping on-demand)
-    const today = new Date().toISOString().split('T')[0]
+    const todayStr = today()
     const { data: allSessions, error: sessionError } = await supabase
       .from('sessions')
       .select('*')
-      .eq('date', today)
+      .eq('date', todayStr)
       .eq('is_active', true)
       .order('start_time')
     
@@ -178,25 +185,25 @@ bot.command('today', async (ctx) => {
     const { data: weather } = await supabase
       .from('weather_cache')
       .select('*')
-      .eq('date', today)
+      .eq('date', todayStr)
       .maybeSingle()
     
-    let message = `🏄‍♂️ *Today's Wave Sessions*\n`
+    let message = `🏄‍♂️ <b>Today's Wave Sessions</b>\n`
     
     // Add weather info at the top if available
     if (weather) {
-      message += `🌡️ *Weather:* ${weather.air_temp}°C | 💧 Water: ${weather.water_temp}°C | 💨 Wind: ${weather.wind_speed}mph ${weather.wind_direction}\n\n`
+      message += `🌡️ <b>Weather:</b> ${toHTML(weather.air_temp)}°C | 💧 Water: ${toHTML(weather.water_temp)}°C | 💨 Wind: ${toHTML(weather.wind_speed)}mph ${toHTML(weather.wind_direction)}\n\n`
     }
     
     const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
     if (hasFilters) {
-      message += `🔍 *Your filters:* `
+      message += `🔍 <b>Your filters:</b> `
       const filters = []
       if (selectedLevels.length > 0) filters.push(selectedLevels.join(', '))
       if (selectedSides.length > 0) filters.push(selectedSides.join(', '))
-      message += filters.join(' | ') + '\n\n'
+      message += toHTML(filters.join(' | ')) + '\n\n'
     } else {
-      message += `📋 *All available sessions*\n\n`
+      message += `📋 <b>All available sessions</b>\n\n`
     }
     
     sessions.forEach(session => {
@@ -243,6 +250,11 @@ bot.command('tomorrow', async (ctx) => {
   try {
     const telegramId = ctx.from.id
     
+    // Rate limiting
+    if (!checkRateLimit(`tomorrow:${telegramId}`)) {
+      return ctx.reply('⏱ Please wait a moment before requesting again...')
+    }
+    
     // Send loading message
     const loadingMsg = await ctx.reply('🌊 Loading tomorrow\'s Wave sessions...')
     
@@ -278,11 +290,11 @@ bot.command('tomorrow', async (ctx) => {
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Get tomorrow's sessions from database (no scraping on-demand)
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const tomorrowStr = tomorrow()
     const { data: allSessions, error: sessionError } = await supabase
       .from('sessions')
       .select('*')
-      .eq('date', tomorrow)
+      .eq('date', tomorrowStr)
       .eq('is_active', true)
       .order('start_time')
     
@@ -354,7 +366,7 @@ bot.command('tomorrow', async (ctx) => {
     const { data: weather } = await supabase
       .from('weather_cache')
       .select('*')
-      .eq('date', tomorrow)
+      .eq('date', tomorrowStr)
       .maybeSingle()
     
     let message = `🏄‍♂️ *Tomorrow's Wave Sessions*\n`
