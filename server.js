@@ -105,7 +105,7 @@ bot.command('today', async (ctx) => {
       .eq('user_id', userProfile.id)
     
     const selectedLevels = userLevels?.map(ul => ul.level) || []
-    const selectedSides = userSides?.map(us => us.side) || []
+    const selectedSides = userSides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Get today's sessions from database (no scraping on-demand)
@@ -286,7 +286,7 @@ bot.command('tomorrow', async (ctx) => {
       .eq('user_id', userProfile.id)
     
     const selectedLevels = userLevels?.map(ul => ul.level) || []
-    const selectedSides = userSides?.map(us => us.side) || []
+    const selectedSides = userSides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Get tomorrow's sessions from database (no scraping on-demand)
