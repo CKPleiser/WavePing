@@ -1148,36 +1148,46 @@ bot.command('tomorrow', async (ctx) => {
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     const selectedTimeWindows = userTimeWindows || []
     
-    // Get tomorrow's sessions from database (no scraping on-demand)
+    // Get tomorrow's sessions - try database first, fallback to scraper
     const tomorrowStr = tomorrow()
-    const { data: allSessions, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('date', tomorrowStr)
-      .eq('is_active', true)
-      .order('start_time')
+    let sessionsFormatted = []
+    const scraper = new WaveScheduleScraper() // Create once, reuse
     
-    if (sessionError) {
-      console.error('Database error:', sessionError)
-      return ctx.telegram.editMessageText(
-        ctx.chat.id, 
-        loadingMsg.message_id, 
-        undefined,
-        `❌ *Database error*\n\nPlease try again later.`, 
-        { parse_mode: 'Markdown' }
-      )
+    try {
+      // Try database first
+      const { data: allSessions, error: sessionError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('date', tomorrowStr)
+        .eq('is_active', true)
+        .order('start_time')
+      
+      if (!sessionError && allSessions && allSessions.length > 0) {
+        // Convert database format to scraper format for compatibility
+        sessionsFormatted = allSessions.map(session => ({
+          session_name: session.session_name,
+          level: session.level,
+          side: session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any',
+          time: session.start_time,
+          time24: session.start_time,
+          spots_available: session.spots_available,
+          booking_url: session.book_url || 'https://ticketing.thewave.com/'
+        }))
+      } else {
+        // Fallback to scraper if no database sessions
+        console.log('No database sessions for tomorrow, falling back to scraper')
+        sessionsFormatted = await scraper.getTomorrowsSessions()
+      }
+    } catch (error) {
+      console.error('Error getting tomorrow sessions:', error)
+      // Final fallback to scraper
+      try {
+        sessionsFormatted = await scraper.getTomorrowsSessions()
+      } catch (scraperError) {
+        console.error('Scraper also failed for tomorrow:', scraperError)
+        sessionsFormatted = []
+      }
     }
-    
-    // Convert database format to scraper format for compatibility
-    const sessionsFormatted = (allSessions || []).map(session => ({
-      session_name: session.session_name,
-      level: session.level,
-      side: session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any',
-      time: session.start_time,
-      time24: session.start_time,
-      spots_available: session.spots_available,
-      booking_url: session.book_url
-    }))
     
     if (!sessionsFormatted || sessionsFormatted.length === 0) {
       return ctx.telegram.editMessageText(
@@ -1190,7 +1200,6 @@ bot.command('tomorrow', async (ctx) => {
     }
     
     // Filter sessions based on user preferences (skip day filter for /tomorrow)
-    const scraper = new WaveScheduleScraper()
     let sessions = sessionsFormatted
     if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0 || selectedTimeWindows.length > 0) {
       sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true, selectedTimeWindows)
@@ -1214,7 +1223,7 @@ bot.command('tomorrow', async (ctx) => {
         const availableTimes = sessionsFormatted.map(s => s.time24).filter((v, i, a) => a.indexOf(v) === i).sort()
         
         noSessionsMsg += `\n💡 *Available tomorrow:*\n`
-        if (availableLevels.length > 0) noSessionsMsg += `📊 Levels: ${availableLevels.join(', ')}\n`
+        if (availableLevels.length > 0) noSessionsMsg += `📊 Levels: ${availableLevels.map(l => capitalizeLevel(l)).join(', ')}\n`
         if (availableTimes.length > 0) noSessionsMsg += `⏰ Times: ${availableTimes.join(', ')}\n`
         noSessionsMsg += `\nTry adjusting your preferences with /prefs or /settime`
       } else {
