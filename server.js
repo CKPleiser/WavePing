@@ -145,6 +145,228 @@ Use /prefs to manage your notification settings.`
   }
 })
 
+// Morning digest cron endpoint (8 AM)
+app.post('/api/cron/send-morning-digest', async (req, res) => {
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    console.log('🌅 Sending morning digest notifications...')
+    
+    // Get users who want morning digest
+    const { data: users, error: usersError } = await supabase
+      .from('profiles')
+      .select(`
+        id, 
+        telegram_id,
+        min_spots,
+        user_levels (level),
+        user_sides (side),
+        user_time_windows (start_time, end_time),
+        user_notifications (timing)
+      `)
+      .eq('notification_enabled', true)
+    
+    if (usersError) throw usersError
+
+    const morningUsers = users.filter(user => 
+      user.user_notifications.some(n => n.timing === 'morning')
+    )
+
+    console.log(`Found ${morningUsers.length} users subscribed to morning digest`)
+
+    // Get today's and tomorrow's sessions
+    const scraper = new WaveScheduleScraper()
+    const todaySessions = await scraper.getTodaysSessions().catch(() => [])
+    const tomorrowSessions = await scraper.getTomorrowsSessions().catch(() => [])
+    
+    const results = []
+    
+    for (const user of morningUsers) {
+      try {
+        // Get user preferences
+        const userLevels = user.user_levels?.map(ul => ul.level) || []
+        const userSides = user.user_sides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
+        const userTimeWindows = user.user_time_windows || []
+        
+        // Filter sessions for user
+        const todayFiltered = scraper.filterSessionsForUser(todaySessions, userLevels, userSides, [], true, userTimeWindows)
+          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+        const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, [], true, userTimeWindows)
+          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+
+        if (todayFiltered.length === 0 && tomorrowFiltered.length === 0) {
+          continue // Skip if no matching sessions
+        }
+
+        // Create morning digest message
+        let message = `🌅 *Good Morning, Wave Rider!* ☀️\n\n`
+        
+        if (todayFiltered.length > 0) {
+          message += `🌊 *TODAY'S SESSIONS* (${todayFiltered.length} match${todayFiltered.length === 1 ? '' : 'es'})\n\n`
+          
+          todayFiltered.slice(0, 5).forEach(session => {
+            const spots = session.spots_available || session.spots || 0
+            const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            message += `⏰ *${session.time}* - ${session.session_name}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+          })
+          
+          if (todayFiltered.length > 5) {
+            message += `...and ${todayFiltered.length - 5} more! Use /today for the full list.\n\n`
+          }
+        }
+        
+        if (tomorrowFiltered.length > 0) {
+          message += `🌅 *TOMORROW'S PREVIEW* (${tomorrowFiltered.length} session${tomorrowFiltered.length === 1 ? '' : 's'})\n\n`
+          
+          tomorrowFiltered.slice(0, 3).forEach(session => {
+            const spots = session.spots_available || session.spots || 0
+            const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            message += `⏰ *${session.time}* - ${session.session_name}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+          })
+        }
+
+        message += `💡 *Quick Commands:*\n`
+        message += `• /today - See all today's sessions\n`  
+        message += `• /tomorrow - Check tomorrow's lineup\n`
+        message += `• /prefs - Update your preferences\n\n`
+        message += `🌊 Ready to catch some waves? 🤙`
+
+        await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
+        results.push({ telegramId: user.telegram_id, status: 'sent', sessionsToday: todayFiltered.length, sessionsTomorrow: tomorrowFiltered.length })
+        
+      } catch (error) {
+        console.error(`Failed to send morning digest to ${user.telegram_id}:`, error.message)
+        results.push({ telegramId: user.telegram_id, status: 'failed', error: error.message })
+      }
+    }
+    
+    console.log(`Morning digest complete: ${results.filter(r => r.status === 'sent').length} sent, ${results.filter(r => r.status === 'failed').length} failed`)
+    res.json({ success: true, results })
+    
+  } catch (error) {
+    console.error('Morning digest error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Evening digest cron endpoint (6 PM)
+app.post('/api/cron/send-evening-digest', async (req, res) => {
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    console.log('🌇 Sending evening digest notifications...')
+    
+    // Get users who want evening digest
+    const { data: users, error: usersError } = await supabase
+      .from('profiles')
+      .select(`
+        id, 
+        telegram_id,
+        min_spots,
+        user_levels (level),
+        user_sides (side),
+        user_time_windows (start_time, end_time),
+        user_notifications (timing)
+      `)
+      .eq('notification_enabled', true)
+    
+    if (usersError) throw usersError
+
+    const eveningUsers = users.filter(user => 
+      user.user_notifications.some(n => n.timing === 'evening')
+    )
+
+    console.log(`Found ${eveningUsers.length} users subscribed to evening digest`)
+
+    // Get tomorrow's sessions and next few days for weekend preview
+    const scraper = new WaveScheduleScraper()
+    const tomorrowSessions = await scraper.getTomorrowsSessions().catch(() => [])
+    const upcomingSessions = await scraper.getSessionsInRange(3, new Date(Date.now() + 24*60*60*1000)).catch(() => []) // Next 3 days from tomorrow
+    
+    const results = []
+    
+    for (const user of eveningUsers) {
+      try {
+        // Get user preferences
+        const userLevels = user.user_levels?.map(ul => ul.level) || []
+        const userSides = user.user_sides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
+        const userTimeWindows = user.user_time_windows || []
+        
+        // Filter sessions for user
+        const tomorrowFiltered = scraper.filterSessionsForUser(tomorrowSessions, userLevels, userSides, [], true, userTimeWindows)
+          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+        const upcomingFiltered = scraper.filterSessionsForUser(upcomingSessions, userLevels, userSides, [], true, userTimeWindows)
+          .filter(s => (s.spots_available || s.spots) >= user.min_spots)
+
+        if (tomorrowFiltered.length === 0 && upcomingFiltered.length === 0) {
+          continue // Skip if no matching sessions
+        }
+
+        // Create evening digest message  
+        let message = `🌇 *Evening Wave Report* 🌊\n\n`
+        
+        if (tomorrowFiltered.length > 0) {
+          message += `🌅 *TOMORROW'S SESSIONS* (${tomorrowFiltered.length} match${tomorrowFiltered.length === 1 ? '' : 'es'})\n\n`
+          
+          tomorrowFiltered.slice(0, 6).forEach(session => {
+            const spots = session.spots_available || session.spots || 0
+            const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+            message += `⏰ *${session.time}* - ${session.session_name}\n`
+            message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+          })
+          
+          if (tomorrowFiltered.length > 6) {
+            message += `...and ${tomorrowFiltered.length - 6} more! Use /tomorrow for the full list.\n\n`
+          }
+        }
+        
+        // Weekend preview (if upcoming sessions)
+        if (upcomingFiltered.length > tomorrowFiltered.length) {
+          const weekendSessions = upcomingFiltered.filter(s => !tomorrowSessions.some(t => t.dateISO === s.dateISO && t.time === s.time))
+          if (weekendSessions.length > 0) {
+            message += `🗓️ *COMING UP* (Next few days)\n\n`
+            
+            weekendSessions.slice(0, 3).forEach(session => {
+              const spots = session.spots_available || session.spots || 0
+              const spotsText = spots > 0 ? `${spots} spot${spots === 1 ? '' : 's'}` : 'Full'
+              message += `📅 *${session.dateLabel}* ${session.time} - ${session.session_name}\n`
+              message += `   📊 ${session.level} • 🏄 ${session.side} • 🎯 ${spotsText}\n\n`
+            })
+          }
+        }
+
+        message += `💡 *Plan Your Sessions:*\n`
+        message += `• /tomorrow - Full tomorrow schedule\n`  
+        message += `• /prefs - Update preferences\n`
+        message += `• Book at [The Wave Ticketing](https://ticketing.thewave.com/)\n\n`
+        message += `🌙 Sweet dreams and may tomorrow bring perfect waves! 🤙`
+
+        await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
+        results.push({ telegramId: user.telegram_id, status: 'sent', sessionsTomorrow: tomorrowFiltered.length, sessionsUpcoming: upcomingFiltered.length })
+        
+      } catch (error) {
+        console.error(`Failed to send evening digest to ${user.telegram_id}:`, error.message)
+        results.push({ telegramId: user.telegram_id, status: 'failed', error: error.message })
+      }
+    }
+    
+    console.log(`Evening digest complete: ${results.filter(r => r.status === 'sent').length} sent, ${results.filter(r => r.status === 'failed').length} failed`)
+    res.json({ success: true, results })
+    
+  } catch (error) {
+    console.error('Evening digest error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Cron endpoint for scraping schedule - improved with UPSERT strategy
 app.post('/api/cron/scrape-schedule', async (req, res) => {
   const authHeader = req.headers.authorization
@@ -2486,39 +2708,34 @@ bot.action('save_times', async (ctx) => {
       }
     }
     
-    // Final step: notifications
+    // Final step: notifications  
     ctx.session.step = 'notifications'
-    ctx.session.selectedNotifications = ['24h'] // Default to 24h
+    ctx.session.selectedNotifications = ['morning'] // Default to morning digest
     
     const notificationsMessage = `✅ *Times saved: ${selectedTimeWindows.length > 0 ? selectedTimeWindows.map(tw => tw.description).join(', ') : 'Any time'}*
 
 🔔 *Step 6: Set Up Notifications* (Final Step!)
 
-Get pinged when spots become available! Choose how many **hours before** the session you want to be notified:
+Get daily surf digests sent to you! Choose when you want to receive your personalized surf reports:
 
-📅 **1 week (168h) before**: Early planning for popular sessions
-🗓️ **48 hours before**: Weekend planning notification  
-⏰ **24 hours before**: Perfect for day-ahead planning (recommended!)
-🕐 **12 hours before**: Half-day notice for flexibility
-⚡ **2 hours before**: Last-minute spot alerts
+🌅 **Morning Digest (8 AM)**: Perfect for planning your day
+- Today's matching sessions
+- Tomorrow's upcoming sessions  
+- Spot availability updates
 
-*Example: If you choose "24h before", you'll get notified 24 hours before each session that matches your preferences starts.*
+🌇 **Evening Digest (6 PM)**: Great for next-day planning
+- Tomorrow's matching sessions
+- Weekend sessions preview
+- Last-minute spot openings
 
-💡 *The more notification times you choose, the better your chances of snagging a spot!* 🎯`
+💡 *Pro tip: Get both digests to never miss perfect waves!* 🌊`
 
     await ctx.editMessageText(notificationsMessage, {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
         [
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('1w') ? '✅ ' : ''}📅 1 week before`, 'setup_notification_1w'),
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('48h') ? '✅ ' : ''}🗓️ 48h before`, 'setup_notification_48h')
-        ],
-        [
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('24h') ? '✅ ' : ''}⏰ 24h before`, 'setup_notification_24h'),
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('12h') ? '✅ ' : ''}🕐 12h before`, 'setup_notification_12h')
-        ],
-        [
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('2h') ? '✅ ' : ''}⚡ 2h before`, 'setup_notification_2h')
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'setup_notification_morning'),
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'setup_notification_evening')
         ],
         [Markup.button.callback('🎉 Finish Setup', 'finish_setup')]
       ]).reply_markup
@@ -2534,7 +2751,12 @@ Get pinged when spots become available! Choose how many **hours before** the ses
 bot.action(/setup_notification_(.+)/, async (ctx) => {
   try {
     const timing = ctx.match[1]
-    await ctx.answerCbQuery(`Selected: ${timing} notifications`)
+    const labels = {
+      'morning': '🌅 Morning Digest (8 AM)',
+      'evening': '🌇 Evening Digest (6 PM)'
+    }
+    
+    await ctx.answerCbQuery(`Selected: ${labels[timing] || timing}`)
     
     if (!ctx.session.selectedNotifications) {
       ctx.session.selectedNotifications = []
@@ -2547,14 +2769,6 @@ bot.action(/setup_notification_(.+)/, async (ctx) => {
       ctx.session.selectedNotifications.push(timing)
     }
     
-    const labels = {
-      '1w': '📅 1 week before',
-      '48h': '🗓️ 48h before',
-      '24h': '⏰ 24h before',
-      '12h': '🕐 12h before',
-      '2h': '⚡ 2h before'
-    }
-    
     // Update UI
     const selectedText = ctx.session.selectedNotifications.length > 0 
       ? `\n\n*Currently selected*: ${ctx.session.selectedNotifications.map(n => labels[n] || n).join(', ')}`
@@ -2564,31 +2778,26 @@ bot.action(/setup_notification_(.+)/, async (ctx) => {
 
 🔔 *Step 6: Set Up Notifications* (Final Step!)
 
-Get pinged when spots become available! Choose how many **hours before** the session you want to be notified:
+Get daily surf digests sent to you! Choose when you want to receive your personalized surf reports:
 
-📅 **1 week (168h) before**: Early planning for popular sessions
-🗓️ **48 hours before**: Weekend planning notification  
-⏰ **24 hours before**: Perfect for day-ahead planning (recommended!)
-🕐 **12 hours before**: Half-day notice for flexibility
-⚡ **2 hours before**: Last-minute spot alerts
+🌅 **Morning Digest (8 AM)**: Perfect for planning your day
+- Today's matching sessions
+- Tomorrow's upcoming sessions  
+- Spot availability updates
 
-*Example: If you choose "24h before", you'll get notified 24 hours before each session that matches your preferences starts.*
+🌇 **Evening Digest (6 PM)**: Great for next-day planning
+- Tomorrow's matching sessions
+- Weekend sessions preview
+- Last-minute spot openings
 
-💡 *The more notification times you choose, the better your chances of snagging a spot!* 🎯${selectedText}`
+💡 *Pro tip: Get both digests to never miss perfect waves!* 🌊${selectedText}`
 
     await ctx.editMessageText(notificationsMessage, {
       parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
         [
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('1w') ? '✅ ' : ''}📅 1 week before`, 'setup_notification_1w'),
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('48h') ? '✅ ' : ''}🗓️ 48h before`, 'setup_notification_48h')
-        ],
-        [
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('24h') ? '✅ ' : ''}⏰ 24h before`, 'setup_notification_24h'),
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('12h') ? '✅ ' : ''}🕐 12h before`, 'setup_notification_12h')
-        ],
-        [
-          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('2h') ? '✅ ' : ''}⚡ 2h before`, 'setup_notification_2h')
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('morning') ? '✅ ' : ''}🌅 Morning Digest (8 AM)`, 'setup_notification_morning'),
+          Markup.button.callback(`${ctx.session.selectedNotifications?.includes('evening') ? '✅ ' : ''}🌇 Evening Digest (6 PM)`, 'setup_notification_evening')
         ],
         [Markup.button.callback('🎉 Finish Setup', 'finish_setup')]
       ]).reply_markup
@@ -2604,7 +2813,7 @@ bot.action('finish_setup', async (ctx) => {
   try {
     await ctx.answerCbQuery('Finishing setup...')
     
-    const selectedNotifications = ctx.session.selectedNotifications?.length > 0 ? ctx.session.selectedNotifications : ['24h']
+    const selectedNotifications = ctx.session.selectedNotifications?.length > 0 ? ctx.session.selectedNotifications : ['morning']
     
     // Save notifications to database
     const userProfile = await getUserProfile(ctx.from.id)
@@ -2638,7 +2847,7 @@ bot.action('finish_setup', async (ctx) => {
 🎯 **Min Spots**: ${ctx.session.selectedMinSpots === 1 ? "I don't care" : `${ctx.session.selectedMinSpots}+ spots`}
 📅 **Days**: ${ctx.session.selectedDays?.length > 0 ? ctx.session.selectedDays.map(d => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d]).join(', ') : 'Any day'}
 🕐 **Times**: ${ctx.session.selectedTimeWindows?.length > 0 ? ctx.session.selectedTimeWindows.map(tw => tw.description).join(', ') : 'Any time'}
-🔔 **Notifications**: ${selectedNotifications.map(n => ({ '1w': '1 week', '48h': '48h', '24h': '24h', '12h': '12h', '2h': '2h' }[n] || n)).join(', ')} before sessions
+🔔 **Notifications**: ${selectedNotifications.map(n => ({ 'morning': '🌅 Morning Digest (8 AM)', 'evening': '🌇 Evening Digest (6 PM)' }[n] || n)).join(', ')}
 
 *Ready to ride some waves?* Here's what you can do now:
 
@@ -2820,7 +3029,7 @@ bot.action('quick_notifications', async (ctx) => {
     const hasNotification = (timing) => currentNotifications.includes(timing)
     
     let message = '🔔 *Notification Preferences*\n\n'
-    message += 'Get notified when spots open up! Choose when:\n\n'
+    message += 'Choose how far in advance you want to know about sessions that match your preferences:\n\n'
     
     if (currentNotifications.length > 0) {
       message += '✅ *Currently enabled:*\n'
