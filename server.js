@@ -1,7 +1,7 @@
 const express = require('express')
 const { Telegraf, session, Markup } = require('telegraf')
 const { createClient } = require('@supabase/supabase-js')
-const { SimpleWaveScraper } = require('./lib/wave-scraper-simple.js')
+const { NativeWaveScraper } = require('./lib/wave-scraper-native.js')
 
 const app = express()
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
@@ -95,7 +95,7 @@ bot.command('today', async (ctx) => {
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Scrape real Wave schedule
-    const scraper = new SimpleWaveScraper()
+    const scraper = new NativeWaveScraper()
     const allSessions = await scraper.getTodaysSessions()
     
     if (!allSessions || allSessions.length === 0) {
@@ -203,7 +203,7 @@ bot.command('tomorrow', async (ctx) => {
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Scrape real Wave schedule for tomorrow
-    const scraper = new SimpleWaveScraper()
+    const scraper = new NativeWaveScraper()
     const allSessions = await scraper.getTomorrowsSessions()
     
     if (!allSessions || allSessions.length === 0) {
