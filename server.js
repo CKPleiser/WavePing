@@ -149,11 +149,11 @@ bot.command('today', async (ctx) => {
       )
     }
     
-    // Filter sessions based on user preferences
+    // Filter sessions based on user preferences (skip day filter for /today)
     const scraper = new WaveScheduleScraper()
     let sessions = sessionsFormatted
     if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
-      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays)
+      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true)
     }
     
     if (sessions.length === 0) {
@@ -330,11 +330,11 @@ bot.command('tomorrow', async (ctx) => {
       )
     }
     
-    // Filter sessions based on user preferences
+    // Filter sessions based on user preferences (skip day filter for /tomorrow)
     const scraper = new WaveScheduleScraper()
     let sessions = sessionsFormatted
     if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
-      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays)
+      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true)
     }
     
     if (sessions.length === 0) {
