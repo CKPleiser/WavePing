@@ -110,11 +110,13 @@ bot.command('today', async (ctx) => {
     
     // Get today's sessions from database (no scraping on-demand)
     const todayStr = today()
+    const currentTime = new Date().toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Europe/London' }).slice(0, 5) // HH:MM format
     const { data: allSessions, error: sessionError } = await supabase
       .from('sessions')
       .select('*')
       .eq('date', todayStr)
       .eq('is_active', true)
+      .gte('start_time', currentTime) // Only future sessions
       .order('start_time')
     
     if (sessionError) {
