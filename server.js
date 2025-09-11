@@ -37,105 +37,172 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() })
 })
 
-// Cron endpoint for scraping schedule
+// Cron endpoint for scraping schedule - improved with UPSERT strategy
 app.post('/api/cron/scrape-schedule', async (req, res) => {
-  // Verify cron secret
   const authHeader = req.headers.authorization
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
   try {
-    console.log('Starting scheduled scrape...')
-    
     const scraper = new WaveScheduleScraper()
+    const DAYS = 14
+
+    console.log(`Starting efficient scrape for next ${DAYS} days...`)
     
-    // Scrape sessions for the next 14 days
-    const today = new Date()
-    const sessions = []
-    let consecutiveFailures = 0
+    // 1) Pull whole window (2–3 HTTP requests under the hood)
+    const sessions = await scraper.getSessionsInRange(DAYS)
+    console.log(`Scraped ${sessions.length} sessions efficiently`)
+
+    // 2) Map to DB rows
+    const rows = sessions.map(s => ({
+      id: `${s.dateISO}_${s.time24}_${s.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
+      date: s.dateISO,
+      start_time: s.time24,
+      end_time: null,
+      session_name: s.session_name,
+      level: s.level,
+      side: s.side === 'Left' ? 'L' : s.side === 'Right' ? 'R' : 'A',
+      total_spots: s.spots,
+      spots_available: s.spots_available,
+      book_url: s.booking_url,
+      instructor: null,
+      is_active: true,
+      last_updated: new Date().toISOString()
+    }))
+
+    // 3) UPSERT only (on id). This updates spot counts without nuking the table.
+    console.log(`Upserting ${rows.length} sessions...`)
+    const { error: upsertErr } = await supabase
+      .from('sessions')
+      .upsert(rows, { onConflict: 'id' })
+    if (upsertErr) throw upsertErr
+
+    // 4) Mark sessions "stale" if they vanished from this scrape (within window)
+    const todayISO = new Date().toISOString().slice(0,10)
+    const endISO = new Date(Date.now() + DAYS*24*3600*1000).toISOString().slice(0,10)
+    const idsNow = rows.map(r => r.id)
+
+    console.log(`Deactivating missing sessions in range ${todayISO} to ${endISO}`)
     
-    for (let i = 0; i < 14; i++) {
-      const targetDate = new Date(today)
-      targetDate.setDate(today.getDate() + i)
-      
-      try {
-        const daySessions = await scraper.getSessionsForDate(targetDate)
-        sessions.push(...daySessions)
-        consecutiveFailures = 0 // Reset on success
-      } catch (error) {
-        console.log(`No sessions for ${targetDate.toDateString()}: ${error.message}`)
-        consecutiveFailures++
-        // If we fail 3 days in a row, likely no more data available
-        if (consecutiveFailures >= 3) {
-          console.log('No more sessions available, stopping scrape')
-          break
-        }
-      }
-    }
+    // Set is_active=false for any row in window that wasn't seen this run
+    const { data: existingSessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .gte('date', todayISO)
+      .lte('date', endISO)
+      .eq('is_active', true)
     
-    console.log(`Scraped ${sessions.length} sessions`)
-    
-    // Update database
-    if (sessions.length > 0) {
-      console.log('Updating database with sessions...')
-      // Mark all existing sessions as inactive
-      await supabase
-        .from('sessions')
-        .update({ is_active: false })
-        .gte('date', today.toISOString().split('T')[0])
+    if (existingSessions) {
+      const existingIds = existingSessions.map(s => s.id)
+      const missingIds = existingIds.filter(id => !idsNow.includes(id))
       
-      // Insert new sessions
-      const dbSessions = sessions.map(session => ({
-        id: `${session.dateISO}_${session.time24}_${session.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
-        date: session.dateISO,
-        start_time: session.time24,
-        end_time: null,
-        session_name: session.session_name,
-        level: session.level,
-        side: session.side === 'Left' ? 'L' : session.side === 'Right' ? 'R' : 'A',
-        total_spots: session.spots,
-        spots_available: session.spots_available,
-        book_url: session.booking_url,
-        instructor: null,
-        is_active: true
-      }))
-      
-      // First, delete existing sessions for these dates
-      const uniqueDates = [...new Set(dbSessions.map(s => s.date))]
-      console.log(`Deleting existing sessions for dates: ${uniqueDates.join(', ')}`)
-      
-      for (const date of uniqueDates) {
-        const { error: deleteError } = await supabase
+      if (missingIds.length > 0) {
+        console.log(`Deactivating ${missingIds.length} missing sessions`)
+        const { error: deactivateErr } = await supabase
           .from('sessions')
-          .delete()
-          .eq('date', date)
-        
-        if (deleteError) {
-          console.error(`Error deleting sessions for ${date}:`, deleteError)
-        }
+          .update({ is_active: false })
+          .in('id', missingIds)
+        if (deactivateErr) console.error('Deactivation error:', deactivateErr)
       }
-      
-      // Then insert new sessions
-      console.log(`Inserting ${dbSessions.length} new sessions...`)
-      const { error } = await supabase
-        .from('sessions')
-        .insert(dbSessions)
-      
-      if (error) {
-        console.error('Database error:', error)
-        return res.status(500).json({ error: 'Database error', details: error.message })
-      }
-      
-      console.log('Database update complete!')
     }
-    
-    res.json({ success: true, sessions: sessions.length, timestamp: new Date().toISOString() })
-  } catch (error) {
-    console.error('Scraping error:', error)
-    res.status(500).json({ error: 'Scraping failed', details: error.message })
+
+    res.json({ 
+      ok: true, 
+      upserted: rows.length, 
+      window: `${todayISO} to ${endISO}`,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (e) {
+    console.error('Scraping error:', e)
+    res.status(500).json({ error: e.message })
   }
 })
+
+// Tiered polling endpoints for different time horizons
+// Near: next 48h (poll every 2 min)
+app.post('/api/cron/scrape-schedule/near', async (req, res) => {
+  return handleTieredScrape(req, res, 2, 'next 48h (high frequency)')
+})
+
+// Mid: days 3-7 (poll every 10 min) 
+app.post('/api/cron/scrape-schedule/mid', async (req, res) => {
+  const dayjs = require('dayjs')
+  const tz = require('dayjs/plugin/timezone')
+  dayjs.extend(tz)
+  const startDate = dayjs().tz('Europe/London').add(3, 'day')
+  return handleTieredScrape(req, res, 5, 'days 3-7 (medium frequency)', startDate)
+})
+
+// Far: days 8-14 (poll every 30-60 min)
+app.post('/api/cron/scrape-schedule/far', async (req, res) => {
+  const dayjs = require('dayjs')
+  const tz = require('dayjs/plugin/timezone')
+  dayjs.extend(tz)
+  const startDate = dayjs().tz('Europe/London').add(8, 'day')
+  return handleTieredScrape(req, res, 7, 'days 8-14 (low frequency)', startDate)
+})
+
+async function handleTieredScrape(req, res, days, description, startDate = null) {
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    const scraper = new WaveScheduleScraper()
+    
+    console.log(`Starting tiered scrape: ${description}`)
+    
+    // Pull sessions for the specified window
+    const sessions = await scraper.getSessionsInRange(days, startDate)
+    console.log(`Scraped ${sessions.length} sessions for ${description}`)
+
+    if (sessions.length === 0) {
+      return res.json({ ok: true, upserted: 0, window: description, note: 'No sessions in range' })
+    }
+
+    // Map to DB rows with same format as main endpoint
+    const rows = sessions.map(s => ({
+      id: `${s.dateISO}_${s.time24}_${s.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
+      date: s.dateISO,
+      start_time: s.time24,
+      end_time: null,
+      session_name: s.session_name,
+      level: s.level,
+      side: s.side === 'Left' ? 'L' : s.side === 'Right' ? 'R' : 'A',
+      total_spots: s.spots,
+      spots_available: s.spots_available,
+      book_url: s.booking_url,
+      instructor: null,
+      is_active: true,
+      last_updated: new Date().toISOString()
+    }))
+
+    // UPSERT with conflict resolution
+    const { error: upsertErr } = await supabase
+      .from('sessions')
+      .upsert(rows, { onConflict: 'id' })
+    if (upsertErr) throw upsertErr
+
+    // Calculate the actual date range covered
+    const dates = [...new Set(rows.map(r => r.date))].sort()
+    const dateRange = dates.length > 1 ? `${dates[0]} to ${dates[dates.length-1]}` : dates[0] || 'none'
+
+    res.json({ 
+      ok: true, 
+      upserted: rows.length,
+      window: description,
+      dateRange,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (e) {
+    console.error(`Tiered scraping error (${description}):`, e)
+    res.status(500).json({ error: e.message, window: description })
+  }
+}
 
 // Basic bot commands
 bot.start((ctx) => {
