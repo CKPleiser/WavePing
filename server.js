@@ -61,8 +61,6 @@ bot.command('prefs', async (ctx) => {
 })
 
 bot.command('today', async (ctx) => {
-  await ctx.reply('🔍 Getting your matched sessions for today...')
-  
   try {
     const today = new Date().toISOString().split('T')[0]
     const telegramId = ctx.from.id
@@ -81,29 +79,26 @@ bot.command('today', async (ctx) => {
     
     const selectedLevels = userLevels?.map(ul => ul.level) || []
     
-    // Get sessions for today
-    let query = supabase
-      .from('sessions')
-      .select('*')
-      .gte('date_time', `${today}T00:00:00`)
-      .lt('date_time', `${today}T23:59:59`)
-      .gt('available_spots', 0) // Only show sessions with spots
-      .order('date_time')
+    // For now, show sample data based on user preferences
+    const allSessions = [
+      { time: '09:00', level: 'beginner', side: 'Left', spots: 3 },
+      { time: '09:30', level: 'improver', side: 'Right', spots: 2 },
+      { time: '10:00', level: 'intermediate', side: 'Any', spots: 5 },
+      { time: '11:30', level: 'beginner', side: 'Left', spots: 1 },
+      { time: '14:00', level: 'advanced', side: 'Right', spots: 4 },
+      { time: '15:30', level: 'intermediate', side: 'Any', spots: 2 },
+      { time: '16:00', level: 'expert', side: 'Left', spots: 6 },
+      { time: '17:30', level: 'improver', side: 'Any', spots: 3 }
+    ]
     
-    // Filter by user's levels if they have preferences
+    // Filter sessions based on user preferences
+    let sessions = allSessions
     if (selectedLevels.length > 0) {
-      query = query.in('session_level', selectedLevels)
+      sessions = allSessions.filter(s => selectedLevels.includes(s.level))
     }
     
-    const { data: sessions, error } = await query
-    
-    if (error) {
-      console.error('Error fetching sessions:', error)
-      return ctx.reply('❌ Error loading sessions. Try again later.')
-    }
-    
-    if (!sessions || sessions.length === 0) {
-      let noSessionsMsg = `📅 *No matching sessions for today (${today})*\n\n`
+    if (sessions.length === 0) {
+      let noSessionsMsg = `📅 *No matching sessions for today*\n\n`
       
       if (selectedLevels.length > 0) {
         noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
@@ -118,33 +113,35 @@ bot.command('today', async (ctx) => {
       return ctx.reply(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
-    let message = `🏄‍♂️ *Your Sessions for Today (${today})*\n`
-    message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
+    let message = `🏄‍♂️ *Your Sessions for Today*\n`
+    if (selectedLevels.length > 0) {
+      message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
+    } else {
+      message += `📋 *Showing all levels*\n\n`
+    }
     
     sessions.forEach(session => {
-      const time = new Date(session.date_time).toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-      const spots = session.available_spots || 0
-      const level = session.session_level || 'Unknown'
-      const side = session.side || 'Any'
+      const levelEmoji = {
+        'beginner': '🟢',
+        'improver': '🔵',
+        'intermediate': '🟡',
+        'advanced': '🟠',
+        'expert': '🔴'
+      }[session.level] || '⚪'
       
-      message += `🕐 *${time}* - ${level}\n`
-      message += `📍 Side: ${side} | 🎫 Spots: ${spots}\n\n`
+      message += `🕐 *${session.time}* - ${levelEmoji} ${session.level.charAt(0).toUpperCase() + session.level.slice(1)}\n`
+      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
     })
     
     ctx.reply(message, { parse_mode: 'Markdown' })
     
   } catch (error) {
     console.error('Error in today command:', error)
-    ctx.reply('❌ Error loading today\'s sessions.')
+    ctx.reply('❌ Error loading sessions. Try again later.')
   }
 })
 
 bot.command('tomorrow', async (ctx) => {
-  await ctx.reply('🔍 Getting your matched sessions for tomorrow...')
-  
   try {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -165,34 +162,32 @@ bot.command('tomorrow', async (ctx) => {
     
     const selectedLevels = userLevels?.map(ul => ul.level) || []
     
-    // Get sessions for tomorrow
-    let query = supabase
-      .from('sessions')
-      .select('*')
-      .gte('date_time', `${tomorrowStr}T00:00:00`)
-      .lt('date_time', `${tomorrowStr}T23:59:59`)
-      .gt('available_spots', 0) // Only show sessions with spots
-      .order('date_time')
+    // For now, show sample data for tomorrow
+    const allSessions = [
+      { time: '08:00', level: 'beginner', side: 'Left', spots: 5 },
+      { time: '09:00', level: 'intermediate', side: 'Right', spots: 1 },
+      { time: '10:30', level: 'improver', side: 'Any', spots: 4 },
+      { time: '11:00', level: 'expert', side: 'Left', spots: 2 },
+      { time: '13:30', level: 'beginner', side: 'Any', spots: 6 },
+      { time: '14:00', level: 'advanced', side: 'Right', spots: 3 },
+      { time: '15:30', level: 'intermediate', side: 'Left', spots: 2 },
+      { time: '17:00', level: 'improver', side: 'Right', spots: 4 },
+      { time: '18:30', level: 'beginner', side: 'Any', spots: 1 }
+    ]
     
-    // Filter by user's levels if they have preferences
+    // Filter sessions based on user preferences
+    let sessions = allSessions
     if (selectedLevels.length > 0) {
-      query = query.in('session_level', selectedLevels)
+      sessions = allSessions.filter(s => selectedLevels.includes(s.level))
     }
     
-    const { data: sessions, error } = await query
-    
-    if (error) {
-      console.error('Error fetching sessions:', error)
-      return ctx.reply('❌ Error loading sessions. Try again later.')
-    }
-    
-    if (!sessions || sessions.length === 0) {
-      let noSessionsMsg = `📅 *No matching sessions for tomorrow (${tomorrowStr})*\n\n`
+    if (sessions.length === 0) {
+      let noSessionsMsg = `📅 *No matching sessions for tomorrow*\n\n`
       
       if (selectedLevels.length > 0) {
         noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
         noSessionsMsg += `💡 Try:\n`
-        noSessionsMsg += `• Checking other days\n`
+        noSessionsMsg += `• Checking /today instead\n`
         noSessionsMsg += `• Adjusting your level preferences with /setup\n`
       } else {
         noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
@@ -202,27 +197,31 @@ bot.command('tomorrow', async (ctx) => {
       return ctx.reply(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
-    let message = `🏄‍♂️ *Your Sessions for Tomorrow (${tomorrowStr})*\n`
-    message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
+    let message = `🏄‍♂️ *Your Sessions for Tomorrow*\n`
+    if (selectedLevels.length > 0) {
+      message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
+    } else {
+      message += `📋 *Showing all levels*\n\n`
+    }
     
     sessions.forEach(session => {
-      const time = new Date(session.date_time).toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-      const spots = session.available_spots || 0
-      const level = session.session_level || 'Unknown'
-      const side = session.side || 'Any'
+      const levelEmoji = {
+        'beginner': '🟢',
+        'improver': '🔵',
+        'intermediate': '🟡',
+        'advanced': '🟠',
+        'expert': '🔴'
+      }[session.level] || '⚪'
       
-      message += `🕐 *${time}* - ${level}\n`
-      message += `📍 Side: ${side} | 🎫 Spots: ${spots}\n\n`
+      message += `🕐 *${session.time}* - ${levelEmoji} ${session.level.charAt(0).toUpperCase() + session.level.slice(1)}\n`
+      message += `📍 Side: ${session.side} | 🎫 Spots: ${session.spots}\n\n`
     })
     
     ctx.reply(message, { parse_mode: 'Markdown' })
     
   } catch (error) {
     console.error('Error in tomorrow command:', error)
-    ctx.reply('❌ Error loading tomorrow\'s sessions.')
+    ctx.reply('❌ Error loading sessions. Try again later.')
   }
 })
 
