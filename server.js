@@ -10,6 +10,9 @@ const { toHTML, safeEdit, checkRateLimit } = require('./utils/helpers')
 const app = express()
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
+// Add middleware for parsing JSON
+app.use(express.json())
+
 // Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -32,6 +35,77 @@ app.get('/', (req, res) => {
 // Health check endpoint  
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() })
+})
+
+// Cron endpoint for scraping schedule
+app.post('/api/cron/scrape-schedule', async (req, res) => {
+  // Verify cron secret
+  const authHeader = req.headers.authorization
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  try {
+    console.log('Starting scheduled scrape...')
+    
+    const scraper = new WaveScheduleScraper()
+    
+    // Scrape sessions for the next 7 days
+    const today = new Date()
+    const sessions = []
+    
+    for (let i = 0; i < 7; i++) {
+      const targetDate = new Date(today)
+      targetDate.setDate(today.getDate() + i)
+      
+      try {
+        const daySessions = await scraper.getSessionsForDate(targetDate)
+        sessions.push(...daySessions)
+      } catch (error) {
+        console.error(`Error scraping for ${targetDate}:`, error.message)
+      }
+    }
+    
+    console.log(`Scraped ${sessions.length} sessions`)
+    
+    // Update database
+    if (sessions.length > 0) {
+      // Mark all existing sessions as inactive
+      await supabase
+        .from('sessions')
+        .update({ is_active: false })
+        .gte('date', today.toISOString().split('T')[0])
+      
+      // Insert new sessions
+      const dbSessions = sessions.map(session => ({
+        date: session.dateISO,
+        start_time: session.time24,
+        end_time: null,
+        session_name: session.session_name,
+        level: session.level,
+        side: session.side === 'Left' ? 'L' : session.side === 'Right' ? 'R' : 'A',
+        total_spots: session.spots,
+        spots_available: session.spots_available,
+        book_url: session.booking_url,
+        instructor: null,
+        is_active: true
+      }))
+      
+      const { error } = await supabase
+        .from('sessions')
+        .upsert(dbSessions, { onConflict: 'date,start_time,session_name' })
+      
+      if (error) {
+        console.error('Database error:', error)
+        return res.status(500).json({ error: 'Database error', details: error.message })
+      }
+    }
+    
+    res.json({ success: true, sessions: sessions.length, timestamp: new Date().toISOString() })
+  } catch (error) {
+    console.error('Scraping error:', error)
+    res.status(500).json({ error: 'Scraping failed', details: error.message })
+  }
 })
 
 // Basic bot commands
