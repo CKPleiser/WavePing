@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 
 // Health check endpoint  
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() })
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() })
 })
 
 // Basic bot commands
@@ -492,33 +492,34 @@ function formatPreferencesMessage(preferences) {
 🔔 *Notifications*: ${notifications}`
 }
 
-// Start server and bot
+// Start server
 const PORT = process.env.PORT || 3000
+const HOST = '0.0.0.0'
 
-if (process.env.NODE_ENV === 'production') {
-  // Production: use webhook
-  app.use(express.json())
-  app.post('/webhook', (req, res) => {
-    bot.handleUpdate(req.body, res)
-  })
+// Production: use webhook
+app.use(express.json())
+
+// Webhook endpoint
+app.post('/webhook', (req, res) => {
+  bot.handleUpdate(req.body, res)
+})
+
+// Start server
+const server = app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`)
   
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`)
-    
-    // Set webhook
+  if (process.env.NODE_ENV === 'production') {
+    // Set webhook in production
     const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL || `https://waveping-production.up.railway.app/webhook`
-    bot.telegram.setWebhook(webhookUrl).then(() => {
-      console.log(`📱 Webhook set to: ${webhookUrl}`)
-    }).catch(console.error)
-  })
-} else {
-  // Development: use polling
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`)
+    bot.telegram.setWebhook(webhookUrl)
+      .then(() => console.log(`📱 Webhook set to: ${webhookUrl}`))
+      .catch(err => console.error('❌ Failed to set webhook:', err))
+  } else {
+    // Use polling in development
     bot.launch()
     console.log('🤖 Bot started with polling')
-  })
-}
+  }
+})
 
 // Graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'))

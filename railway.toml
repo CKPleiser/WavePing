@@ -2,5 +2,5 @@
 buildCommand = "npm install"
 
 [deploy]
-startCommand = "npm start"
-healthcheckPath = "/health"
+startCommand = "node server.js"
+restartPolicyType = "NEVER"
