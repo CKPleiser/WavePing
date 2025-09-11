@@ -50,19 +50,27 @@ app.post('/api/cron/scrape-schedule', async (req, res) => {
     
     const scraper = new WaveScheduleScraper()
     
-    // Scrape sessions for the next 7 days
+    // Scrape sessions for the next 14 days
     const today = new Date()
     const sessions = []
+    let consecutiveFailures = 0
     
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 14; i++) {
       const targetDate = new Date(today)
       targetDate.setDate(today.getDate() + i)
       
       try {
         const daySessions = await scraper.getSessionsForDate(targetDate)
         sessions.push(...daySessions)
+        consecutiveFailures = 0 // Reset on success
       } catch (error) {
-        console.error(`Error scraping for ${targetDate}:`, error.message)
+        console.log(`No sessions for ${targetDate.toDateString()}: ${error.message}`)
+        consecutiveFailures++
+        // If we fail 3 days in a row, likely no more data available
+        if (consecutiveFailures >= 3) {
+          console.log('No more sessions available, stopping scrape')
+          break
+        }
       }
     }
     
@@ -303,28 +311,32 @@ bot.command('today', async (ctx) => {
       message += `📋 <b>All available sessions</b>\n\n`
     }
     
-    sessions.forEach(session => {
-      const levelEmoji = {
-        'beginner': '🟢',
-        'improver': '🔵', 
-        'intermediate': '🟡',
-        'advanced': '🟠',
-        'expert': '🔴'
-      }[session.level] || '⚪'
-      
-      // Clean format: 1. Title, 2. Time, 3. Weather, 4. Book Link
-      message += `${levelEmoji} *${session.session_name}*\n`
-      message += `⏰ ${session.time} | 🎫 ${session.spots_available} spots\n`
-      if (weather) {
-        message += `🌡️ ${weather.air_temp}°C, ${weather.conditions}\n`
-      }
-      if (session.booking_url) {
-        message += `🔗 [Book Now](${session.booking_url})\n`
-      }
-      message += `\n`
-    })
+    // Filter out sessions with 0 spots
+    const availableSessions = sessions.filter(s => s.spots_available > 0)
     
-    message += `📱 *Live from The Wave*`
+    if (availableSessions.length === 0) {
+      message += `😔 All sessions matching your filters are fully booked.\n`
+    } else {
+      availableSessions.forEach(session => {
+        const levelEmoji = {
+          'beginner': '🟢',
+          'improver': '🔵', 
+          'intermediate': '🟡',
+          'advanced': '🟠',
+          'expert': '🔴'
+        }[session.level] || '⚪'
+        
+        // Clean format without repeated weather
+        message += `${levelEmoji} <b>${toHTML(session.session_name)}</b>\n`
+        message += `⏰ ${toHTML(session.time)} | 🎫 ${session.spots_available} spots\n`
+        if (session.booking_url) {
+          message += `🔗 <a href="${session.booking_url}">Book Now</a>\n`
+        }
+        message += `\n`
+      })
+    }
+    
+    message += `📱 <i>Live from The Wave</i>`
     
     ctx.telegram.editMessageText(
       ctx.chat.id, 
@@ -332,7 +344,7 @@ bot.command('today', async (ctx) => {
       undefined,
       message, 
       { 
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         disable_web_page_preview: true
       }
     )
@@ -466,46 +478,50 @@ bot.command('tomorrow', async (ctx) => {
       .eq('date', tomorrowStr)
       .maybeSingle()
     
-    let message = `🏄‍♂️ *Tomorrow's Wave Sessions*\n`
+    let message = `🏄‍♂️ <b>Tomorrow's Wave Sessions</b>\n`
     
     // Add weather info at the top if available
     if (weather) {
-      message += `🌡️ *Weather:* ${weather.air_temp}°C | 💧 Water: ${weather.water_temp}°C | 💨 Wind: ${weather.wind_speed}mph ${weather.wind_direction}\n\n`
+      message += `🌡️ <b>Weather:</b> ${toHTML(weather.air_temp)}°C | 💧 Water: ${toHTML(weather.water_temp)}°C | 💨 Wind: ${toHTML(weather.wind_speed)}mph ${toHTML(weather.wind_direction)}\n\n`
     }
     
     const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
     if (hasFilters) {
-      message += `🔍 *Your filters:* `
+      message += `🔍 <b>Your filters:</b> `
       const filters = []
       if (selectedLevels.length > 0) filters.push(selectedLevels.join(', '))
       if (selectedSides.length > 0) filters.push(selectedSides.join(', '))
-      message += filters.join(' | ') + '\n\n'
+      message += toHTML(filters.join(' | ')) + '\n\n'
     } else {
-      message += `📋 *All scheduled sessions*\n\n`
+      message += `📋 <b>All scheduled sessions</b>\n\n`
     }
     
-    sessions.forEach(session => {
-      const levelEmoji = {
-        'beginner': '🟢',
-        'improver': '🔵',
-        'intermediate': '🟡',
-        'advanced': '🟠',
-        'expert': '🔴'
-      }[session.level] || '⚪'
-      
-      // Clean format: 1. Title, 2. Time, 3. Weather, 4. Book Link
-      message += `${levelEmoji} *${session.session_name}*\n`
-      message += `⏰ ${session.time} | 🎫 ${session.spots_available} spots\n`
-      if (weather) {
-        message += `🌡️ ${weather.air_temp}°C, ${weather.conditions}\n`
-      }
-      if (session.booking_url) {
-        message += `🔗 [Book Now](${session.booking_url})\n`
-      }
-      message += `\n`
-    })
+    // Filter out sessions with 0 spots
+    const availableSessions = sessions.filter(s => s.spots_available > 0)
     
-    message += `📱 *Live from The Wave*`
+    if (availableSessions.length === 0) {
+      message += `😔 All sessions matching your filters are fully booked.\n`
+    } else {
+      availableSessions.forEach(session => {
+        const levelEmoji = {
+          'beginner': '🟢',
+          'improver': '🔵',
+          'intermediate': '🟡',
+          'advanced': '🟠',
+          'expert': '🔴'
+        }[session.level] || '⚪'
+        
+        // Clean format without repeated weather
+        message += `${levelEmoji} <b>${toHTML(session.session_name)}</b>\n`
+        message += `⏰ ${toHTML(session.time)} | 🎫 ${session.spots_available} spots\n`
+        if (session.booking_url) {
+          message += `🔗 <a href="${session.booking_url}">Book Now</a>\n`
+        }
+        message += `\n`
+      })
+    }
+    
+    message += `📱 <i>Live from The Wave</i>`
     
     ctx.telegram.editMessageText(
       ctx.chat.id, 
@@ -513,7 +529,7 @@ bot.command('tomorrow', async (ctx) => {
       undefined,
       message, 
       { 
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         disable_web_page_preview: true
       }
     )
