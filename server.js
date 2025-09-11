@@ -101,24 +101,38 @@ bot.command('today', async (ctx) => {
     const selectedSides = userSides?.map(us => us.side) || []
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
-    // Scrape real Wave schedule
-    const scraper = new WaveScheduleScraper()
-    let allSessions = []
+    // Get today's sessions from database (no scraping on-demand)
+    const today = new Date().toISOString().split('T')[0]
+    const { data: allSessions, error: sessionError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('date', today)
+      .eq('is_active', true)
+      .order('start_time')
     
-    try {
-      allSessions = await scraper.getTodaysSessions()
-    } catch (error) {
-      console.error('Scraping failed:', error.message)
+    if (sessionError) {
+      console.error('Database error:', sessionError)
       return ctx.telegram.editMessageText(
         ctx.chat.id, 
         loadingMsg.message_id, 
         undefined,
-        `❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, 
+        `❌ *Database error*\n\nPlease try again later.`, 
         { parse_mode: 'Markdown' }
       )
     }
     
-    if (!allSessions || allSessions.length === 0) {
+    // Convert database format to scraper format for compatibility
+    const sessionsFormatted = (allSessions || []).map(session => ({
+      session_name: session.session_name,
+      level: session.level,
+      side: session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any',
+      time: session.start_time,
+      time24: session.start_time,
+      spots_available: session.spots_available,
+      booking_url: session.book_url
+    }))
+    
+    if (!sessionsFormatted || sessionsFormatted.length === 0) {
       return ctx.telegram.editMessageText(
         ctx.chat.id, 
         loadingMsg.message_id, 
@@ -129,9 +143,10 @@ bot.command('today', async (ctx) => {
     }
     
     // Filter sessions based on user preferences
-    let sessions = allSessions
+    const scraper = new WaveScheduleScraper()
+    let sessions = sessionsFormatted
     if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
-      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels, selectedSides, selectedDays)
+      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays)
     }
     
     if (sessions.length === 0) {
@@ -143,7 +158,7 @@ bot.command('today', async (ctx) => {
         if (selectedLevels.length > 0) noSessionsMsg += `📊 Levels: ${selectedLevels.join(', ')}\n`
         if (selectedSides.length > 0) noSessionsMsg += `🏄 Sides: ${selectedSides.join(', ')}\n`
         if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
-        noSessionsMsg += `\n💡 *Available today:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
+        noSessionsMsg += `\n💡 *Available today:* ${sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
         noSessionsMsg += `Try adjusting your preferences with /prefs`
       } else {
         noSessionsMsg += `⚠️ You haven't set any preferences!\n`
@@ -160,7 +175,6 @@ bot.command('today', async (ctx) => {
     }
     
     // Get weather data for today
-    const today = new Date().toISOString().split('T')[0]
     const { data: weather } = await supabase
       .from('weather_cache')
       .select('*')
@@ -263,24 +277,38 @@ bot.command('tomorrow', async (ctx) => {
     const selectedSides = userSides?.map(us => us.side) || []
     const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
-    // Scrape real Wave schedule for tomorrow
-    const scraper = new WaveScheduleScraper()
-    let allSessions = []
+    // Get tomorrow's sessions from database (no scraping on-demand)
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const { data: allSessions, error: sessionError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('date', tomorrow)
+      .eq('is_active', true)
+      .order('start_time')
     
-    try {
-      allSessions = await scraper.getTomorrowsSessions()
-    } catch (error) {
-      console.error('Scraping failed:', error.message)
+    if (sessionError) {
+      console.error('Database error:', sessionError)
       return ctx.telegram.editMessageText(
         ctx.chat.id, 
         loadingMsg.message_id, 
         undefined,
-        `❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, 
+        `❌ *Database error*\n\nPlease try again later.`, 
         { parse_mode: 'Markdown' }
       )
     }
     
-    if (!allSessions || allSessions.length === 0) {
+    // Convert database format to scraper format for compatibility
+    const sessionsFormatted = (allSessions || []).map(session => ({
+      session_name: session.session_name,
+      level: session.level,
+      side: session.side === 'L' ? 'Left' : session.side === 'R' ? 'Right' : 'Any',
+      time: session.start_time,
+      time24: session.start_time,
+      spots_available: session.spots_available,
+      booking_url: session.book_url
+    }))
+    
+    if (!sessionsFormatted || sessionsFormatted.length === 0) {
       return ctx.telegram.editMessageText(
         ctx.chat.id, 
         loadingMsg.message_id, 
@@ -291,9 +319,10 @@ bot.command('tomorrow', async (ctx) => {
     }
     
     // Filter sessions based on user preferences
-    let sessions = allSessions
+    const scraper = new WaveScheduleScraper()
+    let sessions = sessionsFormatted
     if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
-      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels, selectedSides, selectedDays)
+      sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays)
     }
     
     if (sessions.length === 0) {
@@ -305,7 +334,7 @@ bot.command('tomorrow', async (ctx) => {
         if (selectedLevels.length > 0) noSessionsMsg += `📊 Levels: ${selectedLevels.join(', ')}\n`
         if (selectedSides.length > 0) noSessionsMsg += `🏄 Sides: ${selectedSides.join(', ')}\n`
         if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
-        noSessionsMsg += `\n💡 *Available tomorrow:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
+        noSessionsMsg += `\n💡 *Available tomorrow:* ${sessionsFormatted.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
         noSessionsMsg += `Try adjusting your preferences with /prefs`
       } else {
         noSessionsMsg += `⚠️ You haven't set any preferences!\n`
@@ -322,7 +351,6 @@ bot.command('tomorrow', async (ctx) => {
     }
     
     // Get weather data for tomorrow
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     const { data: weather } = await supabase
       .from('weather_cache')
       .select('*')
