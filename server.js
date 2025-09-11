@@ -923,6 +923,7 @@ bot.command('today', async (ctx) => {
     const todayStr = today()
     const currentTime = new Date().toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Europe/London' }).slice(0, 5) // HH:MM format
     let sessionsFormatted = []
+    const scraper = new WaveScheduleScraper() // Create once, reuse
     
     try {
       // Try database first
@@ -948,15 +949,20 @@ bot.command('today', async (ctx) => {
       } else {
         // Fallback to scraper if no database sessions
         console.log('No database sessions, falling back to scraper')
-        const scraper = new WaveScheduleScraper()
         const scrapedSessions = await scraper.getTodaysSessions()
-        sessionsFormatted = scrapedSessions
+        // Filter out past sessions like we do with database
+        sessionsFormatted = scrapedSessions.filter(session => session.time24 >= currentTime)
       }
     } catch (error) {
       console.error('Error getting sessions:', error)
       // Final fallback to scraper
-      const scraper = new WaveScheduleScraper()
-      sessionsFormatted = await scraper.getTodaysSessions()
+      try {
+        const scrapedSessions = await scraper.getTodaysSessions()
+        sessionsFormatted = scrapedSessions.filter(session => session.time24 >= currentTime)
+      } catch (scraperError) {
+        console.error('Scraper also failed:', scraperError)
+        sessionsFormatted = []
+      }
     }
     
     if (!sessionsFormatted || sessionsFormatted.length === 0) {
@@ -970,7 +976,6 @@ bot.command('today', async (ctx) => {
     }
     
     // Filter sessions based on user preferences (skip day filter for /today)
-    const scraper = new WaveScheduleScraper()
     let sessions = sessionsFormatted
     if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0 || selectedTimeWindows.length > 0) {
       sessions = scraper.filterSessionsForUser(sessionsFormatted, selectedLevels, selectedSides, selectedDays, true, selectedTimeWindows)
