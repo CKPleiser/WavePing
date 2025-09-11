@@ -13,13 +13,12 @@ Smart Telegram bot for The Wave Bristol surf session alerts with real-time notif
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 with TypeScript
-- **Backend**: Vercel Edge Functions
-- **Database**: Supabase (PostgreSQL with real-time)
+- **Backend**: Node.js with Express
+- **Database**: Supabase (PostgreSQL)
 - **Bot**: Telegraf.js for Telegram integration
 - **Scraping**: Cheerio for The Wave schedule parsing
 - **Weather**: OpenWeatherMap API
-- **CI/CD**: GitHub Actions with automated deployments
+- **Hosting**: Railway with automated deployments
 
 ## Getting Started
 
