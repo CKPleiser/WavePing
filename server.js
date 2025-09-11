@@ -74,13 +74,25 @@ bot.command('today', async (ctx) => {
       return ctx.editMessageText('⚠️ Please run /setup first to set your preferences!')
     }
     
-    // Get user's selected levels
+    // Get user's selected levels and sides
     const { data: userLevels } = await supabase
       .from('user_levels')
       .select('level')
       .eq('user_id', userProfile.id)
     
+    const { data: userSides } = await supabase
+      .from('user_sides')
+      .select('side')
+      .eq('user_id', userProfile.id)
+    
+    const { data: userDays } = await supabase
+      .from('user_days')
+      .select('day_of_week')
+      .eq('user_id', userProfile.id)
+    
     const selectedLevels = userLevels?.map(ul => ul.level) || []
+    const selectedSides = userSides?.map(us => us.side) || []
+    const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Scrape real Wave schedule
     const scraper = new SimpleWaveScraper()
@@ -92,28 +104,37 @@ bot.command('today', async (ctx) => {
     
     // Filter sessions based on user preferences
     let sessions = allSessions
-    if (selectedLevels.length > 0) {
-      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels)
+    if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
+      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels, selectedSides, selectedDays)
     }
     
     if (sessions.length === 0) {
       let noSessionsMsg = `📅 *No matching sessions for today*\n\n`
       
-      if (selectedLevels.length > 0) {
-        noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
-        noSessionsMsg += `💡 *Available today:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
-        noSessionsMsg += `Try adjusting your level preferences with /setup`
+      const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
+      if (hasFilters) {
+        noSessionsMsg += `🔍 *Your filters:*\n`
+        if (selectedLevels.length > 0) noSessionsMsg += `📊 Levels: ${selectedLevels.join(', ')}\n`
+        if (selectedSides.length > 0) noSessionsMsg += `🏄 Sides: ${selectedSides.join(', ')}\n`
+        if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
+        noSessionsMsg += `\n💡 *Available today:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
+        noSessionsMsg += `Try adjusting your preferences with /prefs`
       } else {
-        noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
-        noSessionsMsg += `Use /setup to select your surf levels.`
+        noSessionsMsg += `⚠️ You haven't set any preferences!\n`
+        noSessionsMsg += `Use /setup to select your surf levels and preferences.`
       }
       
       return ctx.editMessageText(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
     let message = `🏄‍♂️ *Today's Wave Sessions*\n`
-    if (selectedLevels.length > 0) {
-      message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
+    const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
+    if (hasFilters) {
+      message += `🔍 *Your filters:* `
+      const filters = []
+      if (selectedLevels.length > 0) filters.push(selectedLevels.join(', '))
+      if (selectedSides.length > 0) filters.push(selectedSides.join(', '))
+      message += filters.join(' | ') + '\n\n'
     } else {
       message += `📋 *All available sessions*\n\n`
     }
@@ -161,13 +182,25 @@ bot.command('tomorrow', async (ctx) => {
       return ctx.editMessageText('⚠️ Please run /setup first to set your preferences!')
     }
     
-    // Get user's selected levels
+    // Get user's selected levels and sides
     const { data: userLevels } = await supabase
       .from('user_levels')
       .select('level')
       .eq('user_id', userProfile.id)
     
+    const { data: userSides } = await supabase
+      .from('user_sides')
+      .select('side')
+      .eq('user_id', userProfile.id)
+    
+    const { data: userDays } = await supabase
+      .from('user_days')
+      .select('day_of_week')
+      .eq('user_id', userProfile.id)
+    
     const selectedLevels = userLevels?.map(ul => ul.level) || []
+    const selectedSides = userSides?.map(us => us.side) || []
+    const selectedDays = userDays?.map(ud => ud.day_of_week) || []
     
     // Scrape real Wave schedule for tomorrow
     const scraper = new SimpleWaveScraper()
@@ -179,28 +212,37 @@ bot.command('tomorrow', async (ctx) => {
     
     // Filter sessions based on user preferences
     let sessions = allSessions
-    if (selectedLevels.length > 0) {
-      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels)
+    if (selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0) {
+      sessions = scraper.filterSessionsForUser(allSessions, selectedLevels, selectedSides, selectedDays)
     }
     
     if (sessions.length === 0) {
       let noSessionsMsg = `📅 *No matching sessions for tomorrow*\n\n`
       
-      if (selectedLevels.length > 0) {
-        noSessionsMsg += `🔍 *Your filters:* ${selectedLevels.join(', ')}\n\n`
-        noSessionsMsg += `💡 *Available tomorrow:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
-        noSessionsMsg += `Try adjusting your level preferences with /setup`
+      const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
+      if (hasFilters) {
+        noSessionsMsg += `🔍 *Your filters:*\n`
+        if (selectedLevels.length > 0) noSessionsMsg += `📊 Levels: ${selectedLevels.join(', ')}\n`
+        if (selectedSides.length > 0) noSessionsMsg += `🏄 Sides: ${selectedSides.join(', ')}\n`
+        if (selectedDays.length > 0) noSessionsMsg += `📅 Days: ${selectedDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}\n`
+        noSessionsMsg += `\n💡 *Available tomorrow:* ${allSessions.map(s => s.level).filter((v, i, a) => a.indexOf(v) === i).join(', ')}\n\n`
+        noSessionsMsg += `Try adjusting your preferences with /prefs`
       } else {
-        noSessionsMsg += `⚠️ You haven't set any level preferences!\n`
-        noSessionsMsg += `Use /setup to select your surf levels.`
+        noSessionsMsg += `⚠️ You haven't set any preferences!\n`
+        noSessionsMsg += `Use /setup to select your surf levels and preferences.`
       }
       
       return ctx.editMessageText(noSessionsMsg, { parse_mode: 'Markdown' })
     }
     
     let message = `🏄‍♂️ *Tomorrow's Wave Sessions*\n`
-    if (selectedLevels.length > 0) {
-      message += `🔍 *Filtered for:* ${selectedLevels.join(', ')}\n\n`
+    const hasFilters = selectedLevels.length > 0 || selectedSides.length > 0 || selectedDays.length > 0
+    if (hasFilters) {
+      message += `🔍 *Your filters:* `
+      const filters = []
+      if (selectedLevels.length > 0) filters.push(selectedLevels.join(', '))
+      if (selectedSides.length > 0) filters.push(selectedSides.join(', '))
+      message += filters.join(' | ') + '\n\n'
     } else {
       message += `📋 *All scheduled sessions*\n\n`
     }
@@ -404,6 +446,229 @@ bot.action('levels_done', async (ctx) => {
     console.error('Error in levels_done:', error)
     await ctx.editMessageText('✅ Levels saved! Use /prefs to view.')
   }
+})
+
+// Edit sides handler
+bot.action('edit_sides', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Loading sides...')
+    
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) {
+      return ctx.editMessageText('⚠️ Please run /setup first!')
+    }
+    
+    // Get current sides
+    const { data: userSides } = await supabase
+      .from('user_sides')
+      .select('side')
+      .eq('user_id', userProfile.id)
+    
+    const currentSides = userSides?.map(us => us.side) || []
+    const selectedText = currentSides.length > 0 
+      ? `\n\n*Currently selected*: ${currentSides.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`🏄 *Edit Preferred Sides*\n\nClick sides to toggle them:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentSides.includes('Left') ? '✅ ' : ''}🏄‍♂️ Left Side`, 'side_Left')],
+        [Markup.button.callback(`${currentSides.includes('Right') ? '✅ ' : ''}🏄‍♀️ Right Side`, 'side_Right')],
+        [Markup.button.callback(`${currentSides.includes('Any') ? '✅ ' : ''}🤙 Any Side`, 'side_Any')],
+        [Markup.button.callback('✅ Done', 'sides_done')]
+      ]).reply_markup
+    })
+  } catch (error) {
+    console.error('Error in edit_sides:', error)
+    await ctx.answerCbQuery('Error loading sides.')
+  }
+})
+
+// Side selection handler
+bot.action(/side_(.+)/, async (ctx) => {
+  try {
+    const side = ctx.match[1]
+    const telegramId = ctx.from.id
+    
+    await ctx.answerCbQuery(`Selected: ${side}`)
+    
+    const userProfile = await getUserProfile(telegramId)
+    if (!userProfile) return
+    
+    // Check if side already exists
+    const { data: existingSide } = await supabase
+      .from('user_sides')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('side', side)
+      .single()
+    
+    if (existingSide) {
+      // Remove side
+      await supabase
+        .from('user_sides')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('side', side)
+    } else {
+      // Add side
+      await supabase
+        .from('user_sides')
+        .insert({ user_id: userProfile.id, side: side })
+    }
+    
+    // Get current sides and update message
+    const { data: userSides } = await supabase
+      .from('user_sides')
+      .select('side')
+      .eq('user_id', userProfile.id)
+    
+    const currentSides = userSides?.map(us => us.side) || []
+    const selectedText = currentSides.length > 0 
+      ? `\n\n*Currently selected*: ${currentSides.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`🏄 *Edit Preferred Sides*\n\nClick sides to toggle them:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentSides.includes('Left') ? '✅ ' : ''}🏄‍♂️ Left Side`, 'side_Left')],
+        [Markup.button.callback(`${currentSides.includes('Right') ? '✅ ' : ''}🏄‍♀️ Right Side`, 'side_Right')],
+        [Markup.button.callback(`${currentSides.includes('Any') ? '✅ ' : ''}🤙 Any Side`, 'side_Any')],
+        [Markup.button.callback('✅ Done', 'sides_done')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in side selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+// Done with sides
+bot.action('sides_done', async (ctx) => {
+  await ctx.answerCbQuery('✅ Sides saved!')
+  await ctx.editMessageText('✅ *Sides Saved!*\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
+})
+
+// Edit days handler
+bot.action('edit_days', async (ctx) => {
+  try {
+    await ctx.answerCbQuery('Loading days...')
+    
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) {
+      return ctx.editMessageText('⚠️ Please run /setup first!')
+    }
+    
+    // Get current days
+    const { data: userDays } = await supabase
+      .from('user_days')
+      .select('day_of_week')
+      .eq('user_id', userProfile.id)
+    
+    const currentDays = userDays?.map(ud => ud.day_of_week) || []
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const selectedDayNames = currentDays.map(d => dayNames[d])
+    const selectedText = currentDays.length > 0 
+      ? `\n\n*Currently selected*: ${selectedDayNames.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`📅 *Edit Preferred Days*\n\nClick days to toggle them:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentDays.includes(0) ? '✅ ' : ''}Mon`, 'day_0'), Markup.button.callback(`${currentDays.includes(1) ? '✅ ' : ''}Tue`, 'day_1')],
+        [Markup.button.callback(`${currentDays.includes(2) ? '✅ ' : ''}Wed`, 'day_2'), Markup.button.callback(`${currentDays.includes(3) ? '✅ ' : ''}Thu`, 'day_3')],
+        [Markup.button.callback(`${currentDays.includes(4) ? '✅ ' : ''}Fri`, 'day_4'), Markup.button.callback(`${currentDays.includes(5) ? '✅ ' : ''}Sat`, 'day_5')],
+        [Markup.button.callback(`${currentDays.includes(6) ? '✅ ' : ''}Sun`, 'day_6')],
+        [Markup.button.callback('✅ Done', 'days_done')]
+      ]).reply_markup
+    })
+  } catch (error) {
+    console.error('Error in edit_days:', error)
+    await ctx.answerCbQuery('Error loading days.')
+  }
+})
+
+// Day selection handler
+bot.action(/day_(\d)/, async (ctx) => {
+  try {
+    const dayOfWeek = parseInt(ctx.match[1])
+    const telegramId = ctx.from.id
+    
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    await ctx.answerCbQuery(`Selected: ${dayNames[dayOfWeek]}`)
+    
+    const userProfile = await getUserProfile(telegramId)
+    if (!userProfile) return
+    
+    // Check if day already exists
+    const { data: existingDay } = await supabase
+      .from('user_days')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .eq('day_of_week', dayOfWeek)
+      .single()
+    
+    if (existingDay) {
+      // Remove day
+      await supabase
+        .from('user_days')
+        .delete()
+        .eq('user_id', userProfile.id)
+        .eq('day_of_week', dayOfWeek)
+    } else {
+      // Add day
+      await supabase
+        .from('user_days')
+        .insert({ user_id: userProfile.id, day_of_week: dayOfWeek })
+    }
+    
+    // Get current days and update message
+    const { data: userDays } = await supabase
+      .from('user_days')
+      .select('day_of_week')
+      .eq('user_id', userProfile.id)
+    
+    const currentDays = userDays?.map(ud => ud.day_of_week) || []
+    const fullDayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const selectedDayNames = currentDays.map(d => fullDayNames[d])
+    const selectedText = currentDays.length > 0 
+      ? `\n\n*Currently selected*: ${selectedDayNames.join(', ')}`
+      : ''
+    
+    await ctx.editMessageText(`📅 *Edit Preferred Days*\n\nClick days to toggle them:${selectedText}`, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback(`${currentDays.includes(0) ? '✅ ' : ''}Mon`, 'day_0'), Markup.button.callback(`${currentDays.includes(1) ? '✅ ' : ''}Tue`, 'day_1')],
+        [Markup.button.callback(`${currentDays.includes(2) ? '✅ ' : ''}Wed`, 'day_2'), Markup.button.callback(`${currentDays.includes(3) ? '✅ ' : ''}Thu`, 'day_3')],
+        [Markup.button.callback(`${currentDays.includes(4) ? '✅ ' : ''}Fri`, 'day_4'), Markup.button.callback(`${currentDays.includes(5) ? '✅ ' : ''}Sat`, 'day_5')],
+        [Markup.button.callback(`${currentDays.includes(6) ? '✅ ' : ''}Sun`, 'day_6')],
+        [Markup.button.callback('✅ Done', 'days_done')]
+      ]).reply_markup
+    })
+    
+  } catch (error) {
+    console.error('Error in day selection:', error)
+    await ctx.answerCbQuery('Error. Try again.')
+  }
+})
+
+// Done with days
+bot.action('days_done', async (ctx) => {
+  await ctx.answerCbQuery('✅ Days saved!')
+  await ctx.editMessageText('✅ *Days Saved!*\n\nUse /prefs to see all your preferences.', { parse_mode: 'Markdown' })
+})
+
+// Edit times handler
+bot.action('edit_times', async (ctx) => {
+  await ctx.answerCbQuery('Times feature coming soon!')
+  await ctx.editMessageText('🕐 *Time Preferences*\n\n⚠️ Time filtering is coming soon!\n\nFor now, we show all available sessions regardless of time.', { parse_mode: 'Markdown' })
+})
+
+// Edit notifications handler  
+bot.action('edit_notifications', async (ctx) => {
+  await ctx.answerCbQuery('Notifications feature coming soon!')
+  await ctx.editMessageText('🔔 *Notification Preferences*\n\n⚠️ Push notifications are coming soon!\n\nCurrently you can check sessions manually with /today and /tomorrow.', { parse_mode: 'Markdown' })
 })
 
 // Save levels handler
