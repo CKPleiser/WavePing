@@ -1,7 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { WaveScraper, type ScrapedSession } from '../../../lib/scraper/wave-scraper'
+import { WaveScheduleScraper } from '../../../lib/wave-scraper-final.js'
 import { createAdminClient } from '../../../lib/supabase/client'
 import type { SessionRow } from '../../../lib/supabase/types'
+
+interface ScrapedSession {
+  id: string
+  date: string
+  start_time: string
+  end_time: string | null
+  session_name: string
+  level: string
+  side: string
+  total_spots: number
+  spots_available: number
+  book_url: string
+  instructor: string | null
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify cron secret
@@ -13,11 +27,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log('Starting scheduled scrape...')
     
-    const scraper = new WaveScraper()
+    const scraper = new WaveScheduleScraper()
     const supabase = createAdminClient()
     
-    // Scrape new sessions
-    const scrapedSessions = await scraper.scrapeSchedule(7)
+    // Scrape sessions for the next 7 days
+    const today = new Date()
+    const scrapedSessions: ScrapedSession[] = []
+    
+    // Get sessions for multiple days
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      
+      try {
+        const sessions = await scraper.getSessionsForDate(date)
+        scrapedSessions.push(...sessions.map((session: any) => ({
+          id: `${session.dateISO || date.toISOString().split('T')[0]}-${session.time24}-${session.session_name}`.replace(/[^\w-]/g, '_'),
+          date: session.dateISO || date.toISOString().split('T')[0],
+          start_time: session.time24,
+          end_time: null,
+          session_name: session.session_name,
+          level: session.level,
+          side: session.side === 'Left' ? 'L' : session.side === 'Right' ? 'R' : 'A',
+          total_spots: session.spots,
+          spots_available: session.spots_available,
+          book_url: session.booking_url,
+          instructor: null,
+        })))
+      } catch (error) {
+        console.warn(`Failed to scrape sessions for ${date.toDateString()}:`, error)
+      }
+    }
     
     if (scrapedSessions.length === 0) {
       console.log('No sessions found during scrape')

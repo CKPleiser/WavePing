@@ -1,3 +1,5 @@
+require('dotenv').config({ path: '.env.local' })
+
 const express = require('express')
 const { Telegraf, session, Markup } = require('telegraf')
 const { createClient } = require('@supabase/supabase-js')
@@ -71,7 +73,12 @@ bot.command('today', async (ctx) => {
     // Get user preferences
     const userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
-      return ctx.editMessageText('⚠️ Please run /setup first to set your preferences!')
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        '⚠️ Please run /setup first to set your preferences!'
+      )
     }
     
     // Get user's selected levels and sides
@@ -102,11 +109,23 @@ bot.command('today', async (ctx) => {
       allSessions = await scraper.getTodaysSessions()
     } catch (error) {
       console.error('Scraping failed:', error.message)
-      return ctx.editMessageText(`❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, { parse_mode: 'Markdown' })
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        `❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, 
+        { parse_mode: 'Markdown' }
+      )
     }
     
     if (!allSessions || allSessions.length === 0) {
-      return ctx.editMessageText('🏄‍♂️ *No sessions found for today*\n\nThe Wave might be closed or no sessions are available.', { parse_mode: 'Markdown' })
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        '🏄‍♂️ *No sessions found for today*\n\nThe Wave might be closed or no sessions are available.', 
+        { parse_mode: 'Markdown' }
+      )
     }
     
     // Filter sessions based on user preferences
@@ -131,7 +150,13 @@ bot.command('today', async (ctx) => {
         noSessionsMsg += `Use /setup to select your surf levels and preferences.`
       }
       
-      return ctx.editMessageText(noSessionsMsg, { parse_mode: 'Markdown' })
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        noSessionsMsg, 
+        { parse_mode: 'Markdown' }
+      )
     }
     
     let message = `🏄‍♂️ *Today's Wave Sessions*\n`
@@ -165,10 +190,16 @@ bot.command('today', async (ctx) => {
     
     message += `\n📱 *Updated live from The Wave*`
     
-    ctx.editMessageText(message, { 
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true
-    })
+    ctx.telegram.editMessageText(
+      ctx.chat.id, 
+      loadingMsg.message_id, 
+      undefined,
+      message, 
+      { 
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true
+      }
+    )
     
   } catch (error) {
     console.error('Error in today command:', error)
@@ -186,7 +217,12 @@ bot.command('tomorrow', async (ctx) => {
     // Get user preferences
     const userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
-      return ctx.editMessageText('⚠️ Please run /setup first to set your preferences!')
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        '⚠️ Please run /setup first to set your preferences!'
+      )
     }
     
     // Get user's selected levels and sides
@@ -217,11 +253,23 @@ bot.command('tomorrow', async (ctx) => {
       allSessions = await scraper.getTomorrowsSessions()
     } catch (error) {
       console.error('Scraping failed:', error.message)
-      return ctx.editMessageText(`❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, { parse_mode: 'Markdown' })
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        `❌ *Unable to fetch Wave schedule*\n\n${error.message}\n\nPlease try again in a few minutes.`, 
+        { parse_mode: 'Markdown' }
+      )
     }
     
     if (!allSessions || allSessions.length === 0) {
-      return ctx.editMessageText('🏄‍♂️ *No sessions found for tomorrow*\n\nThe Wave might be closed or no sessions are scheduled yet.', { parse_mode: 'Markdown' })
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        '🏄‍♂️ *No sessions found for tomorrow*\n\nThe Wave might be closed or no sessions are scheduled yet.', 
+        { parse_mode: 'Markdown' }
+      )
     }
     
     // Filter sessions based on user preferences
@@ -246,7 +294,13 @@ bot.command('tomorrow', async (ctx) => {
         noSessionsMsg += `Use /setup to select your surf levels and preferences.`
       }
       
-      return ctx.editMessageText(noSessionsMsg, { parse_mode: 'Markdown' })
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        noSessionsMsg, 
+        { parse_mode: 'Markdown' }
+      )
     }
     
     let message = `🏄‍♂️ *Tomorrow's Wave Sessions*\n`
@@ -280,10 +334,16 @@ bot.command('tomorrow', async (ctx) => {
     
     message += `\n📱 *Updated live from The Wave*`
     
-    ctx.editMessageText(message, { 
-      parse_mode: 'Markdown',
-      disable_web_page_preview: true
-    })
+    ctx.telegram.editMessageText(
+      ctx.chat.id, 
+      loadingMsg.message_id, 
+      undefined,
+      message, 
+      { 
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true
+      }
+    )
     
   } catch (error) {
     console.error('Error in tomorrow command:', error)
@@ -350,46 +410,85 @@ bot.action(/level_(.+)/, async (ctx) => {
     const level = ctx.match[1]
     const telegramId = ctx.from.id
     
-    await ctx.answerCbQuery(`Selected: ${level}`)
+    try {
+      await ctx.answerCbQuery(`Selected: ${level}`)
+    } catch (cbError) {
+      // Handle case where callback query has expired
+      if (cbError.response?.error_code === 400 && cbError.response?.description?.includes('query is too old')) {
+        console.log('Callback query expired, but continuing with level selection')
+      } else {
+        console.error('Callback query error:', cbError)
+        throw cbError // Re-throw if it's a different error
+      }
+    }
     
     // Get or create user profile
     let userProfile = await getUserProfile(telegramId)
     if (!userProfile) {
-      const { data } = await supabase
+      console.log('Creating new profile for telegram user:', telegramId)
+      const { data, error } = await supabase
         .from('profiles')
         .insert({ telegram_id: telegramId, telegram_username: ctx.from.username })
         .select()
         .single()
+      
+      if (error) {
+        console.error('Error creating profile:', error)
+        return ctx.answerCbQuery('Error creating profile. Try again.')
+      }
       userProfile = data
     }
     
+    if (!userProfile) {
+      console.error('No user profile available')
+      return ctx.answerCbQuery('Profile error. Try /start first.')
+    }
+    
     // Check if level already exists
-    const { data: existingLevel } = await supabase
+    const { data: existingLevel, error: checkError } = await supabase
       .from('user_levels')
       .select('*')
       .eq('user_id', userProfile.id)
       .eq('level', level)
       .single()
     
+    // Note: single() returns error when no rows found, which is expected behavior
     if (existingLevel) {
       // Remove level
-      await supabase
+      console.log(`Removing level ${level} for user ${userProfile.id}`)
+      const { error: deleteError } = await supabase
         .from('user_levels')
         .delete()
         .eq('user_id', userProfile.id)
         .eq('level', level)
+      
+      if (deleteError) {
+        console.error('Error deleting level:', deleteError)
+        return ctx.answerCbQuery('Error removing level. Try again.')
+      }
     } else {
       // Add level
-      await supabase
+      console.log(`Adding level ${level} for user ${userProfile.id}`)
+      const { error: insertError } = await supabase
         .from('user_levels')
         .insert({ user_id: userProfile.id, level: level })
+      
+      if (insertError) {
+        console.error('Error inserting level:', insertError)
+        return ctx.answerCbQuery('Error adding level. Try again.')
+      }
     }
     
     // Get current levels and update message
-    const { data: userLevels } = await supabase
+    const { data: userLevels, error: fetchError } = await supabase
       .from('user_levels')
       .select('level')
       .eq('user_id', userProfile.id)
+    
+    if (fetchError) {
+      console.error('Error fetching user levels:', fetchError)
+      return ctx.answerCbQuery('Error loading levels. Try again.')
+    }
     
     const currentLevels = userLevels?.map(ul => ul.level) || []
     const selectedText = currentLevels.length > 0 
@@ -412,7 +511,16 @@ bot.action(/level_(.+)/, async (ctx) => {
     
   } catch (error) {
     console.error('Error in level selection:', error)
-    await ctx.answerCbQuery('Error. Try again.')
+    try {
+      await ctx.answerCbQuery('Error. Try again.')
+    } catch (cbError) {
+      // Ignore callback query errors in error handler
+      if (cbError.response?.error_code === 400 && cbError.response?.description?.includes('query is too old')) {
+        console.log('Cannot answer expired callback query in error handler')
+      } else {
+        console.error('Callback error in error handler:', cbError)
+      }
+    }
   }
 })
 
