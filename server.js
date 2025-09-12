@@ -30,17 +30,29 @@ const digestService = new DigestService(supabase, bot)
 const botHandler = new BotHandler(bot, supabase)
 const serverLogger = logger.child('Server')
 
-// Debug bot responses - intercept reply method to log keyboards
+// Debug bot responses - intercept reply method to log keyboards AND all messages
 const originalReply = bot.telegram.sendMessage
 bot.telegram.sendMessage = function(chatId, text, extra) {
-  if (extra?.reply_markup) {
-    serverLogger.info('🎹 Keyboard being sent:', {
-      chatId,
-      text: text.substring(0, 50) + '...',
-      keyboard: JSON.stringify(extra.reply_markup, null, 2)
-    })
-  }
+  serverLogger.info('📤 Message being sent:', {
+    chatId,
+    text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+    hasKeyboard: !!extra?.reply_markup,
+    keyboard: extra?.reply_markup ? JSON.stringify(extra.reply_markup, null, 2) : null
+  })
   return originalReply.call(this, chatId, text, extra)
+}
+
+// Also intercept editMessageText
+const originalEdit = bot.telegram.editMessageText
+bot.telegram.editMessageText = function(chatId, messageId, inlineMessageId, text, extra) {
+  serverLogger.info('✏️ Message being edited:', {
+    chatId,
+    messageId,
+    text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+    hasKeyboard: !!extra?.reply_markup,
+    keyboard: extra?.reply_markup ? JSON.stringify(extra.reply_markup, null, 2) : null
+  })
+  return originalEdit.call(this, chatId, messageId, inlineMessageId, text, extra)
 }
 
 // Homepage
@@ -325,12 +337,15 @@ app.post(`/api/telegram/webhook`, asyncHandler(async (req, res) => {
     })
     
     await bot.handleUpdate(req.body)
+    serverLogger.info('✅ Webhook handled successfully')
     res.status(200).send('OK')
   } catch (error) {
-    serverLogger.error('Webhook error:', { 
+    serverLogger.error('🚨 Webhook error:', { 
       error: error.message,
       stack: error.stack,
-      update: req.body
+      updateType: req.body.message ? 'message' : req.body.callback_query ? 'callback_query' : 'unknown',
+      command: req.body.message?.text,
+      callbackData: req.body.callback_query?.data
     })
     res.status(200).send('OK') // Still return OK to prevent Telegram retries
   }
