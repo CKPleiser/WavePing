@@ -76,7 +76,7 @@ class BotHandler {
     this.bot.action(/^back_(.+)$/, callbacks.backTo.bind(null, this.supabase))
     
     // Confirmation actions
-    this.bot.action(/^confirm_(.+)$/, callbacks.confirmActions?.bind(null, this.supabase) || ((ctx) => ctx.answerCbQuery('Confirmation not implemented')))
+    this.bot.action(/^confirm_(.+)$/, callbacks.confirmActions.bind(null, this.supabase))
     
     this.logger.info('Bot callbacks registered successfully')
   }

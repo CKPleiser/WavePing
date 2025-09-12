@@ -194,7 +194,10 @@ const callbacks = {
             '⚠️ *Reset All Preferences*\n\nThis will delete ALL your preferences and start fresh.\n\nAre you sure?',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.confirmationMenu('reset_all', 'menu_preferences')
+              reply_markup: Markup.inlineKeyboard([
+                [Markup.button.callback('✅ Yes, Reset Everything', 'confirm_reset_all')],
+                [Markup.button.callback('❌ Cancel', 'menu_preferences')]
+              ])
             }
           )
           
@@ -1067,6 +1070,59 @@ const callbacks = {
     } catch (error) {
       console.error('Support callback error:', error)
       return ctx.answerCbQuery('Error loading support option')
+    }
+  },
+  
+  /**
+   * Confirmation actions
+   */
+  async confirmActions(supabase, ctx) {
+    const action = ctx.match[1]
+    const telegramId = ctx.from.id
+    
+    try {
+      const userProfile = await getUserProfile(supabase, telegramId)
+      
+      if (!userProfile) {
+        return ctx.answerCbQuery('User profile not found!')
+      }
+      
+      switch (action) {
+        case 'reset_all':
+          // Delete all user preferences
+          await Promise.all([
+            supabase.from('user_levels').delete().eq('user_id', userProfile.id),
+            supabase.from('user_sides').delete().eq('user_id', userProfile.id),
+            supabase.from('user_days').delete().eq('user_id', userProfile.id),
+            supabase.from('user_time_windows').delete().eq('user_id', userProfile.id),
+            supabase.from('user_notifications').delete().eq('user_id', userProfile.id)
+          ])
+          
+          // Reset min_spots to default
+          await supabase.from('profiles').update({
+            min_spots: 1
+          }).eq('id', userProfile.id)
+          
+          ctx.answerCbQuery('✅ All preferences reset!')
+          
+          return ctx.editMessageText(
+            '✅ *Preferences Reset Complete!*\n\n🌊 Your preferences have been cleared.\n\nReady to set up fresh preferences?',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: Markup.inlineKeyboard([
+                [Markup.button.callback('🚀 Quick Setup', 'setup_quick')],
+                [Markup.button.callback('⚙️ Detailed Setup', 'setup_detailed')],
+                [Markup.button.callback('🏠 Main Menu', 'menu_main')]
+              ])
+            }
+          )
+          
+        default:
+          return ctx.answerCbQuery('Unknown confirmation action')
+      }
+    } catch (error) {
+      console.error('Confirmation action error:', error)
+      return ctx.answerCbQuery('Error processing confirmation')
     }
   }
 }

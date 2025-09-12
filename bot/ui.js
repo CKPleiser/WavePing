@@ -243,10 +243,16 @@ Choose what you'd like to do:
     // Min spots
     message += `💺 *Min Spots:* ${userProfile.min_spots || 1}\n`
     
-    // Notifications
+    // Notifications (updated for digest system)
     const notifications = userProfile.user_notifications?.map(un => un.timing) || []
-    const notifText = notifications.length > 0 ? notifications.join(', ') : 'None'
-    message += `🔔 *Notifications:* ${notifText}\n`
+    if (notifications.length > 0) {
+      const digestText = notifications.map(timing => {
+        return timing === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
+      }).join(', ')
+      message += `🔔 *Notifications:* ${digestText}\n`
+    } else {
+      message += `🔔 *Notifications:* None set\n`
+    }
     
     // Status
     message += `📱 *Status:* ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n`
@@ -266,17 +272,15 @@ Choose what you'd like to do:
     
     const notifications = userProfile.user_notifications || []
     if (notifications.length > 0) {
-      message += `*Active Notifications:*\n`
+      message += `*Daily Digests Active:*\n`
       notifications.forEach(notif => {
         const emoji = {
-          '24h': '📅',
-          '12h': '🌅',
-          '6h': '⏰',
-          '3h': '⚡',
-          '1h': '🚨'
+          'morning': '🌅',
+          'evening': '🌇'
         }[notif.timing] || '🔔'
         
-        message += `${emoji} ${notif.timing} before sessions\n`
+        const time = notif.timing === 'morning' ? '8:00 AM' : '6:00 PM'
+        message += `${emoji} ${this.capitalizeWords(notif.timing)} digest at ${time}\n`
       })
     } else {
       message += `*No notification timings set*\n`

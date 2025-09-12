@@ -386,10 +386,18 @@ const commands = {
     
     const preferencesMessage = ui.createPreferencesMessage(userProfile)
     
-    await ctx.reply(preferencesMessage, {
-      parse_mode: 'Markdown',
-      reply_markup: menus.preferencesMenu()
-    })
+    // For existing messages, try to edit instead of reply
+    if (ctx.callbackQuery) {
+      await ctx.editMessageText(preferencesMessage, {
+        parse_mode: 'Markdown',
+        reply_markup: menus.preferencesMenu()
+      })
+    } else {
+      await ctx.reply(preferencesMessage, {
+        parse_mode: 'Markdown',
+        reply_markup: menus.preferencesMenu()
+      })
+    }
   },
 
   /**
