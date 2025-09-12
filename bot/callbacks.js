@@ -249,13 +249,45 @@ const callbacks = {
             }
           )
           
-        case 'digests':
-          const currentDigests = userProfile.user_digest_preferences?.map(dp => dp.digest_type) || []
+        case 'notifications':
+          const currentNotifications = userProfile.user_notifications?.map(un => un.timing) || []
           return ctx.editMessageText(
-            '📱 *Daily Digests*\n\nWhen would you like daily summaries?',
+            '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: menus.notificationTimingMenu(currentNotifications)
+            }
+          )
+          
+        case 'digests':
+          const currentDigests = userProfile.user_notifications?.map(un => un.timing) || []
+          return ctx.editMessageText(
+            '📱 *Daily Digest Timing*\n\nWhen would you like daily summaries?\n\n🌅 *Morning Digest (8 AM)*\nPlan your surf day with today\'s sessions\n\n🌇 *Evening Digest (6 PM)*\nPreview tomorrow\'s available sessions',
             {
               parse_mode: 'Markdown',
               reply_markup: menus.digestMenu(currentDigests)
+            }
+          )
+          
+        case 'profile_overview':
+          const profileMessage = ui.createProfileOverviewMessage(userProfile)
+          return ctx.editMessageText(profileMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: { 
+              inline_keyboard: [
+                [{ text: '⚙️ Edit Preferences', callback_data: 'menu_preferences' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
+          })
+          
+        case 'notifications':
+          const currentNotificationTimings = userProfile.user_notifications?.map(un => un.timing) || []
+          return ctx.editMessageText(
+            '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: menus.notificationTimingMenu(currentNotificationTimings)
             }
           )
           
@@ -441,9 +473,33 @@ const callbacks = {
           const digestType = action.split('_')[2]
           return await this.toggleDigestPreference(supabase, ctx, userProfile, digestType)
           
+        case 'timing_toggle_24h':
+        case 'timing_toggle_12h':
+        case 'timing_toggle_6h':
+        case 'timing_toggle_3h':
+        case 'timing_toggle_1h':
+          const timingKey = action.split('_')[2]
+          return await this.toggleNotificationTiming(supabase, ctx, userProfile, timingKey)
+          
+        case 'timing_save':
+          ctx.answerCbQuery('💾 Notification timing saved!')
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessageTiming = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessageTiming, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
+          
         case 'digest_save':
-          ctx.answerCbQuery('✅ Digest preferences saved!')
-          return commands.notifications(supabase, ctx)
+          ctx.answerCbQuery('💾 Digest preferences saved!')
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessageDigest = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessageDigest, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
           
         default:
           return ctx.answerCbQuery('Unknown notification option')
@@ -1227,6 +1283,42 @@ const callbacks = {
     } catch (error) {
       console.error('Toggle digest error:', error)
       return ctx.answerCbQuery('Error updating digest preference')
+    }
+  },
+  
+  async toggleNotificationTiming(supabase, ctx, userProfile, timingKey) {
+    try {
+      const { data: existing } = await supabase
+        .from('user_notifications')
+        .select('timing')
+        .eq('user_id', userProfile.id)
+        .eq('timing', timingKey)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('user_notifications')
+          .delete()
+          .eq('user_id', userProfile.id)
+          .eq('timing', timingKey)
+      } else {
+        await supabase
+          .from('user_notifications')
+          .insert({
+            user_id: userProfile.id,
+            timing: timingKey
+          })
+      }
+
+      const updatedProfile = await getUserProfile(supabase, ctx.from.id)
+      const currentTimings = updatedProfile.user_notifications?.map(un => un.timing) || []
+      
+      return ctx.editMessageReplyMarkup(
+        menus.notificationTimingMenu(currentTimings).reply_markup
+      )
+    } catch (error) {
+      console.error('Toggle notification timing error:', error)
+      return ctx.answerCbQuery('Error updating notification timing')
     }
   },
   

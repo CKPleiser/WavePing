@@ -72,6 +72,9 @@ const menus = {
   preferencesMenu() {
     return Markup.inlineKeyboard([
       [
+        Markup.button.callback('👤 Show Current Profile', 'pref_profile_overview')
+      ],
+      [
         Markup.button.callback('🎯 Skill Levels', 'pref_levels'),
         Markup.button.callback('🏄 Wave Sides', 'pref_sides')
       ],
@@ -325,12 +328,12 @@ const menus = {
     const buttons = digests.map(digest => {
       const isSelected = currentDigests.includes(digest.key)
       const text = `${isSelected ? '✅ ' : ''}${digest.desc}`
-      return [Markup.button.callback(text, `notif_digest_toggle_${digest.key}`)]
+      return [Markup.button.callback(text, `digest_toggle_${digest.key}`)]
     })
     
     buttons.push(
-      [Markup.button.callback('💾 Save Changes', 'notif_digest_save')],
-      [Markup.button.callback('🔙 Back to Notifications', 'menu_notifications')]
+      [Markup.button.callback('💾 Save Changes', 'digest_save')],
+      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
     )
     
     return Markup.inlineKeyboard(buttons)

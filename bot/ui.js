@@ -56,6 +56,10 @@ Looks like you haven't finished setting up your preferences yet.
   mainMenuMessage() {
     return `🏄‍♂️ *WavePing Main Menu* 🌊
 
+Quick commands:
+/today - 🌊 Check today's sessions
+/tomorrow - 🌅 Check tomorrow's sessions
+
 Choose what you'd like to do:
 
 🌊 *Sessions* - Check availability
@@ -221,6 +225,66 @@ Choose what you'd like to do:
   },
 
   /**
+   * Current profile overview
+   */
+  createProfileOverviewMessage(userProfile) {
+    let message = `👤 *Your Current Profile* 🏄‍♂️\n\n`
+    
+    // Account info
+    message += `*Account:* ${userProfile.telegram_username ? '@' + userProfile.telegram_username : 'Telegram User'}\n`
+    message += `*Status:* ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n\n`
+    
+    // Skill Levels
+    const levels = userProfile.user_levels?.map(ul => ul.level) || []
+    if (levels.length > 0) {
+      const levelEmojis = levels.map(l => `${this.getLevelEmoji(l)} ${this.capitalizeWords(l)}`).join(', ')
+      message += `🎯 *Skill Levels:* ${levelEmojis}\n`
+    } else {
+      message += `🎯 *Skill Levels:* Not set\n`
+    }
+    
+    // Wave Sides
+    const sides = userProfile.user_sides?.map(us => 
+      us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
+    ) || []
+    const sideText = sides.length > 0 ? sides.join(', ') : 'Any side'
+    message += `🏄 *Wave Side:* ${sideText}\n`
+    
+    // Days
+    const days = userProfile.user_days?.map(ud => {
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      return dayNames[ud.day_of_week]
+    }) || []
+    const daysText = days.length > 0 ? days.join(', ') : 'Any day'
+    message += `📅 *Surf Days:* ${daysText}\n`
+    
+    // Time windows
+    const times = userProfile.user_time_windows?.map(tw => 
+      `${tw.start_time}-${tw.end_time}`
+    ) || []
+    const timesText = times.length > 0 ? times.join(', ') : 'Any time'
+    message += `🕐 *Time Windows:* ${timesText}\n`
+    
+    // Min spots
+    message += `💺 *Min Spots:* ${userProfile.min_spots || 1}\n`
+    
+    // Notifications
+    const notifications = userProfile.user_notifications?.map(un => un.timing) || []
+    if (notifications.length > 0) {
+      const digestText = notifications.map(timing => {
+        return timing === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
+      }).join(', ')
+      message += `🔔 *Daily Digests:* ${digestText}\n`
+    } else {
+      message += `🔔 *Daily Digests:* None set\n`
+    }
+    
+    message += `\n*Ready to make changes?* Use the buttons below! 👇`
+    
+    return message
+  },
+
+  /**
    * Notification settings
    */
   createNotificationMessage(userProfile) {
@@ -317,6 +381,7 @@ Choose your surfing level to get the right session recommendations:
 📱 *Daily Digests:*
 • Morning digest (8 AM) - Plan your day
 • Evening digest (6 PM) - Tomorrow's preview
+• Choose specific timing that works for you
 
 ☕ *Support WavePing:*
 If you love using WavePing, consider supporting development!
