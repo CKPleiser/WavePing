@@ -17,8 +17,8 @@ app.use(express.json())
 
 // Initialize Telegram bot
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
-// CRITICAL TEST: Temporarily disable session to test if it's causing ctx.reply() issues
-// bot.use(session())
+// Enable session middleware for callback data persistence
+bot.use(session())
 
 // Initialize Supabase client
 const supabase = createClient(

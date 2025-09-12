@@ -63,11 +63,14 @@ const callbacks = {
     const action = ctx.match[1] // Extract menu type from regex match
     console.log(`🔧 Menu callback triggered: ${action}`, { userId: ctx.from.id })
     
+    // CRITICAL: Answer callback query first to remove loading state
+    await ctx.answerCbQuery()
+    
     try {
       switch (action) {
         case 'main':
           const mainMessage = ui.mainMenuMessage()
-          return ctx.editMessageText(mainMessage, {
+          return await ctx.editMessageText(mainMessage, {
             parse_mode: 'Markdown',
             reply_markup: menus.mainMenu()
           })
@@ -89,14 +92,14 @@ const callbacks = {
           
         case 'help':
           const helpMessage = ui.helpMessage()
-          return ctx.editMessageText(helpMessage, {
+          return await ctx.editMessageText(helpMessage, {
             parse_mode: 'Markdown',
             reply_markup: menus.helpMenu()
           })
           
         case 'support':
           const supportMessage = ui.supportMessage()
-          return ctx.editMessageText(supportMessage, {
+          return await ctx.editMessageText(supportMessage, {
             parse_mode: 'Markdown',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
@@ -124,11 +127,15 @@ const callbacks = {
     const telegramId = ctx.from.id
     console.log(`⚙️ Preferences callback triggered: ${action}`, { userId: telegramId })
     
+    // CRITICAL: Answer callback query first
+    await ctx.answerCbQuery()
+    
     try {
       const userProfile = await getUserProfile(supabase, telegramId)
       
       if (!userProfile) {
-        return ctx.answerCbQuery('Please run /setup first!')
+        // Don't call answerCbQuery again since we already called it
+        return
       }
       
       switch (action) {
@@ -286,11 +293,15 @@ const callbacks = {
     const action = ctx.match[1]
     const telegramId = ctx.from.id
     
+    // CRITICAL: Answer callback query first
+    await ctx.answerCbQuery()
+    
     try {
       const userProfile = await getUserProfile(supabase, telegramId)
       
       if (!userProfile) {
-        return ctx.answerCbQuery('Please run /setup first!')
+        // Don't call answerCbQuery again since we already called it
+        return
       }
       
       switch (action) {
@@ -341,6 +352,9 @@ const callbacks = {
     const action = ctx.match[1]
     const telegramId = ctx.from.id
     console.log(`🚀 Setup callback triggered: ${action}`, { userId: telegramId })
+    
+    // CRITICAL: Answer callback query first
+    await ctx.answerCbQuery()
     
     try {
       let userProfile = await getUserProfile(supabase, telegramId)
@@ -1040,6 +1054,9 @@ const callbacks = {
    */
   async support(supabase, ctx) {
     const action = ctx.match[1]
+    
+    // CRITICAL: Answer callback query first
+    await ctx.answerCbQuery()
     
     try {
       switch (action) {
