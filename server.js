@@ -3,7 +3,7 @@ require('dotenv').config({ path: '.env.local' })
 const express = require('express')
 const { Telegraf, session } = require('telegraf')
 const { createClient } = require('@supabase/supabase-js')
-const { today } = require('./utils/time')
+// Removed unused import: today from ./utils/time
 const { WaveScheduleScraper } = require('./lib/wave-scraper-final.js')
 const DigestService = require('./services/digestService')
 const BotHandler = require('./bot/index')
@@ -270,7 +270,7 @@ app.post('/api/cron/send-session-notifications',
             if (!existingNotification) {
               // Send notification
               const spots = session.spots_available || 0
-              const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
+              const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
               
               const message = `🌊 *Session Alert!* 🏄‍♂️\\n\\n` +
                 `⏰ *${notificationTiming} reminder*\\n\\n` +

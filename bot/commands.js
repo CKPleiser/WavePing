@@ -7,7 +7,7 @@ const { Markup } = require('telegraf')
 const menus = require('./menus')
 const ui = require('./ui')
 const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
-const { checkRateLimit, sendChunked } = require('../utils/telegram-helpers')
+const { checkRateLimit } = require('../utils/telegram-helpers')
 // Import utilities directly to avoid circular dependency
 
 // Utility functions for user profile management
@@ -88,7 +88,6 @@ const commands = {
               { text: '🌅 Tomorrow', callback_data: 'menu_tomorrow' }
             ],
             [
-              { text: '📅 Week View', callback_data: 'menu_week' },
               { text: '⚙️ Preferences', callback_data: 'menu_preferences' }
             ],
             [
@@ -145,7 +144,6 @@ const commands = {
               { text: '🌅 Tomorrow', callback_data: 'menu_tomorrow' }
             ],
             [
-              { text: '📅 Week View', callback_data: 'menu_week' },
               { text: '⚙️ Preferences', callback_data: 'menu_preferences' }
             ],
             [
@@ -212,9 +210,9 @@ const commands = {
         )
       }
       
-      // Get today's sessions
+      // Get today's future sessions (exclude past ones)
       const scraper = new WaveScheduleScraper()
-      const sessions = await scraper.getTodaysSessions()
+      const sessions = await scraper.getTodaysFutureSessions()
       
       // Filter for user
       const userLevels = userProfile.user_levels?.map(ul => ul.level) || []
@@ -356,56 +354,7 @@ const commands = {
     }
   },
 
-  /**
-   * Week overview
-   */
-  async week(supabase, ctx) {
-    const telegramId = ctx.from.id
-    
-    if (!checkRateLimit(`week:${telegramId}`, 10000)) {
-      return ctx.reply(
-        '⏳ *Weekly forecast loading...*\n\n' +
-        'This takes a bit more time. Please wait! 📊',
-        { parse_mode: 'Markdown' }
-      )
-    }
-    
-    const loadingMsg = await ctx.reply('📅 *Analyzing the week ahead...*\n\n📊 Crunching wave data...')
-    
-    try {
-      const scraper = new WaveScheduleScraper()
-      const sessions = await scraper.getSessionsInRange(7)
-      
-      const weekMessage = ui.createWeekOverview(sessions)
-      
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        loadingMsg.message_id,
-        undefined,
-        weekMessage,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: menus.weekMenu()
-        }
-      )
-      
-    } catch (error) {
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        loadingMsg.message_id,
-        undefined,
-        '📅 *Week view temporarily unavailable*\n\n' +
-        'Try checking individual days instead! 🌊',
-        {
-          parse_mode: 'Markdown',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🌊 Today', 'menu_today'), Markup.button.callback('🌅 Tomorrow', 'menu_tomorrow')],
-            [Markup.button.callback('🏠 Main Menu', 'menu_main')]
-          ])
-        }
-      )
-    }
-  },
+  // Week view command removed - only today/tomorrow supported
 
   /**
    * Setup command - Guided setup experience
@@ -556,7 +505,6 @@ const commands = {
         reply_markup: {
           inline_keyboard: [
             [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/waveping' }],
-            [{ text: '💖 GitHub Sponsors', url: 'https://github.com/sponsors/waveping' }],
             [{ text: '💬 Contact Developer', callback_data: 'support_contact' }],
             [{ text: '📈 Feature Request', callback_data: 'support_feature' }],
             [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]

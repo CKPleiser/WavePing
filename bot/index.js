@@ -3,9 +3,7 @@
  * Orchestrates all bot commands and interactions
  */
 
-const { Markup } = require('telegraf')
 const commands = require('./commands')
-const menus = require('./menus')
 const callbacks = require('./callbacks')
 const logger = require('../utils/logger').child('Bot')
 
@@ -29,7 +27,7 @@ class BotHandler {
     // Main commands
     this.bot.command('today', commands.today.bind(null, this.supabase))
     this.bot.command('tomorrow', commands.tomorrow.bind(null, this.supabase))
-    this.bot.command('week', commands.week.bind(null, this.supabase))
+    // Week command removed - only today/tomorrow supported
     
     // Settings and preferences
     this.bot.command('setup', commands.setup.bind(null, this.supabase))
@@ -112,7 +110,6 @@ class BotHandler {
         { command: 'start', description: '🌊 Welcome & Setup' },
         { command: 'today', description: '🏄‍♂️ Today\'s Sessions' },
         { command: 'tomorrow', description: '🌅 Tomorrow\'s Sessions' },
-        { command: 'week', description: '📅 Weekly Overview' },
         { command: 'prefs', description: '⚙️ My Preferences' },
         { command: 'setup', description: '🚀 Quick Setup' },
         { command: 'notifications', description: '🔔 Notification Settings' },

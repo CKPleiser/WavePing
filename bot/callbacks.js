@@ -8,7 +8,7 @@ const menus = require('./menus')
 const ui = require('./ui')
 const commands = require('./commands')
 const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
-const { checkRateLimit } = require('../utils/telegram-helpers')
+// checkRateLimit was removed as it was unused
 // BotHandler methods will be passed as parameters to avoid circular dependency
 
 // Utility function for getting user profile
@@ -81,10 +81,10 @@ const callbacks = {
         case 'tomorrow':
           return commands.tomorrow(supabase, ctx)
           
-        case 'week':
-          return commands.week(supabase, ctx)
+        // Week view removed - only today/tomorrow supported
           
         case 'preferences':
+        case 'menu_preferences':
           return commands.preferences(supabase, ctx)
           
         case 'notifications':
@@ -878,7 +878,7 @@ const callbacks = {
     
     try {
       const sessions = timeframe === 'today' 
-        ? await scraper.getTodaysSessions()
+        ? await scraper.getTodaysFutureSessions()
         : await scraper.getTomorrowsSessions()
 
       const allAvailableSessions = sessions.filter(s => (s.spots_available || 0) > 0)

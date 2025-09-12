@@ -35,7 +35,7 @@ const config = {
 
   // Wave-specific configuration
   wave: {
-    bookingBaseUrl: 'https://thewave.com/bristol/book/',
+    bookingBaseUrl: 'https://ticketing.thewave.com/ticketSale/tickets',
     scraperTimeout: 30000, // 30 seconds
     maxSessionsPerMessage: 10
   },

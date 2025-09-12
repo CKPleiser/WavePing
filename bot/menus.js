@@ -16,7 +16,6 @@ const menus = {
         Markup.button.callback('🌅 Tomorrow', 'menu_tomorrow')
       ],
       [
-        Markup.button.callback('📅 Week View', 'menu_week'),
         Markup.button.callback('⚙️ Preferences', 'menu_preferences')
       ],
       [
@@ -65,24 +64,7 @@ const menus = {
     return Markup.inlineKeyboard(buttons)
   },
 
-  /**
-   * Week view menu
-   */
-  weekMenu() {
-    return Markup.inlineKeyboard([
-      [
-        Markup.button.callback('🌊 Today', 'menu_today'),
-        Markup.button.callback('🌅 Tomorrow', 'menu_tomorrow')
-      ],
-      [
-        Markup.button.callback('🔄 Refresh Week', 'menu_week'),
-        Markup.button.callback('⚙️ Preferences', 'menu_preferences')
-      ],
-      [
-        Markup.button.callback('🏠 Main Menu', 'menu_main')
-      ]
-    ])
-  },
+  // Week view removed - only today/tomorrow supported
 
   /**
    * Preferences management menu

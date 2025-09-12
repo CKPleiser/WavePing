@@ -16,8 +16,7 @@
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "db:refresh": "node scripts/refresh-database.js",
-    "telegram:webhook": "node scripts/setup-secure-webhook.js",
-    "server:original": "node server-original.js"
+    "telegram:webhook": "node scripts/setup-secure-webhook.js"
   },
   "keywords": [
     "surfing",

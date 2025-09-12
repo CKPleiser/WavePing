@@ -92,10 +92,12 @@ Choose what you'd like to do:
         const spots = session.spots_available || 0
         const levelEmoji = this.getLevelEmoji(session.level)
         const sideEmoji = session.side === 'L' ? '🏄‍♂️' : session.side === 'R' ? '🏄‍♀️' : '🌊'
+        const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
         
         message += `${levelEmoji} *${session.time}* ${sideEmoji}\n`
         message += `   ${session.session_name}\n`
         message += `   💺 ${spots} spot${spots !== 1 ? 's' : ''} available\n`
+        message += `   🎫 [Book Now](${bookingUrl})\n`
         if (i < 5 && i < filteredSessions.length - 1) message += '\n'
       })
       
@@ -115,8 +117,10 @@ Choose what you'd like to do:
         otherSessions.slice(0, 3).forEach((session, i) => {
           const spots = session.spots_available || 0
           const levelEmoji = this.getLevelEmoji(session.level)
+          const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
           
           message += `${levelEmoji} *${session.time}* - ${spots} spots\n`
+          message += `   🎫 [Book](${bookingUrl})\n`
         })
         
         if (otherSessions.length > 3) {
@@ -137,10 +141,12 @@ Choose what you'd like to do:
         const spots = session.spots_available || 0
         const levelEmoji = this.getLevelEmoji(session.level)
         const sideEmoji = session.side === 'L' ? '🏄‍♂️' : session.side === 'R' ? '🏄‍♀️' : '🌊'
+        const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
         
         message += `${levelEmoji} *${session.time}* ${sideEmoji}\n`
         message += `   ${session.session_name}\n`
         message += `   💺 ${spots} spot${spots !== 1 ? 's' : ''}\n`
+        message += `   🎫 [Book Now](${bookingUrl})\n`
         if (i < 7 && i < allSessions.length - 1) message += '\n'
       })
       
@@ -154,54 +160,7 @@ Choose what you'd like to do:
     return message
   },
 
-  /**
-   * Week overview
-   */
-  createWeekOverview(sessions) {
-    const dayGroups = {}
-    const today = new Date().toISOString().split('T')[0]
-    
-    // Group sessions by day
-    sessions.forEach(session => {
-      if (!dayGroups[session.dateISO]) {
-        dayGroups[session.dateISO] = []
-      }
-      dayGroups[session.dateISO].push(session)
-    })
-    
-    let message = `📅 *Week Overview* 🌊\n\n`
-    
-    const sortedDays = Object.keys(dayGroups).sort()
-    
-    if (sortedDays.length === 0) {
-      return message + `😴 *No sessions found*\n\nThe waves are taking a week off! 🏖️`
-    }
-    
-    sortedDays.slice(0, 7).forEach((dateISO, dayIndex) => {
-      const daySessions = dayGroups[dateISO]
-      const availableSessions = daySessions.filter(s => (s.spots_available || 0) > 0)
-      
-      const dayName = this.getDayName(dateISO, today)
-      const totalSpots = availableSessions.reduce((sum, s) => sum + (s.spots_available || 0), 0)
-      
-      message += `${dayIndex === 0 ? '🌊' : dayIndex === 1 ? '🌅' : '📆'} *${dayName}*\n`
-      message += `   ${availableSessions.length} sessions, ${totalSpots} total spots\n`
-      
-      // Show top 2 sessions
-      availableSessions.slice(0, 2).forEach(session => {
-        const levelEmoji = this.getLevelEmoji(session.level)
-        message += `   ${levelEmoji} ${session.time} (${session.spots_available} spots)\n`
-      })
-      
-      if (availableSessions.length > 2) {
-        message += `   _...and ${availableSessions.length - 2} more_\n`
-      }
-      
-      if (dayIndex < Math.min(sortedDays.length - 1, 6)) message += '\n'
-    })
-    
-    return message
-  },
+  // Week overview removed - only today/tomorrow supported
 
   /**
    * Preferences display
