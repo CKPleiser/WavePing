@@ -179,30 +179,69 @@ const callbacks = {
           
         case 'days':
           const currentDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
+          const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          const dayButtons = days.map((day, index) => {
+            const isSelected = currentDays.includes(index)
+            const text = `${isSelected ? '✅ ' : ''}📅 ${day}`
+            return [{ text, callback_data: `pref_day_toggle_${index}` }]
+          })
+          dayButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_day_save' }])
+          dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
           return ctx.editMessageText(
             '📅 *Select Surf Days*\n\nWhich days can you surf?',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.daySelectionMenu(currentDays)
+              reply_markup: { inline_keyboard: dayButtons }
             }
           )
           
         case 'times':
           const currentTimes = userProfile.user_time_windows || []
+          const timeWindows = [
+            { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
+            { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
+            { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
+            { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
+            { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
+          ]
+          const timeButtons = timeWindows.map(time => {
+            const isSelected = currentTimes.some(ct => ct.start_time === time.start && ct.end_time === time.end)
+            const text = `${isSelected ? '✅ ' : ''}${time.desc}`
+            return [{ text, callback_data: `pref_time_toggle_${time.start}_${time.end}` }]
+          })
+          timeButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_time_save' }])
+          timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
           return ctx.editMessageText(
             '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.timeSelectionMenu(currentTimes)
+              reply_markup: { inline_keyboard: timeButtons }
             }
           )
           
         case 'spots':
+          const currentMinSpots = userProfile.min_spots || 1
+          const spotOptions = [
+            { value: 1, desc: "1+ (I'll take any spot!)" },
+            { value: 2, desc: '2+ (Small group)' },
+            { value: 3, desc: '3+ (Want options)' },
+            { value: 5, desc: '5+ (Plenty of space)' },
+            { value: 10, desc: '10+ (Lots of availability)' }
+          ]
+          const spotButtons = spotOptions.map(option => {
+            const isSelected = currentMinSpots === option.value
+            const text = `${isSelected ? '✅ ' : ''}${option.desc}`
+            return [{ text, callback_data: `pref_spots_set_${option.value}` }]
+          })
+          spotButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
           return ctx.editMessageText(
             '💺 *Minimum Available Spots*\n\nHow many spots should be available?',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.minSpotsMenu(userProfile.min_spots || 1)
+              reply_markup: { inline_keyboard: spotButtons }
             }
           )
           
@@ -649,10 +688,17 @@ const callbacks = {
       // Refresh the menu with updated selections
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentLevels = updatedProfile.user_levels?.map(ul => ul.level) || []
+      const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
+      const levelButtons = levels.map(level => {
+        const isSelected = currentLevels.includes(level)
+        const emoji = level === 'beginner' ? '🟢' : level === 'improver' ? '🔵' : level === 'intermediate' ? '🟡' : level === 'advanced' ? '🟠' : '🔴'
+        const text = `${isSelected ? '✅ ' : ''}${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}`
+        return [{ text, callback_data: `pref_level_toggle_${level}` }]
+      })
+      levelButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_level_save' }])
+      levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
       
-      return ctx.editMessageReplyMarkup(
-        menus.levelSelectionMenu(currentLevels).reply_markup
-      )
+      return ctx.editMessageReplyMarkup({ inline_keyboard: levelButtons })
     } catch (error) {
       console.error('Toggle level error:', error)
       return ctx.answerCbQuery('Error updating level')
@@ -925,34 +971,31 @@ const callbacks = {
   
   async toggleUserSide(supabase, ctx, userProfile, side) {
     try {
-      const { data: existingSide } = await supabase
+      // Single-select: remove all existing sides first, then add the selected one
+      await supabase
         .from('user_sides')
-        .select('side')
+        .delete()
         .eq('user_id', userProfile.id)
-        .eq('side', side)
-        .single()
-
-      if (existingSide) {
-        await supabase
-          .from('user_sides')
-          .delete()
-          .eq('user_id', userProfile.id)
-          .eq('side', side)
-      } else {
-        await supabase
-          .from('user_sides')
-          .insert({
-            user_id: userProfile.id,
-            side: side
-          })
-      }
+      
+      // Add the new selection
+      await supabase
+        .from('user_sides')
+        .insert({
+          user_id: userProfile.id,
+          side: side
+        })
 
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentSides = updatedProfile.user_sides?.map(us => us.side) || []
+      const sideButtons = [
+        [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
+        [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
+        [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
+        [{ text: '✅ Save Changes', callback_data: 'pref_side_save' }],
+        [{ text: '🔙 Back', callback_data: 'menu_preferences' }]
+      ]
       
-      return ctx.editMessageReplyMarkup(
-        menus.sideSelectionMenu(currentSides).reply_markup
-      )
+      return ctx.editMessageReplyMarkup({ inline_keyboard: sideButtons })
     } catch (error) {
       console.error('Toggle side error:', error)
       return ctx.answerCbQuery('Error updating side preference')
@@ -985,10 +1028,16 @@ const callbacks = {
 
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentDays = updatedProfile.user_days?.map(ud => ud.day_of_week) || []
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      const dayButtons = days.map((day, index) => {
+        const isSelected = currentDays.includes(index)
+        const text = `${isSelected ? '✅ ' : ''}📅 ${day}`
+        return [{ text, callback_data: `pref_day_toggle_${index}` }]
+      })
+      dayButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_day_save' }])
+      dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
       
-      return ctx.editMessageReplyMarkup(
-        menus.daySelectionMenu(currentDays).reply_markup
-      )
+      return ctx.editMessageReplyMarkup({ inline_keyboard: dayButtons })
     } catch (error) {
       console.error('Toggle day error:', error)
       return ctx.answerCbQuery('Error updating day preference')
@@ -1023,9 +1072,22 @@ const callbacks = {
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentTimes = updatedProfile.user_time_windows || []
       
-      return ctx.editMessageReplyMarkup(
-        menus.timeSelectionMenu(currentTimes).reply_markup
-      )
+      const timeWindows = [
+        { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
+        { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
+        { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
+        { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
+        { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
+      ]
+      const timeButtons = timeWindows.map(time => {
+        const isSelected = currentTimes.some(ct => ct.start_time === time.start && ct.end_time === time.end)
+        const text = `${isSelected ? '✅ ' : ''}${time.desc}`
+        return [{ text, callback_data: `pref_time_toggle_${time.start}_${time.end}` }]
+      })
+      timeButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_time_save' }])
+      timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+      
+      return ctx.editMessageReplyMarkup({ inline_keyboard: timeButtons })
     } catch (error) {
       console.error('Toggle time window error:', error)
       return ctx.answerCbQuery('Error updating time preference')
