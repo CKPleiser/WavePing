@@ -80,6 +80,7 @@ const commands = {
       console.log('💬 Sending welcome message with keyboard')
       
       await ctx.reply(welcomeMessage, {
+        parse_mode: 'Markdown',
         reply_markup: menus.mainMenu()
       })
       console.log('✅ Welcome message sent')
@@ -94,6 +95,7 @@ const commands = {
           '• Set notification preferences\n\n' +
           'Ready to get started?',
           {
+            parse_mode: 'Markdown',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('🚀 Quick Setup (30s)', 'setup_quick')],
               [Markup.button.callback('⚙️ Detailed Setup', 'setup_detailed')],
@@ -115,6 +117,7 @@ const commands = {
       })
       
       const replyResult = await ctx.reply(welcomeBackMessage, {
+        parse_mode: 'Markdown',
         reply_markup: menus.mainMenu()
       })
       
@@ -507,30 +510,11 @@ const commands = {
   async support(ctx) {
     console.log('💖 SUPPORT command received for user:', ctx.from.id)
     try {
-      // CRITICAL: Send message without parse_mode first to test
-      const supportMessage = `☕ Support WavePing 💙
-
-Thank you for using WavePing! This bot helps surfers at The Wave Bristol get the perfect session notifications.
-
-How WavePing helps you:
-• Smart session alerts for your skill level
-• Daily surf digests delivered when you want
-• Personalized recommendations
-• Real-time availability tracking
-
-Support the Development:
-WavePing is built with ❤️ by an independent developer. Your support helps:
-
-• Keep the bot running 24/7
-• Add new features you request  
-• Maintain reliable notifications
-• Improve the surf experience for everyone
-
-Ways to Support:`
-      
+      const supportMessage = ui.supportMessage()
       console.log('💬 Sending support message with keyboard')
       
-      const result = await ctx.reply(supportMessage, {
+      await ctx.reply(supportMessage, {
+        parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
           [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
@@ -539,11 +523,7 @@ Ways to Support:`
           [Markup.button.callback('🏠 Main Menu', 'menu_main')]
         ])
       })
-      
-      console.log('✅ Support message sent:', { 
-        messageId: result.message_id,
-        hasKeyboard: !!result.reply_markup 
-      })
+      console.log('✅ Support message sent')
     } catch (error) {
       console.error('🚨 SUPPORT command error:', error.message, error.stack)
       await ctx.reply('Sorry, something went wrong with the support command.').catch(e => {
