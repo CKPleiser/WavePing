@@ -314,15 +314,15 @@ const callbacks = {
         case 'time_toggle_3': // 15:00-18:00
         case 'time_toggle_4': // 18:00-21:00
           const timeId = parseInt(action.split('_')[2])
-          const timeWindows = [
+          const availableTimeWindows = [
             { start: '06:00', end: '09:00' },
             { start: '09:00', end: '12:00' },
             { start: '12:00', end: '15:00' },
             { start: '15:00', end: '18:00' },
             { start: '18:00', end: '21:00' }
           ]
-          const timeWindow = timeWindows[timeId]
-          return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, timeWindow.start, timeWindow.end)
+          const selectedTimeWindow = availableTimeWindows[timeId]
+          return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, selectedTimeWindow.start, selectedTimeWindow.end)
           
         case 'time_save':
           ctx.answerCbQuery('✅ Time windows saved!')
