@@ -373,13 +373,22 @@ const commands = {
     
     const preferencesMessage = ui.createPreferencesMessage(userProfile)
     
-    // For existing messages, try to edit instead of reply
-    if (ctx.callbackQuery) {
-      await ctx.editMessageText(preferencesMessage, {
-        parse_mode: 'Markdown',
-        reply_markup: menus.preferencesMenu()
-      })
-    } else {
+    // Always try to edit if it's a callback, but fall back to reply if edit fails
+    try {
+      if (ctx.callbackQuery) {
+        await ctx.editMessageText(preferencesMessage, {
+          parse_mode: 'Markdown',
+          reply_markup: menus.preferencesMenu()
+        })
+      } else {
+        await ctx.reply(preferencesMessage, {
+          parse_mode: 'Markdown',
+          reply_markup: menus.preferencesMenu()
+        })
+      }
+    } catch (error) {
+      console.error('Error sending preferences menu, trying fallback reply:', error.message)
+      // Fallback: send as new message if edit fails
       await ctx.reply(preferencesMessage, {
         parse_mode: 'Markdown',
         reply_markup: menus.preferencesMenu()
