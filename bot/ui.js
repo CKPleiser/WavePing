@@ -171,9 +171,9 @@ Choose what you'd like to do:
     const levels = userProfile.user_levels?.map(ul => ul.level) || []
     if (levels.length > 0) {
       const levelEmojis = levels.map(l => `${this.getLevelEmoji(l)} ${this.capitalizeWords(l)}`).join(', ')
-      message += `🎯 *Skill Levels:* ${levelEmojis}\n`
+      message += `🎯 Skill Levels: ${levelEmojis}\n`
     } else {
-      message += `🎯 *Skill Levels:* Not set\n`
+      message += `🎯 Skill Levels: Not set\n`
     }
     
     // Sides
@@ -181,7 +181,7 @@ Choose what you'd like to do:
       us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
     ) || []
     const sideText = sides.length > 0 ? sides.join(', ') : 'Any side'
-    message += `🏄 *Wave Side:* ${sideText}\n`
+    message += `🏄 Wave Side: ${sideText}\n`
     
     // Days
     const days = userProfile.user_days?.map(ud => {
@@ -189,17 +189,17 @@ Choose what you'd like to do:
       return dayNames[ud.day_of_week]
     }) || []
     const daysText = days.length > 0 ? days.join(', ') : 'Any day'
-    message += `📅 *Surf Days:* ${daysText}\n`
+    message += `📅 Surf Days: ${daysText}\n`
     
     // Time windows
     const times = userProfile.user_time_windows?.map(tw => 
       `${tw.start_time}-${tw.end_time}`
     ) || []
     const timesText = times.length > 0 ? times.join(', ') : 'Any time'
-    message += `🕐 *Time Windows:* ${timesText}\n`
+    message += `🕐 Time Windows: ${timesText}\n`
     
     // Min spots
-    message += `💺 *Min Spots:* ${userProfile.min_spots || 1}\n`
+    message += `💺 Min Spots: ${userProfile.min_spots || 1}\n`
     
     // Notifications (updated for digest system)
     const notifications = userProfile.user_notifications?.map(un => un.timing) || []
@@ -207,15 +207,15 @@ Choose what you'd like to do:
       const digestText = notifications.map(timing => {
         return timing === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
       }).join(', ')
-      message += `🔔 *Notifications:* ${digestText}\n`
+      message += `🔔 Notifications: ${digestText}\n`
     } else {
-      message += `🔔 *Notifications:* None set\n`
+      message += `🔔 Notifications: None set\n`
     }
     
     // Status
-    message += `📱 *Status:* ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n`
+    message += `📱 Status: ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n`
     
-    message += `\n*Want to make changes?* 🛠️`
+    message += `\nUse the buttons below to make changes! 👇`
     
     return message
   },

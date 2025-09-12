@@ -1144,6 +1144,24 @@ const callbacks = {
       console.error('Confirmation action error:', error)
       return ctx.answerCbQuery('Error processing confirmation')
     }
+  },
+
+  /**
+   * Test callbacks
+   */
+  async test(supabase, ctx) {
+    const action = ctx.match[1]
+    await ctx.answerCbQuery()
+    
+    switch (action) {
+      case 'prefs_menu':
+        return ctx.editMessageText('🧪 Testing preferences menu directly:', {
+          reply_markup: menus.preferencesMenu()
+        })
+      
+      default:
+        return ctx.editMessageText('🧪 Test callback executed: ' + action)
+    }
   }
 }
 

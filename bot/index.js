@@ -73,6 +73,9 @@ class BotHandler {
     // Confirmation actions
     this.bot.action(/^confirm_(.+)$/, callbacks.confirmActions.bind(null, this.supabase))
     
+    // Test actions
+    this.bot.action(/^test_(.+)$/, callbacks.test.bind(null, this.supabase))
+    
     // Catch-all for debugging
     this.bot.action(/.+/, (ctx) => {
       this.logger.info('Unmatched callback received', {

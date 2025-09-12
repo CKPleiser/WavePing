@@ -468,6 +468,13 @@ const commands = {
   async test(supabase, ctx) {
     const userProfile = await getUserProfile(supabase, ctx.from.id)
     
+    // Test the preferences menu specifically
+    if (ctx.message?.text === '/test prefs') {
+      return ctx.reply('🧪 Testing preferences menu:', {
+        reply_markup: menus.preferencesMenu()
+      })
+    }
+    
     const testMessage = ui.createTestMessage(userProfile)
     
     await ctx.reply(testMessage, {
@@ -475,7 +482,8 @@ const commands = {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('📱 Send Test Notification', 'test_notification')],
         [Markup.button.callback('🔄 Refresh Profile', 'test_profile')],
-        [Markup.button.callback('🌊 Test Session Fetch', 'test_sessions')]
+        [Markup.button.callback('🌊 Test Session Fetch', 'test_sessions')],
+        [Markup.button.callback('🧪 Test Prefs Menu', 'test_prefs_menu')]
       ])
     })
   },
