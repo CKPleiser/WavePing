@@ -81,7 +81,25 @@ const commands = {
       
       await ctx.reply(welcomeMessage, {
         parse_mode: 'Markdown',
-        reply_markup: menus.mainMenu()
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🌊 Today', callback_data: 'menu_today' },
+              { text: '🌅 Tomorrow', callback_data: 'menu_tomorrow' }
+            ],
+            [
+              { text: '📅 Week View', callback_data: 'menu_week' },
+              { text: '⚙️ Preferences', callback_data: 'menu_preferences' }
+            ],
+            [
+              { text: '🔔 Notifications', callback_data: 'menu_notifications' },
+              { text: '❓ Help', callback_data: 'menu_help' }
+            ],
+            [
+              { text: '☕ Support WavePing', callback_data: 'menu_support' }
+            ]
+          ]
+        }
       })
       console.log('✅ Welcome message sent')
       
@@ -96,11 +114,13 @@ const commands = {
           'Ready to get started?',
           {
             parse_mode: 'Markdown',
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('🚀 Quick Setup (30s)', 'setup_quick')],
-              [Markup.button.callback('⚙️ Detailed Setup', 'setup_detailed')],
-              [Markup.button.callback('🌊 Just Browse Sessions', 'menu_today')]
-            ])
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🚀 Quick Setup (30s)', callback_data: 'setup_quick' }],
+                [{ text: '⚙️ Detailed Setup', callback_data: 'setup_detailed' }],
+                [{ text: '🌊 Just Browse Sessions', callback_data: 'menu_today' }]
+              ]
+            }
           }
         )
       }, 2000)
@@ -117,8 +137,26 @@ const commands = {
       })
       
       const replyResult = await ctx.reply(welcomeBackMessage, {
-        parse_mode: 'Markdown',
-        reply_markup: menus.mainMenu()
+        parse_mode: 'Markdown',  
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🌊 Today', callback_data: 'menu_today' },
+              { text: '🌅 Tomorrow', callback_data: 'menu_tomorrow' }
+            ],
+            [
+              { text: '📅 Week View', callback_data: 'menu_week' },
+              { text: '⚙️ Preferences', callback_data: 'menu_preferences' }
+            ],
+            [
+              { text: '🔔 Notifications', callback_data: 'menu_notifications' },
+              { text: '❓ Help', callback_data: 'menu_help' }
+            ],
+            [
+              { text: '☕ Support WavePing', callback_data: 'menu_support' }
+            ]
+          ]
+        }
       })
       
       console.log('✅ Welcome back message sent, result:', {
@@ -515,13 +553,15 @@ const commands = {
       
       await ctx.reply(supportMessage, {
         parse_mode: 'Markdown',
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
-          [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
-          [Markup.button.callback('💬 Contact Developer', 'support_contact')],
-          [Markup.button.callback('📈 Feature Request', 'support_feature')],
-          [Markup.button.callback('🏠 Main Menu', 'menu_main')]
-        ])
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/waveping' }],
+            [{ text: '💖 GitHub Sponsors', url: 'https://github.com/sponsors/waveping' }],
+            [{ text: '💬 Contact Developer', callback_data: 'support_contact' }],
+            [{ text: '📈 Feature Request', callback_data: 'support_feature' }],
+            [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+          ]
+        }
       })
       console.log('✅ Support message sent')
     } catch (error) {
