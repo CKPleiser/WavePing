@@ -148,7 +148,7 @@ const callbacks = {
             const text = `${isSelected ? '✅ ' : ''}${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}`
             return [{ text, callback_data: `pref_level_toggle_${level}` }]
           })
-          levelButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_level_save' }])
+          levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
           levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
@@ -165,7 +165,7 @@ const callbacks = {
             [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
             [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
             [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
-            [{ text: '✅ Save Changes', callback_data: 'pref_side_save' }],
+            [{ text: '💾 Save Changes', callback_data: 'pref_side_save' }],
             [{ text: '🔙 Back', callback_data: 'menu_preferences' }]
           ]
           
@@ -185,7 +185,7 @@ const callbacks = {
             const text = `${isSelected ? '✅ ' : ''}📅 ${day}`
             return [{ text, callback_data: `pref_day_toggle_${index}` }]
           })
-          dayButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_day_save' }])
+          dayButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_day_save' }])
           dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
@@ -210,7 +210,7 @@ const callbacks = {
             const text = `${isSelected ? '✅ ' : ''}${time.desc}`
             return [{ text, callback_data: `pref_time_toggle_${time.start}_${time.end}` }]
           })
-          timeButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_time_save' }])
+          timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
           timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
@@ -660,7 +660,12 @@ const callbacks = {
    * Utility methods
    */
   async toggleUserLevel(supabase, ctx, userProfile, level) {
+    // CRITICAL: Answer callback query first to dismiss loading state
+    await ctx.answerCbQuery()
+    
     try {
+      console.log(`🔄 Toggling level: ${level} for user ${userProfile.id}`)
+      
       // Check if level exists
       const { data: existingLevel } = await supabase
         .from('user_levels')
@@ -671,12 +676,14 @@ const callbacks = {
 
       if (existingLevel) {
         // Remove level
+        console.log(`➖ Removing level: ${level}`)
         await supabase
           .from('user_levels')
           .delete()
           .eq('id', existingLevel.id)
       } else {
         // Add level
+        console.log(`➕ Adding level: ${level}`)
         await supabase
           .from('user_levels')
           .insert({
@@ -685,9 +692,14 @@ const callbacks = {
           })
       }
 
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       // Refresh the menu with updated selections
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentLevels = updatedProfile.user_levels?.map(ul => ul.level) || []
+      console.log(`📊 Current levels after toggle: ${currentLevels.join(', ')}`)
+      
       const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
       const levelButtons = levels.map(level => {
         const isSelected = currentLevels.includes(level)
@@ -695,13 +707,13 @@ const callbacks = {
         const text = `${isSelected ? '✅ ' : ''}${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}`
         return [{ text, callback_data: `pref_level_toggle_${level}` }]
       })
-      levelButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_level_save' }])
+      levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
       levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: levelButtons })
     } catch (error) {
-      console.error('Toggle level error:', error)
-      return ctx.answerCbQuery('Error updating level')
+      console.error('🚨 Toggle level error:', error)
+      return ctx.answerCbQuery('❌ Error updating level')
     }
   },
 
@@ -970,7 +982,12 @@ const callbacks = {
   },
   
   async toggleUserSide(supabase, ctx, userProfile, side) {
+    // CRITICAL: Answer callback query first to dismiss loading state
+    await ctx.answerCbQuery()
+    
     try {
+      console.log(`🔄 Setting side: ${side} for user ${userProfile.id} (single-select)`)
+      
       // Single-select: remove all existing sides first, then add the selected one
       await supabase
         .from('user_sides')
@@ -985,25 +1002,35 @@ const callbacks = {
           side: side
         })
 
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentSides = updatedProfile.user_sides?.map(us => us.side) || []
+      console.log(`📊 Current side after toggle: ${currentSides.join(', ')}`)
+      
       const sideButtons = [
         [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
         [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
         [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
-        [{ text: '✅ Save Changes', callback_data: 'pref_side_save' }],
+        [{ text: '💾 Save Changes', callback_data: 'pref_side_save' }],
         [{ text: '🔙 Back', callback_data: 'menu_preferences' }]
       ]
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: sideButtons })
     } catch (error) {
-      console.error('Toggle side error:', error)
-      return ctx.answerCbQuery('Error updating side preference')
+      console.error('🚨 Toggle side error:', error)
+      return ctx.answerCbQuery('❌ Error updating side preference')
     }
   },
   
   async toggleUserDay(supabase, ctx, userProfile, day) {
+    // CRITICAL: Answer callback query first to dismiss loading state
+    await ctx.answerCbQuery()
+    
     try {
+      console.log(`🔄 Toggling day: ${day} for user ${userProfile.id}`)
+      
       const { data: existingDay } = await supabase
         .from('user_days')
         .select('day_of_week')
@@ -1012,12 +1039,14 @@ const callbacks = {
         .single()
 
       if (existingDay) {
+        console.log(`➖ Removing day: ${day}`)
         await supabase
           .from('user_days')
           .delete()
           .eq('user_id', userProfile.id)
           .eq('day_of_week', day)
       } else {
+        console.log(`➕ Adding day: ${day}`)
         await supabase
           .from('user_days')
           .insert({
@@ -1026,26 +1055,36 @@ const callbacks = {
           })
       }
 
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentDays = updatedProfile.user_days?.map(ud => ud.day_of_week) || []
+      console.log(`📊 Current days after toggle: ${currentDays.join(', ')}`)
+      
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
       const dayButtons = days.map((day, index) => {
         const isSelected = currentDays.includes(index)
         const text = `${isSelected ? '✅ ' : ''}📅 ${day}`
         return [{ text, callback_data: `pref_day_toggle_${index}` }]
       })
-      dayButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_day_save' }])
+      dayButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_day_save' }])
       dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: dayButtons })
     } catch (error) {
-      console.error('Toggle day error:', error)
-      return ctx.answerCbQuery('Error updating day preference')
+      console.error('🚨 Toggle day error:', error)
+      return ctx.answerCbQuery('❌ Error updating day preference')
     }
   },
   
   async toggleUserTimeWindow(supabase, ctx, userProfile, startTime, endTime) {
+    // CRITICAL: Answer callback query first to dismiss loading state
+    await ctx.answerCbQuery()
+    
     try {
+      console.log(`🔄 Toggling time window: ${startTime}-${endTime} for user ${userProfile.id}`)
+      
       const { data: existingWindow } = await supabase
         .from('user_time_windows')
         .select('id')
@@ -1055,11 +1094,13 @@ const callbacks = {
         .single()
 
       if (existingWindow) {
+        console.log(`➖ Removing time window: ${startTime}-${endTime}`)
         await supabase
           .from('user_time_windows')
           .delete()
           .eq('id', existingWindow.id)
       } else {
+        console.log(`➕ Adding time window: ${startTime}-${endTime}`)
         await supabase
           .from('user_time_windows')
           .insert({
@@ -1069,8 +1110,12 @@ const callbacks = {
           })
       }
 
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentTimes = updatedProfile.user_time_windows || []
+      console.log(`📊 Current time windows after toggle: ${currentTimes.map(t => `${t.start_time}-${t.end_time}`).join(', ')}`)
       
       const timeWindows = [
         { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
@@ -1084,13 +1129,13 @@ const callbacks = {
         const text = `${isSelected ? '✅ ' : ''}${time.desc}`
         return [{ text, callback_data: `pref_time_toggle_${time.start}_${time.end}` }]
       })
-      timeButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_time_save' }])
+      timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
       timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: timeButtons })
     } catch (error) {
-      console.error('Toggle time window error:', error)
-      return ctx.answerCbQuery('Error updating time preference')
+      console.error('🚨 Toggle time window error:', error)
+      return ctx.answerCbQuery('❌ Error updating time preference')
     }
   },
   
