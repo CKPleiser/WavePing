@@ -78,6 +78,15 @@ class BotHandler {
     // Confirmation actions
     this.bot.action(/^confirm_(.+)$/, callbacks.confirmActions.bind(null, this.supabase))
     
+    // Catch-all for debugging
+    this.bot.action(/.+/, (ctx) => {
+      this.logger.info('Unmatched callback received', {
+        data: ctx.callbackQuery.data,
+        userId: ctx.from.id
+      })
+      ctx.answerCbQuery('Debug: Callback received but not matched')
+    })
+    
     this.logger.info('Bot callbacks registered successfully')
   }
 
@@ -122,19 +131,26 @@ class BotHandler {
     this.bot.catch((err, ctx) => {
       this.logger.error('Bot error occurred', {
         error: err.message,
+        stack: err.stack,
         userId: ctx.from?.id,
-        command: ctx.updateType
+        updateType: ctx.updateType,
+        callbackData: ctx.callbackQuery?.data,
+        message: ctx.message?.text
       })
       
       // Send user-friendly error message
-      ctx.reply(
-        '🚨 Oops! Something went wrong. Please try again later.\n\n' +
-        'If the problem persists, use /help for support.',
-        { parse_mode: 'Markdown' }
-      ).catch(() => {
-        // Silent fail for reply errors
-        this.logger.error('Failed to send error message to user')
-      })
+      if (ctx.callbackQuery) {
+        ctx.answerCbQuery('🚨 Something went wrong. Please try again.').catch(() => {})
+      } else {
+        ctx.reply(
+          '🚨 Oops! Something went wrong. Please try again later.\n\n' +
+          'If the problem persists, use /help for support.',
+          { parse_mode: 'Markdown' }
+        ).catch(() => {
+          // Silent fail for reply errors
+          this.logger.error('Failed to send error message to user')
+        })
+      }
     })
   }
 

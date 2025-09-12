@@ -61,6 +61,7 @@ const callbacks = {
    */
   async menu(supabase, ctx) {
     const action = ctx.match[1] // Extract menu type from regex match
+    console.log(`🔧 Menu callback triggered: ${action}`, { userId: ctx.from.id })
     
     try {
       switch (action) {
@@ -121,6 +122,7 @@ const callbacks = {
   async preferences(supabase, ctx) {
     const action = ctx.match[1]
     const telegramId = ctx.from.id
+    console.log(`⚙️ Preferences callback triggered: ${action}`, { userId: telegramId })
     
     try {
       const userProfile = await getUserProfile(supabase, telegramId)
@@ -338,6 +340,7 @@ const callbacks = {
   async setup(supabase, ctx) {
     const action = ctx.match[1]
     const telegramId = ctx.from.id
+    console.log(`🚀 Setup callback triggered: ${action}`, { userId: telegramId })
     
     try {
       let userProfile = await getUserProfile(supabase, telegramId)

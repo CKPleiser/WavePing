@@ -315,5 +315,17 @@ app.listen(PORT, () => {
   serverLogger.info(`Server running on port ${PORT}`)
 })
 
+// Start bot in polling mode for development (comment out for production webhook)
+if (process.env.NODE_ENV !== 'production') {
+  bot.launch({ polling: { timeout: 30 } })
+  serverLogger.info('Bot started in polling mode for development')
+  
+  // Graceful shutdown
+  process.once('SIGINT', () => bot.stop('SIGINT'))
+  process.once('SIGTERM', () => bot.stop('SIGTERM'))
+} else {
+  serverLogger.info('Bot configured for webhook mode (production)')
+}
+
 // Export for testing
 module.exports = { app, bot }
