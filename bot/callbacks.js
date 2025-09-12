@@ -206,7 +206,10 @@ const callbacks = {
             { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
           ]
           const timeButtons = timeWindows.map((time, index) => {
-            const isSelected = currentTimes.some(ct => ct.start_time === time.start && ct.end_time === time.end)
+            const isSelected = currentTimes.some(ct => 
+              (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
+              (ct.end_time === time.end || ct.end_time === time.end + ':00')
+            )
             const text = `${isSelected ? '✅ ' : ''}${time.desc}`
             return [{ text, callback_data: `pref_time_toggle_${index}` }]
           })
@@ -1144,7 +1147,10 @@ const callbacks = {
         { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
       ]
       const timeButtons = timeWindows.map((time, index) => {
-        const isSelected = currentTimes.some(ct => ct.start_time === time.start && ct.end_time === time.end)
+        const isSelected = currentTimes.some(ct => 
+          (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
+          (ct.end_time === time.end || ct.end_time === time.end + ':00')
+        )
         const text = `${isSelected ? '✅ ' : ''}${time.desc}`
         return [{ text, callback_data: `pref_time_toggle_${index}` }]
       })
