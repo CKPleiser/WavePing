@@ -3,8 +3,7 @@ require('dotenv').config({ path: '.env.local' })
 const express = require('express')
 const { Telegraf, session } = require('telegraf')
 const { createClient } = require('@supabase/supabase-js')
-const { today } = require('./utils/time')
-const { WaveScheduleScraper } = require('./lib/wave-scraper-final.js')
+const { today, tomorrow } = require('./utils/time')
 const DigestService = require('./services/digestService')
 const BotHandler = require('./bot/index')
 const logger = require('./utils/logger')
@@ -30,6 +29,288 @@ const digestService = new DigestService(supabase, bot)
 const botHandler = new BotHandler(bot, supabase)
 const serverLogger = logger.child('Server')
 
+
+
+// /today command - Show today's sessions
+bot.command('today', async (ctx) => {
+  serverLogger.info(`/today command triggered by user ${ctx.from.id}`)
+  try {
+    const telegramId = ctx.from.id
+    
+    // Rate limiting
+    if (!checkRateLimit(`today:${telegramId}`)) {
+      serverLogger.info(`Rate limited user ${telegramId}`)
+      return ctx.reply('⏱ Please wait a moment before requesting again...')
+    }
+    
+    serverLogger.info(`Rate limit passed for user ${telegramId}`)
+    
+    // Send loading message
+    const loadingMsg = await ctx.reply('🌊 Loading today\'s Wave sessions...')
+    
+    // Get user preferences
+    serverLogger.info(`Getting user profile for ${telegramId}`)
+    const userProfile = await getUserProfile(telegramId)
+    if (!userProfile) {
+      serverLogger.info(`No user profile found for ${telegramId}`)
+      return ctx.telegram.editMessageText(
+        ctx.chat.id, 
+        loadingMsg.message_id, 
+        undefined,
+        '⚠️ Please run /setup first to set your preferences!'
+      )
+    }
+    serverLogger.info(`User profile found for ${telegramId}`)
+    
+    // Get user's preferences
+    const { data: userLevels } = await supabase
+      .from('user_levels')
+      .select('level')
+      .eq('user_id', userProfile.id)
+    
+    const { data: userSides } = await supabase
+      .from('user_sides')
+      .select('side')
+      .eq('user_id', userProfile.id)
+    
+    const { data: userDays } = await supabase
+      .from('user_days')
+      .select('day_of_week')
+      .eq('user_id', userProfile.id)
+    
+    const { data: userTimeWindows } = await supabase
+      .from('user_time_windows')
+      .select('start_time, end_time')
+      .eq('user_id', userProfile.id)
+
+    // Get today's date
+    const todayDate = today()
+    serverLogger.info(`Looking for sessions on ${todayDate}`)
+
+    // Try database first, then scraper as fallback
+    let sessions = []
+    
+    // Get sessions from database
+    const { data: dbSessions, error: dbError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('date', todayDate)
+      .gt('spots_available', 0)
+      .order('time', { ascending: true })
+
+    if (dbError) {
+      serverLogger.error('Database error fetching sessions:', { error: dbError.message })
+    } else if (dbSessions && dbSessions.length > 0) {
+      sessions = dbSessions
+      serverLogger.info(`Found ${sessions.length} sessions in database for ${todayDate}`)
+    } else {
+      // Fallback to scraper
+      serverLogger.info('No sessions in database, falling back to scraper')
+      const scraper = new WaveScheduleScraper()
+      try {
+        sessions = await scraper.getTodaysSessions()
+        serverLogger.info(`Scraper found ${sessions.length} sessions`)
+      } catch (scraperError) {
+        serverLogger.error('Scraper error:', { error: scraperError.message })
+        return ctx.telegram.editMessageText(
+          ctx.chat.id,
+          loadingMsg.message_id,
+          undefined,
+          '❌ Unable to load sessions right now. Please try again later.'
+        )
+      }
+    }
+
+    if (sessions.length === 0) {
+      return ctx.telegram.editMessageText(
+        ctx.chat.id,
+        loadingMsg.message_id,
+        undefined,
+        '🏄‍♂️ No sessions available today. Check back tomorrow!'
+      )
+    }
+
+    // Filter sessions based on user preferences
+    const scraper = new WaveScheduleScraper()
+    const userLevelList = userLevels?.map(ul => ul.level) || []
+    const userSideList = userSides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
+    const userDayList = userDays?.map(ud => ud.day_of_week) || []
+    
+    const filteredSessions = scraper.filterSessionsForUser(
+      sessions,
+      userLevelList,
+      userSideList, 
+      userDayList,
+      true, // isToday
+      userTimeWindows || []
+    ).filter(session => {
+      const availableSpots = session.spots_available || 0
+      return availableSpots > 0 && availableSpots >= (userProfile.min_spots || 1)
+    })
+
+    if (filteredSessions.length === 0) {
+      const message = `🏄‍♂️ No sessions match your preferences today.
+
+📊 *Your current filters:*
+• Levels: ${userLevelList.length > 0 ? userLevelList.map(l => capitalizeLevel(l)).join(', ') : 'Any'}
+• Sides: ${userSideList.length > 0 ? userSideList.join(', ') : 'Any'}
+• Min spots: ${userProfile.min_spots || 1}
+
+💡 Try adjusting your preferences with /prefs or check /tomorrow!`
+
+      return ctx.telegram.editMessageText(
+        ctx.chat.id,
+        loadingMsg.message_id,
+        undefined,
+        message,
+        { parse_mode: 'Markdown' }
+      )
+    }
+
+    // Format sessions message
+    let message = `🌊 *Today's Sessions* (${filteredSessions.length} match${filteredSessions.length === 1 ? '' : 'es'})\n\n`
+    
+    filteredSessions.slice(0, 15).forEach(session => {
+      const spots = session.spots_available || 0
+      const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
+      message += `🕐 *${session.time}* - ${session.session_name}\n`
+      message += `📍 ${spots} spot${spots === 1 ? '' : 's'} available\n`
+      message += `[Book Now](${bookingUrl})\n\n`
+    })
+    
+    if (filteredSessions.length > 15) {
+      message += `...and ${filteredSessions.length - 15} more sessions!\n\n`
+    }
+    
+    message += `💡 Use /prefs to adjust your preferences`
+
+    await ctx.telegram.editMessageText(
+      ctx.chat.id,
+      loadingMsg.message_id,
+      undefined,
+      message,
+      { parse_mode: 'Markdown' }
+    )
+
+  } catch (error) {
+    serverLogger.error('Error in /today command:', { error: error.message })
+    try {
+      await ctx.reply('❌ Something went wrong loading today\'s sessions. Please try again.')
+    } catch (replyError) {
+      serverLogger.error('Failed to send error message:', { error: replyError.message })
+    }
+  }
+})
+
+// /setup command - Initial user setup
+bot.command('setup', async (ctx) => {
+  try {
+    // Create or update user profile
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        telegram_id: ctx.from.id,
+        telegram_username: ctx.from.username || null,
+        notification_enabled: true
+      }, { 
+        onConflict: 'telegram_id',
+        ignoreDuplicates: false 
+      })
+
+    if (error) {
+      serverLogger.error('Error creating profile:', { error: error.message })
+      return ctx.reply('Error setting up profile. Try again later.')
+    }
+
+    await ctx.reply(`🌊 *Welcome to WavePing!* 🏄‍♂️
+
+I'll help you get personalized Wave Bristol session alerts.
+
+Let's set up your preferences so I can show you the sessions that match what you're looking for!
+
+Use the commands below:
+• /today - See today's matching sessions
+• /prefs - Set up your detailed preferences  
+• /testnotif - Test your notifications
+
+💡 *Quick start*: Use /today to see sessions right away (I'll use default settings), or /prefs to customize everything first.`, 
+      { parse_mode: 'Markdown' })
+
+  } catch (error) {
+    serverLogger.error('Error in /setup command:', { error: error.message })
+    ctx.reply('Error during setup. Please try again.')
+  }
+})
+
+// /prefs command - Show and manage preferences  
+bot.command('prefs', async (ctx) => {
+  try {
+    const userProfile = await getUserProfile(ctx.from.id)
+    if (!userProfile) {
+      return ctx.reply("You haven't set up preferences yet. Use /setup to get started.")
+    }
+
+    // Get all user preferences
+    const { data: preferences, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        user_levels (level),
+        user_sides (side), 
+        user_days (day_of_week),
+        user_time_windows (start_time, end_time),
+        user_notifications (timing)
+      `)
+      .eq('id', userProfile.id)
+      .single()
+
+    if (error) {
+      serverLogger.error('Error fetching preferences:', { error: error.message })
+      return ctx.reply('Error loading preferences. Try again later.')
+    }
+
+    const message = formatPreferencesMessage(preferences)
+    
+    await ctx.reply(`${message}
+
+💡 *Commands*:
+• /today - See today's sessions with these preferences
+• /setup - Reset your preferences  
+• /testnotif - Test notifications
+
+🔧 Want to change something? Just run /setup again to reconfigure.`, 
+      { parse_mode: 'Markdown' })
+
+  } catch (error) {
+    serverLogger.error('Error in /prefs command:', { error: error.message })
+    ctx.reply('Error loading preferences. Try again later.')
+  }
+})
+
+// /testnotif command - Test notifications
+bot.command('testnotif', async (ctx) => {
+  try {
+    const testMessage = `🧪 *Test Notification* 🧪
+
+🌊 Hey! This is a test notification from WavePing.
+
+If you're seeing this, your notifications are working perfectly! 🎉
+
+*Next steps:*
+• Set your preferences with /prefs
+• Check today's sessions with /today  
+• Your personalized surf alerts are ready!
+
+*Pro tip:* WavePing will automatically notify you when spots become available for sessions that match your preferences! 🤙`
+
+    await ctx.reply(testMessage, { parse_mode: 'Markdown' })
+    
+  } catch (error) {
+    serverLogger.error('Test notification error:', { error: error.message })
+    await ctx.reply('❌ Test notification failed. Please try again.')
+  }
+})
+
 // Homepage
 app.get('/', (req, res) => {
   res.json({ 
@@ -37,7 +318,7 @@ app.get('/', (req, res) => {
     status: 'running',
     description: 'Smart Telegram bot for The Wave Bristol surf session alerts',
     bot: '@WavePingBot',
-    version: '2.0.0' // Updated version with new bot system
+    version: '1.1.0' // Updated version with improvements
   })
 })
 
