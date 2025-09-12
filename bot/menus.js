@@ -171,7 +171,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('✅ Save Changes', 'pref_level_save')],
+      [Markup.button.callback('💾 Save Changes', 'pref_level_save')],
       [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
     )
     
@@ -195,7 +195,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('✅ Save Changes', 'pref_side_save')],
+      [Markup.button.callback('💾 Save Changes', 'pref_side_save')],
       [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
     )
     
@@ -225,7 +225,7 @@ const menus = {
     ]
     
     buttons.push(
-      [Markup.button.callback('✅ Save Changes', 'pref_day_save')],
+      [Markup.button.callback('💾 Save Changes', 'pref_day_save')],
       [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
     )
     
@@ -253,7 +253,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('✅ Save Changes', 'pref_time_save')],
+      [Markup.button.callback('💾 Save Changes', 'pref_time_save')],
       [Markup.button.callback('➕ Custom Time', 'pref_time_custom')],
       [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
     )
@@ -305,7 +305,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('✅ Save Changes', 'notif_timing_save')],
+      [Markup.button.callback('💾 Save Changes', 'notif_timing_save')],
       [Markup.button.callback('🔙 Back to Notifications', 'menu_notifications')]
     )
     
@@ -328,7 +328,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('✅ Save Changes', 'notif_digest_save')],
+      [Markup.button.callback('💾 Save Changes', 'notif_digest_save')],
       [Markup.button.callback('🔙 Back to Notifications', 'menu_notifications')]
     )
     
