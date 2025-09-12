@@ -347,76 +347,28 @@ const commands = {
       // Create user profile and start setup wizard
       userProfile = await createUserProfile(supabase, telegramId, ctx.from.username)
       
-      // Start session for setup wizard
-      ctx.session = ctx.session || {}
-      ctx.session.setup = {
-        step: 'levels',
-        levels: [],
-        sides: [],
-        days: [],
-        timeWindows: [],
-        notifications: [],
-        minSpots: 1
-      }
-      
-      return ctx.reply(
-        '🚀 *Welcome to WavePing!*\n\n' +
-        'Let\'s set up your preferences to get personalized session recommendations.\n\n' +
-        '*Step 1 of 6: Skill Levels*\n\n' +
-        'Choose all levels you\'re comfortable surfing with:',
-        {
-          parse_mode: 'Markdown',
-          reply_markup: menus.setupLevelSelectionMenu([])
+      return ctx.reply('🚀 *Welcome to WavePing!*\n\nLet\'s set up your preferences!', {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🎯 Start Setup', callback_data: 'setup_start' }],
+            [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+          ]
         }
-      )
+      })
     }
     
-    const preferencesMessage = ui.createPreferencesMessage(userProfile)
-    const preferencesMenu = menus.preferencesMenu()
-    
-    console.log('🔧 Preferences menu created:', {
-      hasMenu: !!preferencesMenu,
-      menuType: typeof preferencesMenu,
-      hasInlineKeyboard: !!(preferencesMenu && preferencesMenu.reply_markup && preferencesMenu.reply_markup.inline_keyboard),
-      keyboardLength: preferencesMenu?.reply_markup?.inline_keyboard?.length || 0
+    // TEMPORARY: Super simple preferences menu to test
+    await ctx.reply('⚙️ *Your Preferences*\n\nClick a button to modify:', {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🎯 Skill Levels', callback_data: 'pref_levels' }],
+          [{ text: '🏄 Wave Sides', callback_data: 'pref_sides' }],
+          [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+        ]
+      }
     })
-    
-    // Always try to edit if it's a callback, but fall back to reply if edit fails
-    try {
-      if (ctx.callbackQuery) {
-        console.log('🔧 Editing message with preferences menu')
-        await ctx.editMessageText(preferencesMessage, {
-          parse_mode: 'Markdown',
-          reply_markup: preferencesMenu
-        })
-        console.log('✅ Successfully edited message with preferences menu')
-      } else {
-        console.log('🔧 Sending new preferences message with menu')
-        await ctx.reply(preferencesMessage, {
-          parse_mode: 'Markdown',
-          reply_markup: preferencesMenu
-        })
-        console.log('✅ Successfully sent new preferences message with menu')
-      }
-    } catch (error) {
-      console.error('🚨 Error sending preferences menu:', error.message, error.stack)
-      console.log('🔧 Trying fallback reply with menu')
-      try {
-        // Fallback: send as new message if edit fails
-        await ctx.reply(preferencesMessage, {
-          parse_mode: 'Markdown',
-          reply_markup: preferencesMenu
-        })
-        console.log('✅ Fallback reply with menu succeeded')
-      } catch (fallbackError) {
-        console.error('🚨 Even fallback reply failed:', fallbackError.message)
-        // Last resort: send message without menu but tell user what to do
-        await ctx.reply(
-          preferencesMessage + '\n\n🚨 *Buttons not working? Try typing:* `/prefs`',
-          { parse_mode: 'Markdown' }
-        )
-      }
-    }
   },
 
   /**
@@ -468,10 +420,45 @@ const commands = {
   async test(supabase, ctx) {
     const userProfile = await getUserProfile(supabase, ctx.from.id)
     
+    // Test basic inline keyboard
+    if (ctx.message?.text === '/test basic') {
+      return ctx.reply('🧪 Basic keyboard test:', {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '✅ Button 1', callback_data: 'test_btn1' }],
+            [{ text: '❌ Button 2', callback_data: 'test_btn2' }]
+          ]
+        }
+      })
+    }
+    
     // Test the preferences menu specifically
     if (ctx.message?.text === '/test prefs') {
+      const menu = menus.preferencesMenu()
+      console.log('🧪 Preferences menu structure:', JSON.stringify(menu, null, 2))
       return ctx.reply('🧪 Testing preferences menu:', {
-        reply_markup: menus.preferencesMenu()
+        reply_markup: menu
+      })
+    }
+
+    // Test raw preferences menu
+    if (ctx.message?.text === '/test raw') {
+      return ctx.reply('🧪 Raw preferences menu:', {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🎯 Skill Levels', callback_data: 'pref_levels' },
+              { text: '🏄 Wave Sides', callback_data: 'pref_sides' }
+            ],
+            [
+              { text: '📅 Surf Days', callback_data: 'pref_days' },
+              { text: '🕐 Time Windows', callback_data: 'pref_times' }
+            ],
+            [
+              { text: '🏠 Main Menu', callback_data: 'menu_main' }
+            ]
+          ]
+        }
       })
     }
     
