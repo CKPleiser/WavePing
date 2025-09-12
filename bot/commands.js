@@ -109,11 +109,22 @@ const commands = {
       // Welcome back existing user
       const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile)
       
-      await ctx.reply(welcomeBackMessage, {
+      console.log('🔧 DEBUG: About to call ctx.reply():', {
+        hasCtx: !!ctx,
+        hasReply: !!(ctx && ctx.reply),
+        chatId: ctx.chat?.id,
+        messageLength: welcomeBackMessage.length
+      })
+      
+      const replyResult = await ctx.reply(welcomeBackMessage, {
         parse_mode: 'Markdown',
         reply_markup: menus.mainMenu()
       })
-      console.log('✅ Welcome back message sent')
+      
+      console.log('✅ Welcome back message sent, result:', {
+        hasResult: !!replyResult,
+        messageId: replyResult?.message_id
+      })
     }
     } catch (error) {
       console.error('🚨 START command error:', error.message, error.stack)
