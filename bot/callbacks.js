@@ -274,7 +274,7 @@ const callbacks = {
         case 'level_toggle_advanced':
         case 'level_toggle_expert':
           const levelToToggle = action.split('_')[2]
-          return await this.toggleUserLevel(supabase, ctx, userProfile, levelToToggle)
+          return await callbacks.toggleUserLevel(supabase, ctx, userProfile, levelToToggle)
           
         // Save level changes
         case 'level_save':
@@ -286,7 +286,7 @@ const callbacks = {
         case 'side_toggle_R':
         case 'side_toggle_A':
           const sideToToggle = action.split('_')[2]
-          return await this.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
+          return await callbacks.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
           
         case 'side_save':
           ctx.answerCbQuery('✅ Wave sides saved!')
@@ -301,7 +301,7 @@ const callbacks = {
         case 'day_toggle_5':
         case 'day_toggle_6':
           const dayToToggle = parseInt(action.split('_')[2])
-          return await this.toggleUserDay(supabase, ctx, userProfile, dayToToggle)
+          return await callbacks.toggleUserDay(supabase, ctx, userProfile, dayToToggle)
           
         case 'day_save':
           ctx.answerCbQuery('✅ Surf days saved!')
@@ -314,7 +314,7 @@ const callbacks = {
         case 'time_toggle_15:00_18:00':
         case 'time_toggle_18:00_21:00':
           const [_, __, startTime, endTime] = action.split('_')
-          return await this.toggleUserTimeWindow(supabase, ctx, userProfile, startTime, endTime)
+          return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, startTime, endTime)
           
         case 'time_save':
           ctx.answerCbQuery('✅ Time windows saved!')
