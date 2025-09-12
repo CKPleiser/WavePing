@@ -307,31 +307,49 @@ const callbacks = {
           ctx.answerCbQuery('✅ Surf days saved!')
           return commands.preferences(supabase, ctx)
           
-        // Time toggles
-        case 'time_toggle_06:00_09:00':
-        case 'time_toggle_09:00_12:00':
-        case 'time_toggle_12:00_15:00':
-        case 'time_toggle_15:00_18:00':
-        case 'time_toggle_18:00_21:00':
-          const [_, __, startTime, endTime] = action.split('_')
-          return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, startTime, endTime)
+        // Time toggles (using numeric IDs instead of time strings to avoid parsing issues)
+        case 'time_toggle_0': // 06:00-09:00
+        case 'time_toggle_1': // 09:00-12:00  
+        case 'time_toggle_2': // 12:00-15:00
+        case 'time_toggle_3': // 15:00-18:00
+        case 'time_toggle_4': // 18:00-21:00
+          const timeId = parseInt(action.split('_')[2])
+          const timeWindows = [
+            { start: '06:00', end: '09:00' },
+            { start: '09:00', end: '12:00' },
+            { start: '12:00', end: '15:00' },
+            { start: '15:00', end: '18:00' },
+            { start: '18:00', end: '21:00' }
+          ]
+          const timeWindow = timeWindows[timeId]
+          return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, timeWindow.start, timeWindow.end)
           
         case 'time_save':
           ctx.answerCbQuery('✅ Time windows saved!')
           return commands.preferences(supabase, ctx)
           
-        // Min spots selection
-        case 'spots_set_1':
-        case 'spots_set_2':
-        case 'spots_set_3':
-        case 'spots_set_5':
-        case 'spots_set_10':
+        // Min spots toggles (new toggle + save pattern)
+        case 'spots_toggle_1':
+        case 'spots_toggle_2':
+        case 'spots_toggle_3':
+        case 'spots_toggle_5':
+        case 'spots_toggle_10':
           const spotCount = parseInt(action.split('_')[2])
+          return await callbacks.toggleUserMinSpots(supabase, ctx, userProfile, spotCount)
+          
+        case 'spots_save':
+          // Save the min spots from session to database
+          const spotCountToSave = ctx.session?.tempMinSpots || userProfile.min_spots || 1
           await supabase.from('profiles').update({
-            min_spots: spotCount
+            min_spots: spotCountToSave
           }).eq('id', userProfile.id)
           
-          ctx.answerCbQuery(`✅ Minimum spots set to ${spotCount}!`)
+          // Clear session temp value
+          if (ctx.session?.tempMinSpots) {
+            delete ctx.session.tempMinSpots
+          }
+          
+          ctx.answerCbQuery(`💾 Minimum spots set to ${spotCountToSave}!`)
           return commands.preferences(supabase, ctx)
           
         default:
@@ -1124,10 +1142,10 @@ const callbacks = {
         { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
         { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
       ]
-      const timeButtons = timeWindows.map(time => {
+      const timeButtons = timeWindows.map((time, index) => {
         const isSelected = currentTimes.some(ct => ct.start_time === time.start && ct.end_time === time.end)
         const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-        return [{ text, callback_data: `pref_time_toggle_${time.start}_${time.end}` }]
+        return [{ text, callback_data: `pref_time_toggle_${index}` }]
       })
       timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
       timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
@@ -1268,6 +1286,45 @@ const callbacks = {
     } catch (error) {
       console.error('Confirmation action error:', error)
       return ctx.answerCbQuery('Error processing confirmation')
+    }
+  },
+
+  async toggleUserMinSpots(supabase, ctx, userProfile, spotCount) {
+    // CRITICAL: Answer callback query first to dismiss loading state
+    await ctx.answerCbQuery()
+    
+    try {
+      console.log(`🔄 Setting min spots: ${spotCount} for user ${userProfile.id}`)
+      
+      // Update the min_spots value in the session for immediate UI feedback
+      // (actual DB save happens when user clicks save)
+      ctx.session = ctx.session || {}
+      ctx.session.tempMinSpots = spotCount
+      
+      // Get current min spots from session or profile
+      const currentMinSpots = ctx.session.tempMinSpots || userProfile.min_spots || 1
+      console.log(`📊 Current min spots after toggle: ${currentMinSpots}`)
+      
+      const options = [
+        { value: 1, desc: "1+ (I'll take any spot!)" },
+        { value: 2, desc: '2+ (Small group)' },
+        { value: 3, desc: '3+ (Want options)' },
+        { value: 5, desc: '5+ (Plenty of space)' },
+        { value: 10, desc: '10+ (Lots of availability)' }
+      ]
+      
+      const spotsButtons = options.map(option => {
+        const isSelected = currentMinSpots === option.value
+        const text = `${isSelected ? '✅ ' : ''}${option.desc}`
+        return [{ text, callback_data: `pref_spots_toggle_${option.value}` }]
+      })
+      spotsButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_spots_save' }])
+      spotsButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+      
+      return ctx.editMessageReplyMarkup({ inline_keyboard: spotsButtons })
+    } catch (error) {
+      console.error('🚨 Toggle min spots error:', error)
+      return ctx.answerCbQuery('❌ Error updating spots preference')
     }
   },
 

@@ -244,12 +244,12 @@ const menus = {
       { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
     ]
     
-    const buttons = timeWindows.map(time => {
+    const buttons = timeWindows.map((time, index) => {
       const isSelected = currentTimes.some(ct => 
         ct.start_time === time.start && ct.end_time === time.end
       )
       const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-      return [Markup.button.callback(text, `pref_time_toggle_${time.start}_${time.end}`)]
+      return [Markup.button.callback(text, `pref_time_toggle_${index}`)]
     })
     
     buttons.push(
@@ -276,10 +276,11 @@ const menus = {
     const buttons = options.map(option => {
       const isSelected = currentMinSpots === option.value
       const text = `${isSelected ? '✅ ' : ''}${option.desc}`
-      return [Markup.button.callback(text, `pref_spots_set_${option.value}`)]
+      return [Markup.button.callback(text, `pref_spots_toggle_${option.value}`)]
     })
     
     buttons.push(
+      [Markup.button.callback('💾 Save Changes', 'pref_spots_save')],
       [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
     )
     
