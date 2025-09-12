@@ -93,6 +93,19 @@ const callbacks = {
             reply_markup: menus.helpMenu()
           })
           
+        case 'support':
+          const supportMessage = ui.supportMessage()
+          return ctx.editMessageText(supportMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
+              [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
+              [Markup.button.callback('💬 Contact Developer', 'support_contact')],
+              [Markup.button.callback('📈 Feature Request', 'support_feature')],
+              [Markup.button.callback('🏠 Main Menu', 'menu_main')]
+            ])
+          })
+          
         default:
           return ctx.answerCbQuery('Unknown menu option')
       }
@@ -199,6 +212,59 @@ const callbacks = {
           ctx.answerCbQuery('✅ Skill levels saved!')
           return commands.preferences(supabase, ctx)
           
+        // Side toggles
+        case 'side_toggle_L':
+        case 'side_toggle_R':
+        case 'side_toggle_A':
+          const sideToToggle = action.split('_')[2]
+          return await this.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
+          
+        case 'side_save':
+          ctx.answerCbQuery('✅ Wave sides saved!')
+          return commands.preferences(supabase, ctx)
+          
+        // Day toggles
+        case 'day_toggle_0':
+        case 'day_toggle_1':
+        case 'day_toggle_2':
+        case 'day_toggle_3':
+        case 'day_toggle_4':
+        case 'day_toggle_5':
+        case 'day_toggle_6':
+          const dayToToggle = parseInt(action.split('_')[2])
+          return await this.toggleUserDay(supabase, ctx, userProfile, dayToToggle)
+          
+        case 'day_save':
+          ctx.answerCbQuery('✅ Surf days saved!')
+          return commands.preferences(supabase, ctx)
+          
+        // Time toggles
+        case 'time_toggle_06:00_09:00':
+        case 'time_toggle_09:00_12:00':
+        case 'time_toggle_12:00_15:00':
+        case 'time_toggle_15:00_18:00':
+        case 'time_toggle_18:00_21:00':
+          const [_, __, startTime, endTime] = action.split('_')
+          return await this.toggleUserTimeWindow(supabase, ctx, userProfile, startTime, endTime)
+          
+        case 'time_save':
+          ctx.answerCbQuery('✅ Time windows saved!')
+          return commands.preferences(supabase, ctx)
+          
+        // Min spots selection
+        case 'spots_set_1':
+        case 'spots_set_2':
+        case 'spots_set_3':
+        case 'spots_set_5':
+        case 'spots_set_10':
+          const spotCount = parseInt(action.split('_')[2])
+          await supabase.from('profiles').update({
+            min_spots: spotCount
+          }).eq('id', userProfile.id)
+          
+          ctx.answerCbQuery(`✅ Minimum spots set to ${spotCount}!`)
+          return commands.preferences(supabase, ctx)
+          
         default:
           return ctx.answerCbQuery('Unknown preference option')
       }
@@ -207,9 +273,64 @@ const callbacks = {
       return ctx.answerCbQuery('Error updating preferences')
     }
   },
+  
+  /**
+   * Notification management callbacks
+   */
+  async notifications(supabase, ctx) {
+    const action = ctx.match[1]
+    const telegramId = ctx.from.id
+    
+    try {
+      const userProfile = await getUserProfile(supabase, telegramId)
+      
+      if (!userProfile) {
+        return ctx.answerCbQuery('Please run /setup first!')
+      }
+      
+      switch (action) {
+        case 'enable':
+          await supabase.from('profiles').update({
+            notification_enabled: true
+          }).eq('id', userProfile.id)
+          
+          ctx.answerCbQuery('✅ Notifications enabled!')
+          return commands.notifications(supabase, ctx)
+          
+        case 'disable':
+          await supabase.from('profiles').update({
+            notification_enabled: false
+          }).eq('id', userProfile.id)
+          
+          ctx.answerCbQuery('❌ Notifications disabled!')
+          return commands.notifications(supabase, ctx)
+          
+        case 'test':
+          const testMessage = `🧪 *Test Notification* 🔔\n\nThis is a test to make sure your WavePing notifications are working!\n\nIf you can see this message, everything is working perfectly! 🎉`
+          
+          await ctx.reply(testMessage, { parse_mode: 'Markdown' })
+          return ctx.answerCbQuery('📤 Test notification sent!')
+          
+        case 'digest_toggle_morning':
+        case 'digest_toggle_evening':
+          const digestType = action.split('_')[2]
+          return await this.toggleDigestPreference(supabase, ctx, userProfile, digestType)
+          
+        case 'digest_save':
+          ctx.answerCbQuery('✅ Digest preferences saved!')
+          return commands.notifications(supabase, ctx)
+          
+        default:
+          return ctx.answerCbQuery('Unknown notification option')
+      }
+    } catch (error) {
+      console.error('Notification callback error:', error)
+      return ctx.answerCbQuery('Error updating notifications')
+    }
+  },
 
   /**
-   * Setup workflow callbacks
+   * Setup workflow callbacks - Complete 6-step guided wizard
    */
   async setup(supabase, ctx) {
     const action = ctx.match[1]
@@ -224,7 +345,25 @@ const callbacks = {
       
       switch (action) {
         case 'quick':
-          return commands.quickSetup(supabase, ctx)
+          // Start session for 6-step wizard
+          ctx.session = ctx.session || {}
+          ctx.session.setup = {
+            step: 'levels',
+            levels: [],
+            sides: [],
+            days: [],
+            timeWindows: [],
+            notifications: [],
+            minSpots: 1
+          }
+          
+          return ctx.editMessageText(
+            '🚀 *Setup Wizard Started!* ⚡\n\n*Step 1 of 6: Skill Levels*\n\nChoose all levels you\'re comfortable surfing with:',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: menus.setupLevelSelectionMenu([])
+            }
+          )
           
         case 'detailed':
           return ctx.editMessageText(
@@ -235,46 +374,129 @@ const callbacks = {
             }
           )
           
-        case 'quick_level_beginner':
-        case 'quick_level_improver':
-        case 'quick_level_intermediate':
-        case 'quick_level_advanced':
-        case 'quick_level_expert':
-          const level = action.split('_')[2]
-          await this.setUserLevel(supabase, userProfile, level)
+        // Setup wizard level toggles
+        case 'setup_level_toggle_beginner':
+        case 'setup_level_toggle_improver':
+        case 'setup_level_toggle_intermediate':
+        case 'setup_level_toggle_advanced':
+        case 'setup_level_toggle_expert':
+          const levelToToggle = action.split('_')[3]
+          return this.toggleSetupLevel(supabase, ctx, levelToToggle)
+          
+        case 'setup_level_continue':
+          if (!ctx.session?.setup?.levels?.length) {
+            return ctx.answerCbQuery('⚠️ Please select at least one skill level!')
+          }
           
           return ctx.editMessageText(
-            `✅ *Level Set: ${ui.capitalizeWords(level)}*\n\n🕐 *Step 2 of 3: Preferred Times*\n\nWhen do you like to surf?`,
+            `✅ *Levels Selected*\n\n*Step 2 of 6: Wave Sides*\n\nWhich side do you prefer to surf?`,
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.quickSetupTimeMenu()
+              reply_markup: menus.setupSideSelectionMenu([])
             }
           )
           
-        case 'quick_time_morning':
-        case 'quick_time_afternoon':
-        case 'quick_time_evening':
-        case 'quick_time_any':
-          const timePreference = action.split('_')[2]
-          await this.setUserTimePreference(supabase, userProfile, timePreference)
+        // Setup wizard side toggles
+        case 'setup_side_toggle_Left':
+        case 'setup_side_toggle_Right':
+        case 'setup_side_toggle_Any':
+          const sideToToggle = action.split('_')[3]
+          return this.toggleSetupSide(supabase, ctx, sideToToggle)
+          
+        case 'setup_side_continue':
+          if (!ctx.session?.setup?.sides?.length) {
+            ctx.session.setup.sides = ['Any'] // Default to any if none selected
+          }
           
           return ctx.editMessageText(
-            `✅ *Time Preference Set*\n\n🔔 *Step 3 of 3: Notifications*\n\nWhen should I remind you about matching sessions?`,
+            `✅ *Wave Sides Selected*\n\n*Step 3 of 6: Minimum Spots*\n\nHow many available spots do you need?`,
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.quickSetupNotificationsMenu()
+              reply_markup: menus.setupMinSpotsMenu(1)
             }
           )
           
-        case 'quick_notif_24h':
-        case 'quick_notif_12h':
-        case 'quick_notif_6h':
-        case 'quick_notif_digest':
-          const notifTiming = action.split('_')[2]
-          await this.setUserNotificationPreference(supabase, userProfile, notifTiming)
+        // Setup wizard min spots
+        case 'setup_spots_1':
+        case 'setup_spots_2':
+        case 'setup_spots_5':
+        case 'setup_spots_10':
+          const spotCount = parseInt(action.split('_')[2])
+          ctx.session.setup.minSpots = spotCount
           
           return ctx.editMessageText(
-            `🎉 *Setup Complete!* 🎉\n\n✅ Profile configured\n✅ Preferences set\n✅ Notifications enabled\n\n*You're all set!*\n\nTry /today to see your personalized session matches! 🌊`,
+            `✅ *Minimum Spots: ${spotCount}*\n\n*Step 4 of 6: Surf Days*\n\nWhich days can you surf?`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: menus.setupDaySelectionMenu([])
+            }
+          )
+          
+        // Setup wizard day toggles
+        case 'setup_day_toggle_0':
+        case 'setup_day_toggle_1':
+        case 'setup_day_toggle_2':
+        case 'setup_day_toggle_3':
+        case 'setup_day_toggle_4':
+        case 'setup_day_toggle_5':
+        case 'setup_day_toggle_6':
+          const dayToToggle = parseInt(action.split('_')[3])
+          return this.toggleSetupDay(supabase, ctx, dayToToggle)
+          
+        case 'setup_day_continue':
+          if (!ctx.session?.setup?.days?.length) {
+            ctx.session.setup.days = [0,1,2,3,4,5,6] // Default to all days
+          }
+          
+          return ctx.editMessageText(
+            `✅ *Surf Days Selected*\n\n*Step 5 of 6: Time Windows*\n\nWhen do you prefer to surf?`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: menus.setupTimeSelectionMenu([])
+            }
+          )
+          
+        // Setup wizard time toggles
+        case 'setup_time_toggle_morning':
+        case 'setup_time_toggle_afternoon':
+        case 'setup_time_toggle_evening':
+          const timeToToggle = action.split('_')[3]
+          return this.toggleSetupTime(supabase, ctx, timeToToggle)
+          
+        case 'setup_time_continue':
+          if (!ctx.session?.setup?.timeWindows?.length) {
+            // Default to all times if none selected
+            ctx.session.setup.timeWindows = [
+              { start_time: '06:00', end_time: '09:00' },
+              { start_time: '09:00', end_time: '12:00' },
+              { start_time: '12:00', end_time: '15:00' },
+              { start_time: '15:00', end_time: '18:00' },
+              { start_time: '18:00', end_time: '21:00' }
+            ]
+          }
+          
+          return ctx.editMessageText(
+            `✅ *Time Windows Selected*\n\n*Step 6 of 6: Notifications*\n\nHow would you like to be notified?`,
+            {
+              parse_mode: 'Markdown',
+              reply_markup: menus.setupNotificationMenu()
+            }
+          )
+          
+        // Setup wizard notifications
+        case 'setup_notif_morning':
+        case 'setup_notif_evening':
+        case 'setup_notif_both':
+          const notifChoice = action.split('_')[2]
+          
+          // Save all preferences to database
+          await this.saveSetupWizard(supabase, userProfile, ctx.session.setup, notifChoice)
+          
+          // Clear session
+          delete ctx.session.setup
+          
+          return ctx.editMessageText(
+            `🎉 *Setup Complete!* 🎉\n\n✅ Skill levels configured\n✅ Wave preferences set\n✅ Timing preferences saved\n✅ Notifications enabled\n\n*You're all set to get personalized surf alerts!*\n\nTry /today to see your matches! 🌊`,
             {
               parse_mode: 'Markdown',
               reply_markup: menus.mainMenu()
@@ -453,21 +675,181 @@ const callbacks = {
       .eq('user_id', userProfile.id)
 
     if (timing === 'digest') {
-      // Set up digest preference instead
-      await supabase
-        .from('user_digest_preferences')
-        .upsert({
-          user_id: userProfile.id,
-          digest_type: 'morning'
-        })
-    } else {
-      // Set notification timing
+      // Set up digest preference using new enum system
       await supabase
         .from('user_notifications')
         .insert({
           user_id: userProfile.id,
-          timing: timing
+          timing: 'morning'
         })
+    } else {
+      // Set notification timing (convert old system to new enum)
+      const timingMap = {
+        '24h': 'morning',
+        '12h': 'morning', 
+        '6h': 'evening',
+        '3h': 'evening',
+        '1h': 'evening'
+      }
+      
+      await supabase
+        .from('user_notifications')
+        .insert({
+          user_id: userProfile.id,
+          timing: timingMap[timing] || 'morning'
+        })
+    }
+  },
+
+  // New setup wizard helper methods
+  async toggleSetupLevel(supabase, ctx, level) {
+    ctx.session = ctx.session || {}
+    ctx.session.setup = ctx.session.setup || { levels: [] }
+    
+    const levels = ctx.session.setup.levels
+    const index = levels.indexOf(level)
+    
+    if (index === -1) {
+      levels.push(level)
+    } else {
+      levels.splice(index, 1)
+    }
+    
+    return ctx.editMessageReplyMarkup(
+      menus.setupLevelSelectionMenu(levels).reply_markup
+    )
+  },
+  
+  async toggleSetupSide(supabase, ctx, side) {
+    ctx.session = ctx.session || {}
+    ctx.session.setup = ctx.session.setup || { sides: [] }
+    
+    const sides = ctx.session.setup.sides
+    const index = sides.indexOf(side)
+    
+    if (index === -1) {
+      sides.push(side)
+    } else {
+      sides.splice(index, 1)
+    }
+    
+    return ctx.editMessageReplyMarkup(
+      menus.setupSideSelectionMenu(sides).reply_markup
+    )
+  },
+  
+  async toggleSetupDay(supabase, ctx, day) {
+    ctx.session = ctx.session || {}
+    ctx.session.setup = ctx.session.setup || { days: [] }
+    
+    const days = ctx.session.setup.days
+    const index = days.indexOf(day)
+    
+    if (index === -1) {
+      days.push(day)
+    } else {
+      days.splice(index, 1)
+    }
+    
+    return ctx.editMessageReplyMarkup(
+      menus.setupDaySelectionMenu(days).reply_markup
+    )
+  },
+  
+  async toggleSetupTime(supabase, ctx, timeSlot) {
+    ctx.session = ctx.session || {}
+    ctx.session.setup = ctx.session.setup || { timeWindows: [] }
+    
+    const timeWindows = ctx.session.setup.timeWindows
+    const timeSlots = {
+      morning: { start_time: '06:00', end_time: '12:00' },
+      afternoon: { start_time: '12:00', end_time: '18:00' },
+      evening: { start_time: '18:00', end_time: '21:00' }
+    }
+    
+    const window = timeSlots[timeSlot]
+    const index = timeWindows.findIndex(tw => tw.start_time === window.start_time)
+    
+    if (index === -1) {
+      timeWindows.push(window)
+    } else {
+      timeWindows.splice(index, 1)
+    }
+    
+    const selectedSlots = timeWindows.map(tw => {
+      const slot = Object.keys(timeSlots).find(key => 
+        timeSlots[key].start_time === tw.start_time
+      )
+      return slot
+    })
+    
+    return ctx.editMessageReplyMarkup(
+      menus.setupTimeSelectionMenu(selectedSlots).reply_markup
+    )
+  },
+  
+  async saveSetupWizard(supabase, userProfile, setup, notificationChoice) {
+    // Save levels
+    await supabase.from('user_levels').delete().eq('user_id', userProfile.id)
+    for (const level of setup.levels) {
+      await supabase.from('user_levels').insert({
+        user_id: userProfile.id,
+        level: level
+      })
+    }
+    
+    // Save sides
+    await supabase.from('user_sides').delete().eq('user_id', userProfile.id)
+    for (const side of setup.sides) {
+      const sideCode = side === 'Left' ? 'L' : side === 'Right' ? 'R' : 'A'
+      await supabase.from('user_sides').insert({
+        user_id: userProfile.id,
+        side: sideCode
+      })
+    }
+    
+    // Save days
+    await supabase.from('user_days').delete().eq('user_id', userProfile.id)
+    for (const day of setup.days) {
+      await supabase.from('user_days').insert({
+        user_id: userProfile.id,
+        day_of_week: day
+      })
+    }
+    
+    // Save time windows
+    await supabase.from('user_time_windows').delete().eq('user_id', userProfile.id)
+    for (const window of setup.timeWindows) {
+      await supabase.from('user_time_windows').insert({
+        user_id: userProfile.id,
+        start_time: window.start_time,
+        end_time: window.end_time
+      })
+    }
+    
+    // Save min spots
+    await supabase.from('profiles').update({
+      min_spots: setup.minSpots
+    }).eq('id', userProfile.id)
+    
+    // Save notifications using new digest system
+    await supabase.from('user_notifications').delete().eq('user_id', userProfile.id)
+    
+    if (notificationChoice === 'morning') {
+      await supabase.from('user_notifications').insert({
+        user_id: userProfile.id,
+        timing: 'morning'
+      })
+    } else if (notificationChoice === 'evening') {
+      await supabase.from('user_notifications').insert({
+        user_id: userProfile.id,
+        timing: 'evening'
+      })
+    } else if (notificationChoice === 'both') {
+      await supabase.from('user_notifications').insert([
+        { user_id: userProfile.id, timing: 'morning' },
+        { user_id: userProfile.id, timing: 'evening' }
+      ])
     }
   },
 
@@ -499,6 +881,192 @@ const callbacks = {
           reply_markup: menus.sessionMenu(timeframe, false)
         }
       )
+    }
+  },
+  
+  async toggleUserSide(supabase, ctx, userProfile, side) {
+    try {
+      const { data: existingSide } = await supabase
+        .from('user_sides')
+        .select('side')
+        .eq('user_id', userProfile.id)
+        .eq('side', side)
+        .single()
+
+      if (existingSide) {
+        await supabase
+          .from('user_sides')
+          .delete()
+          .eq('user_id', userProfile.id)
+          .eq('side', side)
+      } else {
+        await supabase
+          .from('user_sides')
+          .insert({
+            user_id: userProfile.id,
+            side: side
+          })
+      }
+
+      const updatedProfile = await getUserProfile(supabase, ctx.from.id)
+      const currentSides = updatedProfile.user_sides?.map(us => us.side) || []
+      
+      return ctx.editMessageReplyMarkup(
+        menus.sideSelectionMenu(currentSides).reply_markup
+      )
+    } catch (error) {
+      console.error('Toggle side error:', error)
+      return ctx.answerCbQuery('Error updating side preference')
+    }
+  },
+  
+  async toggleUserDay(supabase, ctx, userProfile, day) {
+    try {
+      const { data: existingDay } = await supabase
+        .from('user_days')
+        .select('day_of_week')
+        .eq('user_id', userProfile.id)
+        .eq('day_of_week', day)
+        .single()
+
+      if (existingDay) {
+        await supabase
+          .from('user_days')
+          .delete()
+          .eq('user_id', userProfile.id)
+          .eq('day_of_week', day)
+      } else {
+        await supabase
+          .from('user_days')
+          .insert({
+            user_id: userProfile.id,
+            day_of_week: day
+          })
+      }
+
+      const updatedProfile = await getUserProfile(supabase, ctx.from.id)
+      const currentDays = updatedProfile.user_days?.map(ud => ud.day_of_week) || []
+      
+      return ctx.editMessageReplyMarkup(
+        menus.daySelectionMenu(currentDays).reply_markup
+      )
+    } catch (error) {
+      console.error('Toggle day error:', error)
+      return ctx.answerCbQuery('Error updating day preference')
+    }
+  },
+  
+  async toggleUserTimeWindow(supabase, ctx, userProfile, startTime, endTime) {
+    try {
+      const { data: existingWindow } = await supabase
+        .from('user_time_windows')
+        .select('id')
+        .eq('user_id', userProfile.id)
+        .eq('start_time', startTime)
+        .eq('end_time', endTime)
+        .single()
+
+      if (existingWindow) {
+        await supabase
+          .from('user_time_windows')
+          .delete()
+          .eq('id', existingWindow.id)
+      } else {
+        await supabase
+          .from('user_time_windows')
+          .insert({
+            user_id: userProfile.id,
+            start_time: startTime,
+            end_time: endTime
+          })
+      }
+
+      const updatedProfile = await getUserProfile(supabase, ctx.from.id)
+      const currentTimes = updatedProfile.user_time_windows || []
+      
+      return ctx.editMessageReplyMarkup(
+        menus.timeSelectionMenu(currentTimes).reply_markup
+      )
+    } catch (error) {
+      console.error('Toggle time window error:', error)
+      return ctx.answerCbQuery('Error updating time preference')
+    }
+  },
+  
+  async toggleDigestPreference(supabase, ctx, userProfile, digestType) {
+    try {
+      const { data: existing } = await supabase
+        .from('user_notifications')
+        .select('timing')
+        .eq('user_id', userProfile.id)
+        .eq('timing', digestType)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('user_notifications')
+          .delete()
+          .eq('user_id', userProfile.id)
+          .eq('timing', digestType)
+      } else {
+        await supabase
+          .from('user_notifications')
+          .insert({
+            user_id: userProfile.id,
+            timing: digestType
+          })
+      }
+
+      const updatedProfile = await getUserProfile(supabase, ctx.from.id)
+      const currentDigests = updatedProfile.user_notifications?.map(un => un.timing) || []
+      
+      return ctx.editMessageReplyMarkup(
+        menus.digestMenu(currentDigests).reply_markup
+      )
+    } catch (error) {
+      console.error('Toggle digest error:', error)
+      return ctx.answerCbQuery('Error updating digest preference')
+    }
+  },
+  
+  /**
+   * Support-related callbacks
+   */
+  async support(supabase, ctx) {
+    const action = ctx.match[1]
+    
+    try {
+      switch (action) {
+        case 'contact':
+          const contactMessage = ui.contactMessage()
+          return ctx.editMessageText(contactMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.url('📧 Email Support', 'mailto:support@waveping.app')],
+              [Markup.button.url('💬 Telegram Support', 'https://t.me/WavePingSupport')],
+              [Markup.button.callback('🔙 Back to Support', 'menu_support')]
+            ])
+          })
+          
+        case 'feature':
+          const featureMessage = ui.featureRequestMessage()
+          return ctx.editMessageText(featureMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.url('📈 Submit Feature Request', 'https://t.me/WavePingSupport')],
+              [Markup.button.callback('🔙 Back to Support', 'menu_support')]
+            ])
+          })
+          
+        case 'coffee':
+          return ctx.answerCbQuery('☕ Opening Buy Me a Coffee... Thanks for your support! 💙')
+          
+        default:
+          return ctx.answerCbQuery('Unknown support option')
+      }
+    } catch (error) {
+      console.error('Support callback error:', error)
+      return ctx.answerCbQuery('Error loading support option')
     }
   }
 }

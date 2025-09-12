@@ -467,6 +467,24 @@ const commands = {
         [Markup.button.callback('🌊 Test Session Fetch', 'test_sessions')]
       ])
     })
+  },
+
+  /**
+   * Support command - Buy Me a Coffee integration
+   */
+  async support(ctx) {
+    const supportMessage = ui.supportMessage()
+    
+    await ctx.reply(supportMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
+        [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
+        [Markup.button.callback('💬 Contact Developer', 'support_contact')],
+        [Markup.button.callback('📈 Feature Request', 'support_feature')],
+        [Markup.button.callback('🏠 Main Menu', 'menu_main')]
+      ])
+    })
   }
 }
 

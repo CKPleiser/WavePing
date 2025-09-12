@@ -344,16 +344,21 @@ Choose your surfing level to get the right session recommendations:
 /week - Week overview
 /prefs - Manage preferences
 /setup - Configure alerts
+/support - Support the developer
 /help - This help message
 
 🔔 *How Notifications Work:*
 • Set your preferences (level, times, days)
-• Choose notification timing (1h, 6h, 24h before)
+• Choose notification timing via daily digests
 • Get alerts when matching sessions have spots!
 
 📱 *Daily Digests:*
 • Morning digest (8 AM) - Plan your day
 • Evening digest (6 PM) - Tomorrow's preview
+
+☕ *Support WavePing:*
+If you love using WavePing, consider supporting development!
+Use /support to see how you can help.
 
 🆘 *Need More Help?*
 Contact @WavePingSupport for assistance!
@@ -383,6 +388,81 @@ Contact @WavePingSupport for assistance!
     message += `*Test Functions:* 🧪`
     
     return message
+  },
+
+  /**
+   * Support message - Buy Me a Coffee integration
+   */
+  supportMessage() {
+    return `☕ *Support WavePing* 💙
+
+🌊 Thank you for using WavePing! This bot helps surfers at The Wave Bristol get the perfect session notifications.
+
+*How WavePing helps you:*
+• 🔔 Smart session alerts for your skill level
+• 📱 Daily surf digests delivered when you want
+• 🎯 Personalized recommendations
+• 🔄 Real-time availability tracking
+
+*Support the Development:*
+WavePing is built with ❤️ by an independent developer. Your support helps:
+
+• 🔧 Keep the bot running 24/7
+• ✨ Add new features you request  
+• 🛡️ Maintain reliable notifications
+• 🌊 Improve the surf experience for everyone
+
+*Ways to Support:*`
+  },
+
+  /**
+   * Contact support message
+   */
+  contactMessage() {
+    return `💬 *Contact Developer* 🙋‍♂️
+
+Have questions, feedback, or found a bug?
+
+*Get in Touch:*
+• 📧 Email: support@waveping.app
+• 🐦 Twitter: @WavePingBot
+• 💬 Telegram: @WavePingSupport
+
+*Response Time:*
+Usually within 24 hours! 🚀
+
+*What to Include:*
+• Describe the issue clearly
+• Include your Telegram username
+• Screenshots if helpful
+
+Thanks for helping make WavePing better! 🌊`
+  },
+
+  /**
+   * Feature request message
+   */
+  featureRequestMessage() {
+    return `📈 *Feature Requests* ✨
+
+Got an idea to make WavePing even better?
+
+*Popular Requests:*
+• 🌡️ Water temperature alerts
+• 🌌 Wind condition notifications  
+• 📅 Session booking reminders
+• 🏆 Surf streak tracking
+• 📊 Session analytics
+
+*How to Submit:*
+1️⃣ Contact @WavePingSupport with your idea
+2️⃣ Describe how it would help you
+3️⃣ We'll consider it for the roadmap!
+
+*Development Priority:*
+Features that help the most surfers get added first! 🌊
+
+Your input shapes the future of WavePing! 🚀`
   },
 
   // Utility methods

@@ -17,6 +17,8 @@ class BotHandler {
     
     this.setupCommands()
     this.setupCallbacks()
+    this.setupMenuButton()
+    this.setupBotCommands()
     this.setupErrorHandling()
   }
 
@@ -42,6 +44,9 @@ class BotHandler {
     // Quick setup commands
     this.bot.command('quick', commands.quickSetup.bind(null, this.supabase))
     
+    // Support command for Buy Me a Coffee
+    this.bot.command('support', commands.support)
+    
     this.logger.info('Bot commands registered successfully')
   }
 
@@ -52,6 +57,12 @@ class BotHandler {
     // Preferences management
     this.bot.action(/^pref_(.+)$/, callbacks.preferences.bind(null, this.supabase))
     this.bot.action(/^setup_(.+)$/, callbacks.setup.bind(null, this.supabase))
+    
+    // Notification management
+    this.bot.action(/^notif_(.+)$/, callbacks.notifications.bind(null, this.supabase))
+    
+    // Support and contact management
+    this.bot.action(/^support_(.+)$/, callbacks.support.bind(null, this.supabase))
     
     // Session filtering and display
     this.bot.action(/^filter_(.+)$/, callbacks.filters.bind(null, this.supabase))
@@ -64,7 +75,47 @@ class BotHandler {
     this.bot.action('back', callbacks.back)
     this.bot.action(/^back_(.+)$/, callbacks.backTo.bind(null, this.supabase))
     
+    // Confirmation actions
+    this.bot.action(/^confirm_(.+)$/, callbacks.confirmActions?.bind(null, this.supabase) || ((ctx) => ctx.answerCbQuery('Confirmation not implemented')))
+    
     this.logger.info('Bot callbacks registered successfully')
+  }
+
+  async setupMenuButton() {
+    try {
+      // Set the menu button that appears next to the text input
+      await this.bot.telegram.setChatMenuButton({
+        menu_button: {
+          type: 'commands'
+        }
+      })
+      
+      this.logger.info('Bot menu button configured successfully')
+    } catch (error) {
+      this.logger.error('Failed to setup menu button', { error: error.message })
+    }
+  }
+
+  async setupBotCommands() {
+    try {
+      // Define the command list that appears in the menu
+      const commands = [
+        { command: 'start', description: '🌊 Welcome & Setup' },
+        { command: 'today', description: '🏄‍♂️ Today\'s Sessions' },
+        { command: 'tomorrow', description: '🌅 Tomorrow\'s Sessions' },
+        { command: 'week', description: '📅 Weekly Overview' },
+        { command: 'prefs', description: '⚙️ My Preferences' },
+        { command: 'setup', description: '🚀 Quick Setup' },
+        { command: 'notifications', description: '🔔 Notification Settings' },
+        { command: 'support', description: '☕ Support WavePing' },
+        { command: 'help', description: '❓ Help & Commands' }
+      ]
+      
+      await this.bot.telegram.setMyCommands(commands)
+      this.logger.info('Bot commands menu configured successfully')
+    } catch (error) {
+      this.logger.error('Failed to setup bot commands', { error: error.message })
+    }
   }
 
   setupErrorHandling() {

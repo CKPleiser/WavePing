@@ -22,6 +22,9 @@ const menus = {
       [
         Markup.button.callback('🔔 Notifications', 'menu_notifications'),
         Markup.button.callback('❓ Help', 'menu_help')
+      ],
+      [
+        Markup.button.callback('☕ Support WavePing', 'menu_support')
       ]
     ])
   },
@@ -380,6 +383,123 @@ const menus = {
       [Markup.button.callback('🌅 12h before', 'setup_quick_notif_12h')],
       [Markup.button.callback('⏰ 6h before', 'setup_quick_notif_6h')],
       [Markup.button.callback('🌊 Daily digest only', 'setup_quick_notif_digest')]
+    ])
+  },
+
+  /**
+   * Setup wizard specific menus
+   */
+  setupLevelSelectionMenu(currentLevels = []) {
+    const levels = [
+      { key: 'beginner', emoji: '🟢', name: 'Beginner' },
+      { key: 'improver', emoji: '🔵', name: 'Improver' },
+      { key: 'intermediate', emoji: '🟡', name: 'Intermediate' },
+      { key: 'advanced', emoji: '🟠', name: 'Advanced' },
+      { key: 'expert', emoji: '🔴', name: 'Expert' }
+    ]
+    
+    const buttons = levels.map(level => {
+      const isSelected = currentLevels.includes(level.key)
+      const text = `${isSelected ? '✅ ' : ''}${level.emoji} ${level.name}`
+      return [Markup.button.callback(text, `setup_level_toggle_${level.key}`)]
+    })
+    
+    buttons.push(
+      [Markup.button.callback('➡️ Continue to Step 2', 'setup_level_continue')],
+      [Markup.button.callback('🔙 Back to Menu', 'menu_main')]
+    )
+    
+    return Markup.inlineKeyboard(buttons)
+  },
+  
+  setupSideSelectionMenu(currentSides = []) {
+    const sides = [
+      { key: 'Left', emoji: '🏄‍♂️', name: 'Left Side' },
+      { key: 'Right', emoji: '🏄‍♀️', name: 'Right Side' },
+      { key: 'Any', emoji: '🌊', name: 'Any Side (I don\'t mind!)' }
+    ]
+    
+    const buttons = sides.map(side => {
+      const isSelected = currentSides.includes(side.key)
+      const text = `${isSelected ? '✅ ' : ''}${side.emoji} ${side.name}`
+      return [Markup.button.callback(text, `setup_side_toggle_${side.key}`)]
+    })
+    
+    buttons.push(
+      [Markup.button.callback('➡️ Continue to Step 3', 'setup_side_continue')]
+    )
+    
+    return Markup.inlineKeyboard(buttons)
+  },
+  
+  setupMinSpotsMenu(currentSpots = 1) {
+    const options = [
+      { value: 1, desc: "1+ spot (I'll take any!)" },
+      { value: 2, desc: '2+ spots (Small group)' },
+      { value: 5, desc: '5+ spots (Want options)' },
+      { value: 10, desc: '10+ spots (Lots of space)' }
+    ]
+    
+    const buttons = options.map(option => {
+      const isSelected = currentSpots === option.value
+      const text = `${isSelected ? '✅ ' : ''}💺 ${option.desc}`
+      return [Markup.button.callback(text, `setup_spots_${option.value}`)]
+    })
+    
+    return Markup.inlineKeyboard(buttons)
+  },
+  
+  setupDaySelectionMenu(currentDays = []) {
+    const days = [
+      { key: 0, name: 'Mon' }, { key: 1, name: 'Tue' }, { key: 2, name: 'Wed' },
+      { key: 3, name: 'Thu' }, { key: 4, name: 'Fri' }, { key: 5, name: 'Sat' }, { key: 6, name: 'Sun' }
+    ]
+    
+    const buttons = [
+      days.slice(0, 4).map(day => {
+        const isSelected = currentDays.includes(day.key)
+        const text = `${isSelected ? '✅ ' : ''}📅 ${day.name}`
+        return Markup.button.callback(text, `setup_day_toggle_${day.key}`)
+      }),
+      days.slice(4).map(day => {
+        const isSelected = currentDays.includes(day.key)
+        const text = `${isSelected ? '✅ ' : ''}📅 ${day.name}`
+        return Markup.button.callback(text, `setup_day_toggle_${day.key}`)
+      })
+    ]
+    
+    buttons.push(
+      [Markup.button.callback('➡️ Continue to Step 5', 'setup_day_continue')]
+    )
+    
+    return Markup.inlineKeyboard(buttons)
+  },
+  
+  setupTimeSelectionMenu(currentTimes = []) {
+    const times = [
+      { key: 'morning', desc: '🌅 Morning (6 AM - 12 PM)' },
+      { key: 'afternoon', desc: '☀️ Afternoon (12 PM - 6 PM)' },
+      { key: 'evening', desc: '🌆 Evening (6 PM - 9 PM)' }
+    ]
+    
+    const buttons = times.map(time => {
+      const isSelected = currentTimes.includes(time.key)
+      const text = `${isSelected ? '✅ ' : ''}${time.desc}`
+      return [Markup.button.callback(text, `setup_time_toggle_${time.key}`)]
+    })
+    
+    buttons.push(
+      [Markup.button.callback('➡️ Continue to Step 6', 'setup_time_continue')]
+    )
+    
+    return Markup.inlineKeyboard(buttons)
+  },
+  
+  setupNotificationMenu() {
+    return Markup.inlineKeyboard([
+      [Markup.button.callback('🌅 Morning Digest (8 AM)', 'setup_notif_morning')],
+      [Markup.button.callback('🌇 Evening Digest (6 PM)', 'setup_notif_evening')],
+      [Markup.button.callback('📱 Both Morning & Evening', 'setup_notif_both')]
     ])
   },
 
