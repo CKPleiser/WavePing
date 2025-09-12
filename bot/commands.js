@@ -102,26 +102,6 @@ const commands = {
       })
       console.log('✅ Welcome message sent')
       
-      // Suggest quick setup
-      setTimeout(() => {
-        ctx.reply(
-          '🎯 *Quick Start Available!*\n\n' +
-          'Get personalized surf alerts in just 30 seconds:\n\n' +
-          '• Tell us your skill level\n' +
-          '• Choose your preferred surf times\n' +
-          '• Set notification preferences\n\n' +
-          'Ready to get started?',
-          {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '⚙️ Setup Preferences', callback_data: 'menu_preferences' }],
-                [{ text: '🌊 Just Browse Sessions', callback_data: 'menu_today' }]
-              ]
-            }
-          }
-        )
-      }, 2000)
     } else {
       console.log('🎉 Existing user found, sending welcome back message')
       // Welcome back existing user
@@ -355,13 +335,6 @@ const commands = {
 
   // Week view command removed - only today/tomorrow supported
 
-  /**
-   * Setup command - Redirects to preferences
-   */
-  async setup(supabase, ctx) {
-    // Setup command now redirects to preferences for unified experience
-    return this.preferences(supabase, ctx)
-  },
 
   /**
    * Preferences command
@@ -456,22 +429,6 @@ const commands = {
     })
   },
 
-  /**
-   * Quick setup command
-   */
-  async quickSetup(supabase, ctx) {
-    // Start session
-    ctx.session = ctx.session || {}
-    ctx.session.setupType = 'quick'
-    ctx.session.setupStep = 'level'
-    
-    const quickSetupMessage = ui.quickSetupMessage()
-    
-    await ctx.reply(quickSetupMessage, {
-      parse_mode: 'Markdown',
-      reply_markup: menus.quickSetupLevelsMenu()
-    })
-  },
 
   /**
    * Test command

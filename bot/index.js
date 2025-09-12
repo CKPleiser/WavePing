@@ -30,7 +30,6 @@ class BotHandler {
     // Week command removed - only today/tomorrow supported
     
     // Settings and preferences
-    this.bot.command('setup', commands.setup.bind(null, this.supabase))
     this.bot.command('prefs', commands.preferences.bind(null, this.supabase))
     this.bot.command('notifications', commands.notifications.bind(null, this.supabase))
     
@@ -39,8 +38,6 @@ class BotHandler {
     this.bot.command('menu', commands.menu)
     this.bot.command('test', commands.test.bind(null, this.supabase))
     
-    // Quick setup commands
-    this.bot.command('quick', commands.quickSetup.bind(null, this.supabase))
     
     // Support command for Buy Me a Coffee
     this.bot.command('support', commands.support)
@@ -107,11 +104,10 @@ class BotHandler {
     try {
       // Define the command list that appears in the menu
       const commands = [
-        { command: 'start', description: '🌊 Welcome & Setup' },
+        { command: 'start', description: '🌊 Welcome' },
         { command: 'today', description: '🏄‍♂️ Today\'s Sessions' },
         { command: 'tomorrow', description: '🌅 Tomorrow\'s Sessions' },
-        { command: 'prefs', description: '⚙️ My Preferences' },
-        { command: 'setup', description: '⚙️ Setup Preferences' },
+        { command: 'prefs', description: '⚙️ Preferences' },
         { command: 'notifications', description: '🔔 Notification Settings' },
         { command: 'support', description: '☕ Support WavePing' },
         { command: 'help', description: '❓ Help & Commands' }
