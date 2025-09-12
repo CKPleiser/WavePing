@@ -141,21 +141,39 @@ const callbacks = {
       switch (action) {
         case 'levels':
           const currentLevels = userProfile.user_levels?.map(ul => ul.level) || []
+          const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
+          const levelButtons = levels.map(level => {
+            const isSelected = currentLevels.includes(level)
+            const emoji = level === 'beginner' ? '🟢' : level === 'improver' ? '🔵' : level === 'intermediate' ? '🟡' : level === 'advanced' ? '🟠' : '🔴'
+            const text = `${isSelected ? '✅ ' : ''}${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}`
+            return [{ text, callback_data: `pref_level_toggle_${level}` }]
+          })
+          levelButtons.push([{ text: '✅ Save Changes', callback_data: 'pref_level_save' }])
+          levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
           return ctx.editMessageText(
             '🎯 *Select Your Skill Levels*\n\nChoose all levels you\'re comfortable surfing:',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.levelSelectionMenu(currentLevels)
+              reply_markup: { inline_keyboard: levelButtons }
             }
           )
           
         case 'sides':
           const currentSides = userProfile.user_sides?.map(us => us.side) || []
+          const sideButtons = [
+            [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
+            [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
+            [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
+            [{ text: '✅ Save Changes', callback_data: 'pref_side_save' }],
+            [{ text: '🔙 Back', callback_data: 'menu_preferences' }]
+          ]
+          
           return ctx.editMessageText(
             '🏄 *Select Wave Sides*\n\nWhich side(s) do you prefer?',
             {
               parse_mode: 'Markdown', 
-              reply_markup: menus.sideSelectionMenu(currentSides)
+              reply_markup: { inline_keyboard: sideButtons }
             }
           )
           
