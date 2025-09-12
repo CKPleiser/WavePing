@@ -30,6 +30,19 @@ const digestService = new DigestService(supabase, bot)
 const botHandler = new BotHandler(bot, supabase)
 const serverLogger = logger.child('Server')
 
+// Debug bot responses - intercept reply method to log keyboards
+const originalReply = bot.telegram.sendMessage
+bot.telegram.sendMessage = function(chatId, text, extra) {
+  if (extra?.reply_markup) {
+    serverLogger.info('🎹 Keyboard being sent:', {
+      chatId,
+      text: text.substring(0, 50) + '...',
+      keyboard: JSON.stringify(extra.reply_markup, null, 2)
+    })
+  }
+  return originalReply.call(this, chatId, text, extra)
+}
+
 // Homepage
 app.get('/', (req, res) => {
   res.json({ 
@@ -298,10 +311,27 @@ app.post('/api/cron/send-session-notifications',
 // Telegram webhook endpoint
 app.post(`/api/telegram/webhook`, asyncHandler(async (req, res) => {
   try {
+    // Debug webhook requests
+    serverLogger.info('🔍 Webhook received:', { 
+      update_id: req.body.update_id,
+      message: req.body.message ? {
+        text: req.body.message.text,
+        from: req.body.message.from?.first_name
+      } : null,
+      callback_query: req.body.callback_query ? {
+        data: req.body.callback_query.data,
+        from: req.body.callback_query.from?.first_name
+      } : null
+    })
+    
     await bot.handleUpdate(req.body)
     res.status(200).send('OK')
   } catch (error) {
-    serverLogger.error('Webhook error:', { error: error.message })
+    serverLogger.error('Webhook error:', { 
+      error: error.message,
+      stack: error.stack,
+      update: req.body
+    })
     res.status(200).send('OK') // Still return OK to prevent Telegram retries
   }
 }))
