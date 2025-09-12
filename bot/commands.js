@@ -372,27 +372,50 @@ const commands = {
     }
     
     const preferencesMessage = ui.createPreferencesMessage(userProfile)
+    const preferencesMenu = menus.preferencesMenu()
+    
+    console.log('🔧 Preferences menu created:', {
+      hasMenu: !!preferencesMenu,
+      menuType: typeof preferencesMenu,
+      hasInlineKeyboard: !!(preferencesMenu && preferencesMenu.reply_markup && preferencesMenu.reply_markup.inline_keyboard),
+      keyboardLength: preferencesMenu?.reply_markup?.inline_keyboard?.length || 0
+    })
     
     // Always try to edit if it's a callback, but fall back to reply if edit fails
     try {
       if (ctx.callbackQuery) {
+        console.log('🔧 Editing message with preferences menu')
         await ctx.editMessageText(preferencesMessage, {
           parse_mode: 'Markdown',
-          reply_markup: menus.preferencesMenu()
+          reply_markup: preferencesMenu
         })
+        console.log('✅ Successfully edited message with preferences menu')
       } else {
+        console.log('🔧 Sending new preferences message with menu')
         await ctx.reply(preferencesMessage, {
           parse_mode: 'Markdown',
-          reply_markup: menus.preferencesMenu()
+          reply_markup: preferencesMenu
         })
+        console.log('✅ Successfully sent new preferences message with menu')
       }
     } catch (error) {
-      console.error('Error sending preferences menu, trying fallback reply:', error.message)
-      // Fallback: send as new message if edit fails
-      await ctx.reply(preferencesMessage, {
-        parse_mode: 'Markdown',
-        reply_markup: menus.preferencesMenu()
-      })
+      console.error('🚨 Error sending preferences menu:', error.message, error.stack)
+      console.log('🔧 Trying fallback reply with menu')
+      try {
+        // Fallback: send as new message if edit fails
+        await ctx.reply(preferencesMessage, {
+          parse_mode: 'Markdown',
+          reply_markup: preferencesMenu
+        })
+        console.log('✅ Fallback reply with menu succeeded')
+      } catch (fallbackError) {
+        console.error('🚨 Even fallback reply failed:', fallbackError.message)
+        // Last resort: send message without menu but tell user what to do
+        await ctx.reply(
+          preferencesMessage + '\n\n🚨 *Buttons not working? Try typing:* `/prefs`',
+          { parse_mode: 'Markdown' }
+        )
+      }
     }
   },
 
