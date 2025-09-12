@@ -22,9 +22,9 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.randomBytes(32).toString('hex')
 const WEBHOOK_URL = process.env.WEBHOOK_URL || 
   process.env.TELEGRAM_WEBHOOK_URL || 
-  (process.env.VERCEL_URL ? `${process.env.VERCEL_URL}/api/telegram/webhook` : null) ||
+  (process.env.RAILWAY_URL ? `${process.env.RAILWAY_URL}/api/telegram/webhook` : null) ||
   (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}/api/telegram/webhook` : null) ||
-  'https://your-domain.vercel.app/api/telegram/webhook' // Replace with your domain
+  'https://your-app.up.railway.app/api/telegram/webhook' // Replace with your Railway domain
 
 if (!BOT_TOKEN) {
   console.error('❌ TELEGRAM_BOT_TOKEN environment variable is required')
