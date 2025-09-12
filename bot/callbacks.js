@@ -282,8 +282,14 @@ const callbacks = {
           
         // Save level changes
         case 'level_save':
-          ctx.answerCbQuery('✅ Skill levels saved!')
-          return commands.preferences(supabase, ctx)
+          ctx.answerCbQuery('💾 Skill levels saved!')
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessageLevels = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessageLevels, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
           
         // Side toggles
         case 'side_toggle_L':
@@ -293,8 +299,14 @@ const callbacks = {
           return await callbacks.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
           
         case 'side_save':
-          ctx.answerCbQuery('✅ Wave sides saved!')
-          return commands.preferences(supabase, ctx)
+          ctx.answerCbQuery('💾 Wave sides saved!')
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessageSides = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessageSides, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
           
         // Day toggles
         case 'day_toggle_0':
@@ -308,8 +320,14 @@ const callbacks = {
           return await callbacks.toggleUserDay(supabase, ctx, userProfile, dayToToggle)
           
         case 'day_save':
-          ctx.answerCbQuery('✅ Surf days saved!')
-          return commands.preferences(supabase, ctx)
+          ctx.answerCbQuery('💾 Surf days saved!')
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessageDays = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessageDays, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
           
         // Time toggles (using numeric IDs instead of time strings to avoid parsing issues)
         case 'time_toggle_0': // 06:00-09:00
@@ -329,8 +347,14 @@ const callbacks = {
           return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, selectedTimeWindow.start, selectedTimeWindow.end)
           
         case 'time_save':
-          ctx.answerCbQuery('✅ Time windows saved!')
-          return commands.preferences(supabase, ctx)
+          ctx.answerCbQuery('💾 Time windows saved!')
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessageTimes = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessageTimes, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
           
         // Min spots toggles (new toggle + save pattern)
         case 'spots_toggle_1':
@@ -354,7 +378,13 @@ const callbacks = {
           }
           
           ctx.answerCbQuery(`💾 Minimum spots set to ${spotCountToSave}!`)
-          return commands.preferences(supabase, ctx)
+          
+          // Redirect to main menu with interactive buttons
+          const mainMessage = ui.mainMenuMessage()
+          return await ctx.editMessageText(mainMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: menus.mainMenu()
+          })
           
         default:
           return ctx.answerCbQuery('Unknown preference option')
