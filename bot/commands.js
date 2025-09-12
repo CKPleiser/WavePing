@@ -59,23 +59,31 @@ const commands = {
    * Welcome command - Beautiful onboarding experience
    */
   async start(supabase, ctx) {
+    console.log('🚀 START command received for user:', ctx.from.id)
     const telegramId = ctx.from.id
     const username = ctx.from.username
     
-    // Check if user exists
-    let userProfile = await getUserProfile(supabase, telegramId)
+    try {
+      // Check if user exists
+      console.log('📋 Checking user profile for:', telegramId)
+      let userProfile = await getUserProfile(supabase, telegramId)
+      console.log('📋 User profile result:', !!userProfile)
     
     if (!userProfile) {
+      console.log('👤 Creating new user profile for:', telegramId)
       // Create new user
       userProfile = await createUserProfile(supabase, telegramId, username)
+      console.log('👤 New user created:', !!userProfile)
       
       // Welcome new user with beautiful onboarding
       const welcomeMessage = ui.welcomeMessage(ctx.from.first_name || 'Wave Rider')
+      console.log('💬 Sending welcome message with keyboard')
       
       await ctx.reply(welcomeMessage, {
         parse_mode: 'Markdown',
         reply_markup: menus.mainMenu()
       })
+      console.log('✅ Welcome message sent')
       
       // Suggest quick setup
       setTimeout(() => {
@@ -97,12 +105,20 @@ const commands = {
         )
       }, 2000)
     } else {
+      console.log('🎉 Existing user found, sending welcome back message')
       // Welcome back existing user
       const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile)
       
       await ctx.reply(welcomeBackMessage, {
         parse_mode: 'Markdown',
         reply_markup: menus.mainMenu()
+      })
+      console.log('✅ Welcome back message sent')
+    }
+    } catch (error) {
+      console.error('🚨 START command error:', error.message, error.stack)
+      await ctx.reply('Sorry, something went wrong. Please try again.').catch(e => {
+        console.error('Failed to send error message:', e)
       })
     }
   },
@@ -481,18 +497,28 @@ const commands = {
    * Support command - Buy Me a Coffee integration
    */
   async support(ctx) {
-    const supportMessage = ui.supportMessage()
-    
-    await ctx.reply(supportMessage, {
-      parse_mode: 'Markdown',
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
-        [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
-        [Markup.button.callback('💬 Contact Developer', 'support_contact')],
-        [Markup.button.callback('📈 Feature Request', 'support_feature')],
-        [Markup.button.callback('🏠 Main Menu', 'menu_main')]
-      ])
-    })
+    console.log('💖 SUPPORT command received for user:', ctx.from.id)
+    try {
+      const supportMessage = ui.supportMessage()
+      console.log('💬 Sending support message with keyboard')
+      
+      await ctx.reply(supportMessage, {
+        parse_mode: 'Markdown',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
+          [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
+          [Markup.button.callback('💬 Contact Developer', 'support_contact')],
+          [Markup.button.callback('📈 Feature Request', 'support_feature')],
+          [Markup.button.callback('🏠 Main Menu', 'menu_main')]
+        ])
+      })
+      console.log('✅ Support message sent')
+    } catch (error) {
+      console.error('🚨 SUPPORT command error:', error.message, error.stack)
+      await ctx.reply('Sorry, something went wrong with the support command.').catch(e => {
+        console.error('Failed to send error message:', e)
+      })
+    }
   }
 }
 
