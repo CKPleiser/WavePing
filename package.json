@@ -9,11 +9,15 @@
     "dev": "node server.js",
     "start": "node server.js",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "validate": "node scripts/validate-environment.js",
     "tunnel": "ngrok http 3000",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "db:refresh": "node scripts/refresh-database.js",
-    "telegram:webhook": "node scripts/setup-webhook.js"
+    "telegram:webhook": "node scripts/setup-secure-webhook.js",
+    "server:original": "node server-original.js"
   },
   "keywords": [
     "surfing",
