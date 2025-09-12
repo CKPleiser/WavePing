@@ -115,8 +115,7 @@ const commands = {
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
-                [{ text: '🚀 Quick Setup (30s)', callback_data: 'setup_quick' }],
-                [{ text: '⚙️ Detailed Setup', callback_data: 'setup_detailed' }],
+                [{ text: '⚙️ Setup Preferences', callback_data: 'menu_preferences' }],
                 [{ text: '🌊 Just Browse Sessions', callback_data: 'menu_today' }]
               ]
             }
@@ -203,7 +202,7 @@ const commands = {
           {
             parse_mode: 'Markdown',
             reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('⚙️ Quick Setup', 'setup_quick')],
+              [Markup.button.callback('⚙️ Setup Preferences', 'menu_preferences')],
               [Markup.button.callback('🌊 Show All Sessions', 'filter_all_today')]
             ])
           }
@@ -357,43 +356,44 @@ const commands = {
   // Week view command removed - only today/tomorrow supported
 
   /**
-   * Setup command - Guided setup experience
+   * Setup command - Redirects to preferences
    */
   async setup(supabase, ctx) {
-    const userProfile = await getUserProfile(supabase, ctx.from.id)
-    
-    if (!userProfile) {
-      await createUserProfile(supabase, ctx.from.id, ctx.from.username)
-    }
-    
-    const setupMessage = ui.setupWelcomeMessage()
-    
-    await ctx.reply(setupMessage, {
-      parse_mode: 'Markdown',
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🚀 Quick Setup (30s)', 'setup_quick')],
-        [Markup.button.callback('⚙️ Detailed Setup (2min)', 'setup_detailed')],
-        [Markup.button.callback('🏠 Back to Menu', 'menu_main')]
-      ])
-    })
+    // Setup command now redirects to preferences for unified experience
+    return this.preferences(supabase, ctx)
   },
 
   /**
    * Preferences command
    */
   async preferences(supabase, ctx) {
-    const userProfile = await getUserProfile(supabase, ctx.from.id)
+    const telegramId = ctx.from.id
+    let userProfile = await getUserProfile(supabase, telegramId)
     
     if (!userProfile) {
+      // Create user profile and start setup wizard
+      userProfile = await createUserProfile(supabase, telegramId, ctx.from.username)
+      
+      // Start session for setup wizard
+      ctx.session = ctx.session || {}
+      ctx.session.setup = {
+        step: 'levels',
+        levels: [],
+        sides: [],
+        days: [],
+        timeWindows: [],
+        notifications: [],
+        minSpots: 1
+      }
+      
       return ctx.reply(
-        '⚙️ *No preferences set yet*\n\n' +
-        'Let\'s get you set up first!',
+        '🚀 *Welcome to WavePing!*\n\n' +
+        'Let\'s set up your preferences to get personalized session recommendations.\n\n' +
+        '*Step 1 of 6: Skill Levels*\n\n' +
+        'Choose all levels you\'re comfortable surfing with:',
         {
           parse_mode: 'Markdown',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🚀 Quick Setup', 'setup_quick')],
-            [Markup.button.callback('⚙️ Detailed Setup', 'setup_detailed')]
-          ])
+          reply_markup: menus.setupLevelSelectionMenu([])
         }
       )
     }

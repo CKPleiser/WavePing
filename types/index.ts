@@ -16,7 +16,7 @@ export interface UserProfile {
 }
 
 export interface UserLevel {
-  level: 'beginner' | 'intermediate' | 'expert' | 'pro'
+  level: 'beginner' | 'improver' | 'intermediate' | 'advanced' | 'expert' | 'pro'
 }
 
 export interface UserSide {

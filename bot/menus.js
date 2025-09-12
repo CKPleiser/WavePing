@@ -85,6 +85,9 @@ const menus = {
       ],
       [
         Markup.button.callback('📱 Digests', 'pref_digests'),
+        Markup.button.callback('🚀 Setup Wizard', 'setup_restart')
+      ],
+      [
         Markup.button.callback('🔄 Reset All', 'pref_reset')
       ],
       [

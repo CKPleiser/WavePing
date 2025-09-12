@@ -92,12 +92,10 @@ Choose what you'd like to do:
         const spots = session.spots_available || 0
         const levelEmoji = this.getLevelEmoji(session.level)
         const sideEmoji = session.side === 'L' ? '🏄‍♂️' : session.side === 'R' ? '🏄‍♀️' : '🌊'
-        const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
         
         message += `${levelEmoji} *${session.time}* ${sideEmoji}\n`
         message += `   ${session.session_name}\n`
         message += `   💺 ${spots} spot${spots !== 1 ? 's' : ''} available\n`
-        message += `   🎫 [Book Now](${bookingUrl})\n`
         if (i < 5 && i < filteredSessions.length - 1) message += '\n'
       })
       
@@ -117,18 +115,21 @@ Choose what you'd like to do:
         otherSessions.slice(0, 3).forEach((session, i) => {
           const spots = session.spots_available || 0
           const levelEmoji = this.getLevelEmoji(session.level)
-          const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
           
           message += `${levelEmoji} *${session.time}* - ${spots} spots\n`
-          message += `   🎫 [Book](${bookingUrl})\n`
         })
         
         if (otherSessions.length > 3) {
           message += `_...and ${otherSessions.length - 3} more available._`
         }
       }
+    } else if (userProfile && filteredSessions.length === 0) {
+      // User has preferences but no matches
+      message += `🎯 *No sessions match your preferences today*\n\n`
+      message += `Here are all available sessions:\n\n`
+      message += `🌊 *All Available Sessions* (${allSessions.length})\n\n`
     } else {
-      // Show all sessions (no user profile or no matches)
+      // No user profile  
       message += `🌊 *All Available Sessions* (${allSessions.length})\n\n`
       
       if (allSessions.length === 0) {
@@ -141,12 +142,10 @@ Choose what you'd like to do:
         const spots = session.spots_available || 0
         const levelEmoji = this.getLevelEmoji(session.level)
         const sideEmoji = session.side === 'L' ? '🏄‍♂️' : session.side === 'R' ? '🏄‍♀️' : '🌊'
-        const bookingUrl = session.booking_url || 'https://ticketing.thewave.com/ticketSale/tickets'
         
         message += `${levelEmoji} *${session.time}* ${sideEmoji}\n`
         message += `   ${session.session_name}\n`
         message += `   💺 ${spots} spot${spots !== 1 ? 's' : ''}\n`
-        message += `   🎫 [Book Now](${bookingUrl})\n`
         if (i < 7 && i < allSessions.length - 1) message += '\n'
       })
       

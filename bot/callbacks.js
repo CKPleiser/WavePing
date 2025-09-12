@@ -365,6 +365,7 @@ const callbacks = {
       
       switch (action) {
         case 'quick':
+        case 'restart':
           // Start session for 6-step wizard
           ctx.session = ctx.session || {}
           ctx.session.setup = {
@@ -1130,8 +1131,7 @@ const callbacks = {
             {
               parse_mode: 'Markdown',
               reply_markup: Markup.inlineKeyboard([
-                [Markup.button.callback('🚀 Quick Setup', 'setup_quick')],
-                [Markup.button.callback('⚙️ Detailed Setup', 'setup_detailed')],
+                [Markup.button.callback('⚙️ Setup Preferences', 'menu_preferences')],
                 [Markup.button.callback('🏠 Main Menu', 'menu_main')]
               ])
             }

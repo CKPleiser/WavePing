@@ -111,7 +111,7 @@ class BotHandler {
         { command: 'today', description: '🏄‍♂️ Today\'s Sessions' },
         { command: 'tomorrow', description: '🌅 Tomorrow\'s Sessions' },
         { command: 'prefs', description: '⚙️ My Preferences' },
-        { command: 'setup', description: '🚀 Quick Setup' },
+        { command: 'setup', description: '⚙️ Setup Preferences' },
         { command: 'notifications', description: '🔔 Notification Settings' },
         { command: 'support', description: '☕ Support WavePing' },
         { command: 'help', description: '❓ Help & Commands' }
