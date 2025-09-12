@@ -30,29 +30,19 @@ const digestService = new DigestService(supabase, bot)
 const botHandler = new BotHandler(bot, supabase)
 const serverLogger = logger.child('Server')
 
-// Debug bot responses - intercept reply method to log keyboards AND all messages
-const originalReply = bot.telegram.sendMessage
-bot.telegram.sendMessage = function(chatId, text, extra) {
-  serverLogger.info('📤 Message being sent:', {
-    chatId,
-    text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-    hasKeyboard: !!extra?.reply_markup,
-    keyboard: extra?.reply_markup ? JSON.stringify(extra.reply_markup, null, 2) : null
-  })
-  return originalReply.call(this, chatId, text, extra)
-}
-
-// Also intercept editMessageText
-const originalEdit = bot.telegram.editMessageText
-bot.telegram.editMessageText = function(chatId, messageId, inlineMessageId, text, extra) {
-  serverLogger.info('✏️ Message being edited:', {
-    chatId,
-    messageId,
-    text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-    hasKeyboard: !!extra?.reply_markup,
-    keyboard: extra?.reply_markup ? JSON.stringify(extra.reply_markup, null, 2) : null
-  })
-  return originalEdit.call(this, chatId, messageId, inlineMessageId, text, extra)
+// Debug bot responses - intercept ALL Telegram API methods
+const originalCall = bot.telegram.callApi
+bot.telegram.callApi = function(method, data) {
+  if (method === 'sendMessage' || method === 'editMessageText') {
+    serverLogger.info(`🎯 Telegram API Call: ${method}`, {
+      chatId: data.chat_id,
+      text: data.text ? data.text.substring(0, 100) + (data.text.length > 100 ? '...' : '') : null,
+      hasKeyboard: !!data.reply_markup,
+      keyboard: data.reply_markup ? JSON.stringify(data.reply_markup, null, 2) : null,
+      method: method
+    })
+  }
+  return originalCall.call(this, method, data)
 }
 
 // Homepage
