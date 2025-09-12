@@ -358,14 +358,25 @@ const commands = {
       })
     }
     
-    // TEMPORARY: Super simple preferences menu to test
+    // Complete preferences menu with all options
     await ctx.reply('⚙️ *Your Preferences*\n\nClick a button to modify:', {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🎯 Skill Levels', callback_data: 'pref_levels' }],
-          [{ text: '🏄 Wave Sides', callback_data: 'pref_sides' }],
-          [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+          [
+            { text: '🎯 Skill Levels', callback_data: 'pref_levels' },
+            { text: '🏄 Wave Sides', callback_data: 'pref_sides' }
+          ],
+          [
+            { text: '📅 Surf Days', callback_data: 'pref_days' },
+            { text: '🕐 Time Windows', callback_data: 'pref_times' }
+          ],
+          [
+            { text: '💺 Min Spots', callback_data: 'pref_spots' }
+          ],
+          [
+            { text: '🏠 Main Menu', callback_data: 'menu_main' }
+          ]
         ]
       }
     })
