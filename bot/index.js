@@ -23,8 +23,8 @@ class BotHandler {
   }
 
   setupCommands() {
-    // Welcome command
-    this.bot.command('start', commands.start.bind(null, this.supabase))
+    // Welcome command - CRITICAL FIX: Proper context passing
+    this.bot.command('start', (ctx) => commands.start(this.supabase, ctx))
     
     // Main commands
     this.bot.command('today', commands.today.bind(null, this.supabase))

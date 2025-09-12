@@ -329,21 +329,6 @@ app.post(`/api/telegram/webhook`, asyncHandler(async (req, res) => {
     
     await bot.handleUpdate(req.body)
     
-    // CRITICAL TEST: Try to send a direct message via bot.telegram
-    try {
-      if (req.body.message?.text === '/start') {
-        const chatId = req.body.message.chat.id
-        serverLogger.info('🧪 CRITICAL TEST: Attempting direct bot.telegram.sendMessage call')
-        const result = await bot.telegram.sendMessage(chatId, '🧪 DIRECT API TEST - If you see this, API works!')
-        serverLogger.info('🎉 DIRECT API TEST SUCCESS:', { result: !!result })
-      }
-    } catch (testError) {
-      serverLogger.error('🚨 DIRECT API TEST FAILED:', { 
-        error: testError.message,
-        stack: testError.stack 
-      })
-    }
-    
     serverLogger.info('✅ Webhook handled successfully')
     res.status(200).send('OK')
   } catch (error) {
