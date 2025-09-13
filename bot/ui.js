@@ -130,84 +130,79 @@ Choose what you'd like to do:
       'Week': '📅'
     }[timeframe] || '🌊'
     
-    let message = `${emoji} *${timeframe}'s Sessions*\n\n`
+    let message = `*${emoji} ${timeframe} at The Wave*\n`
     
     if (filteredSessions.length === 0 && allSessions.length === 0) {
-      message += `😴 *No sessions available*\n\n`
+      message += `\n*No sessions available*\n\n`
       message += `The waves are taking a rest day.\n`
-      message += `Try checking tomorrow! 🌅`
+      message += `Try checking tomorrow!`
       return message
     }
     
     if (userProfile && filteredSessions.length > 0) {
-      message += `🎯 *Your Matches* (${filteredSessions.length})\n`
-      message += `_Perfect for your preferences_\n\n`
+      message += `*Your matches (${filteredSessions.length})*\n\n`
       
-      filteredSessions.slice(0, 6).forEach((session, i) => {
+      const displaySessions = filteredSessions.slice(0, 4)
+      displaySessions.forEach((session, i) => {
         const spots = session.spots_available || 0
-        const levelEmoji = this.getLevelEmoji(session.level)
-        const sideEmoji = session.side === 'L' ? '🏄‍♂️' : session.side === 'R' ? '🏄‍♀️' : '🌊'
+        const level = this.capitalizeWords(session.level)
+        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : '[Any]'
         
-        message += `${levelEmoji} *${session.time}* ${sideEmoji}\n`
-        message += `   ${session.session_name}\n`
-        message += `   💺 ${spots} spot${spots !== 1 ? 's' : ''} available\n`
-        if (i < 5 && i < filteredSessions.length - 1) message += '\n'
+        message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
       
-      if (filteredSessions.length > 6) {
-        message += `\n_...and ${filteredSessions.length - 6} more matches!_\n`
+      if (filteredSessions.length > 4) {
+        message += `\n_...and ${filteredSessions.length - 4} more matches_`
       }
       
-      // Show different sessions if available
-      const otherSessions = allSessions.filter(s => 
-        !filteredSessions.some(fs => fs.session_id === s.session_id)
-      )
+      message += `\n\n_Tip: Side = [L] left, [R] right._`
       
-      if (otherSessions.length > 0) {
-        message += `\n\n🌊 *Other Available Sessions* (${otherSessions.length})\n`
-        message += `_Don't match your preferences, but available_\n\n`
-        
-        otherSessions.slice(0, 3).forEach((session, i) => {
-          const spots = session.spots_available || 0
-          const levelEmoji = this.getLevelEmoji(session.level)
-          
-          message += `${levelEmoji} *${session.time}* - ${spots} spots\n`
-        })
-        
-        if (otherSessions.length > 3) {
-          message += `_...and ${otherSessions.length - 3} more available._`
-        }
-      }
     } else if (userProfile && filteredSessions.length === 0) {
       // User has preferences but no matches
-      message += `No matches right now. Try widening time windows or set Min spots to 1+.\n\n`
-      message += `🌊 *All Available Sessions* (${allSessions.length})\n\n`
+      message += `*No matches right now*\n\n`
+      message += `Try widening time windows or set Min spots to 1+.\n\n`
+      
+      // Show some available sessions
+      const availableSessions = allSessions.slice(0, 4)
+      if (availableSessions.length > 0) {
+        message += `*Other available sessions (${allSessions.length})*\n\n`
+        availableSessions.forEach((session, i) => {
+          const spots = session.spots_available || 0
+          const level = this.capitalizeWords(session.level)
+          const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : '[Any]'
+          
+          message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+        })
+        if (allSessions.length > 4) {
+          message += `\n_...and ${allSessions.length - 4} more available_`
+        }
+        message += `\n\n_Tip: Side = [L] left, [R] right._`
+      }
+      
     } else {
       // No user profile  
-      message += `🌊 *All Available Sessions* (${allSessions.length})\n\n`
+      message += `*All available sessions (${allSessions.length})*\n\n`
       
       if (allSessions.length === 0) {
-        message += `No matches right now. Try widening time windows or set Min spots to 1+.`
+        message += `No sessions available right now.`
         return message
       }
       
-      allSessions.slice(0, 8).forEach((session, i) => {
+      const displaySessions = allSessions.slice(0, 4)
+      displaySessions.forEach((session, i) => {
         const spots = session.spots_available || 0
-        const levelEmoji = this.getLevelEmoji(session.level)
-        const sideEmoji = session.side === 'L' ? '🏄‍♂️' : session.side === 'R' ? '🏄‍♀️' : '🌊'
+        const level = this.capitalizeWords(session.level)
+        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : '[Any]'
         
-        message += `${levelEmoji} *${session.time}* ${sideEmoji}\n`
-        message += `   ${session.session_name}\n`
-        message += `   💺 ${spots} spot${spots !== 1 ? 's' : ''}\n`
-        if (i < 7 && i < allSessions.length - 1) message += '\n'
+        message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
       
-      if (allSessions.length > 8) {
-        message += `\n_...and ${allSessions.length - 8} more sessions!_`
+      if (allSessions.length > 4) {
+        message += `\n_...and ${allSessions.length - 4} more sessions_`
       }
+      
+      message += `\n\n_Tip: Side = [L] left, [R] right._`
     }
-  
-    message += `\n🔗 [Book at The Wave](https://ticketing.thewave.com/)`
     
     return message
   },

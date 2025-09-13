@@ -34,7 +34,18 @@ const menus = {
   sessionMenu(timeframe, hasMatches) {
     const buttons = []
     
-    // Navigation buttons
+    // Single CTA - Book at The Wave  
+    buttons.push([
+      Markup.button.url('🔗 Book at The Wave', 'https://ticketing.thewave.com/')
+    ])
+    
+    // Secondary actions
+    buttons.push([
+      Markup.button.callback('🔄 Refresh', `menu_${timeframe}`),
+      Markup.button.callback('🛠 Edit setup', 'menu_preferences')
+    ])
+    
+    // Navigation
     if (timeframe !== 'today') {
       buttons.push([Markup.button.callback('🌊 Today', 'menu_today')])
     }
@@ -42,24 +53,7 @@ const menus = {
       buttons.push([Markup.button.callback('🌅 Tomorrow', 'menu_tomorrow')])
     }
     
-    // Filter options if user has matches
-    if (hasMatches) {
-      buttons.push([
-        Markup.button.callback('🎯 My Matches Only', `filter_matches_${timeframe}`),
-        Markup.button.callback('🌊 Show All', `filter_all_${timeframe}`)
-      ])
-    }
-    
-    // Action buttons
-    buttons.push([
-      Markup.button.callback('🔄 Refresh', `menu_${timeframe}`),
-      Markup.button.callback('⚙️ Edit Filters', 'menu_preferences')
-    ])
-    
-    // Bottom navigation
-    buttons.push([
-      Markup.button.callback('🏠 Main Menu', 'menu_main')
-    ])
+    buttons.push([Markup.button.callback('🏠 Main Menu', 'menu_main')])
     
     return Markup.inlineKeyboard(buttons)
   },
