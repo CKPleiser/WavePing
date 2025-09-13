@@ -176,9 +176,16 @@ app.post('/api/cron/scrape-schedule',
       
       // Fetch fresh sessions using scraper
       const scraper = new WaveScheduleScraper()
-      const sessions = await scraper.getSessionsInRange(14) // Get 14 days of data
+      let sessions = []
       
-      serverLogger.info(`Found ${sessions.length} sessions to insert`)
+      try {
+        sessions = await scraper.getSessionsInRange(14) // Get 14 days of data
+        serverLogger.info(`Found ${sessions.length} sessions to insert`)
+      } catch (scrapeError) {
+        serverLogger.error('Error scraping sessions:', scrapeError)
+        // Continue with empty sessions array - don't fail the entire operation
+        sessions = []
+      }
       
       // Insert fresh sessions
       if (sessions.length > 0) {
@@ -196,10 +203,7 @@ app.post('/api/cron/scrape-schedule',
         
         const { error: insertError } = await supabase
           .from('sessions')
-          .upsert(dbSessions, {
-            onConflict: 'id',
-            ignoreDuplicates: false
-          })
+          .upsert(dbSessions)
         
         if (insertError) throw insertError
       }
@@ -211,10 +215,11 @@ app.post('/api/cron/scrape-schedule',
         timestamp: new Date().toISOString()
       })
     } catch (error) {
-      serverLogger.error('Scraping error:', error)
+      serverLogger.error('Scraping endpoint error:', error)
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       })
     }
   })
