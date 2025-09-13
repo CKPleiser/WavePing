@@ -223,7 +223,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menus.sessionMenu('today', filteredSessions.length > 0)
+          reply_markup: menus.sessionMenu('today', filteredSessions.length > 0, filteredSessions.length > 0 ? filteredSessions : allAvailableSessions)
         }
       )
       
@@ -278,7 +278,7 @@ const commands = {
           message,
           {
             parse_mode: 'Markdown',
-            reply_markup: menus.sessionMenu('tomorrow', allSessions.length > 0)
+            reply_markup: menus.sessionMenu('tomorrow', allSessions.length > 0, allSessions)
           }
         )
       }
@@ -311,7 +311,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menus.sessionMenu('tomorrow', filteredSessions.length > 0)
+          reply_markup: menus.sessionMenu('tomorrow', filteredSessions.length > 0, filteredSessions.length > 0 ? filteredSessions : allAvailableSessions)
         }
       )
       

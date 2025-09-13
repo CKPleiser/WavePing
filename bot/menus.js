@@ -29,15 +29,35 @@ const menus = {
   },
 
   /**
-   * Session viewing menu
+   * Session viewing menu with individual session booking buttons
    */
-  sessionMenu(timeframe, hasMatches) {
+  sessionMenu(timeframe, hasMatches, sessions = []) {
     const buttons = []
     
-    // Single CTA - Book at The Wave  
-    buttons.push([
-      Markup.button.url('🔗 Book at The Wave', 'https://ticketing.thewave.com/')
-    ])
+    // Individual session booking buttons (max 10 to avoid Telegram limits)
+    const displaySessions = sessions.slice(0, 10)
+    displaySessions.forEach((session, i) => {
+      const spots = session.spots_available || 0
+      const level = session.level ? session.level.charAt(0).toUpperCase() + session.level.slice(1) : ''
+      const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
+      
+      const buttonText = `${i + 1}) ${session.time} • ${level} • ${sideChip} • ${spots} spots`
+      buttons.push([
+        Markup.button.url(buttonText, session.book_url || 'https://ticketing.thewave.com/')
+      ])
+    })
+    
+    // If more than 10 sessions, add a general booking button
+    if (sessions.length > 10) {
+      buttons.push([
+        Markup.button.url(`🔗 Book at The Wave (+${sessions.length - 10} more sessions)`, 'https://ticketing.thewave.com/')
+      ])
+    } else if (sessions.length === 0) {
+      // Fallback booking button when no sessions
+      buttons.push([
+        Markup.button.url('🔗 Book at The Wave', 'https://ticketing.thewave.com/')
+      ])
+    }
     
     // Secondary actions
     buttons.push([

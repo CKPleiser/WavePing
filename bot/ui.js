@@ -88,10 +88,10 @@ Get instant notifications when surf sessions matching your preferences become av
 • *Tomorrow at The Wave* — plan ahead
 
 *Your setup*
-• Level: ${levelText}  • Side: ${sideText}
-• Days: ${daysText}
-• Times: ${timesText}
-• Min spots: ${minSpots}+  • Alerts: ${alertsStatus}  • Digests: ${digestText}`
+• *Level:* ${levelText}  • Side: ${sideText}
+• *Days:* ${daysText}
+• *Times:* ${timesText}
+• *Min spots:* ${minSpots}+  • *Alerts:* ${alertsStatus}  • *Digests:* ${digestText}`
     } else {
       return `🌊 *Welcome back, ${firstName}*
 
@@ -110,12 +110,7 @@ Looks like you haven't finished setting up your preferences yet.
 Quick commands:
 /today - 🌊 Check today's sessions
 /tomorrow - 🌅 Check tomorrow's sessions
-
-Choose what you'd like to do:
-
-🌊 *Sessions* - Check availability
-⚙️ *Settings* - Manage preferences  
-📱 *Help* - Get support
+/setup - 🛠️ Change your preferences
 
 *Let's find you the perfect wave!* 🤙`
   },
@@ -150,7 +145,6 @@ Choose what you'd like to do:
         message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
       
-      
     } else if (userProfile && filteredSessions.length === 0) {
       // User has preferences but no matches
       message += `*No matches right now*\n\n`
@@ -166,7 +160,7 @@ Choose what you'd like to do:
           
           message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
         })
-        }
+      }
       
     } else {
       // No user profile  
@@ -184,7 +178,6 @@ Choose what you'd like to do:
         
         message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
-      
     }
     
     return message
