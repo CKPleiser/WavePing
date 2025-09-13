@@ -22,7 +22,8 @@ class DigestService {
         user_sides (side),
         user_days (day_of_week),
         user_time_windows (start_time, end_time),
-        user_digest_preferences (digest_type)
+        user_digest_preferences (digest_type),
+        user_digest_filters (timing)
       `)
       .eq('notification_enabled', true)
     
@@ -61,21 +62,46 @@ class DigestService {
   }
 
   /**
-   * Format session for message display
+   * Format session for message display - now without individual booking links
    */
   formatSession(session, includeDate = false) {
     const spots = session.spots_available || 0
-    const bookingUrl = session.booking_url || 'https://thewave.com/bristol/book/'
+    const sideChip = session.side === 'Left' ? '[L]' : session.side === 'Right' ? '[R]' : '[Any]'
     
     let message = ''
     if (includeDate && session.dateLabel) {
-      message += `*${session.dateLabel}* `
+      message += `**${session.dateLabel}** `
     }
-    message += `*${session.time}* - ${session.session_name}\n`
-    message += `${spots} spot${spots === 1 ? '' : 's'} available\n`
-    message += `[Book Now](${bookingUrl})\n\n`
+    message += `**${session.time}** ${session.session_name} ${sideChip}\n`
+    message += `${spots} spot${spots === 1 ? '' : 's'} available\n\n`
     
     return message
+  }
+
+  /**
+   * Get sessions for user's notification timing preference
+   */
+  async getSessionsForTimingPreference(user) {
+    // Get user's notification timing preferences
+    const userTimings = user.user_digest_filters?.map(n => n.timing) || []
+    
+    let days = 1 // Default to 1 day
+    
+    // Determine how many days to fetch based on user's timing preferences
+    if (userTimings.includes('1w')) {
+      days = 7 // 1 week
+    } else if (userTimings.includes('48h')) {
+      days = 2 // 48 hours
+    } else if (userTimings.includes('24h')) {
+      days = 1 // 24 hours  
+    } else if (userTimings.includes('12h')) {
+      days = 1 // 12 hours (same day)
+    } else if (userTimings.includes('2h')) {
+      days = 1 // 2 hours (same day)
+    }
+    
+    // Get sessions for the determined timeframe
+    return await this.scraper.getSessionsInRange(days).catch(() => [])
   }
 
   /**
@@ -86,54 +112,64 @@ class DigestService {
     
     const users = await this.getDigestUsers('morning')
     console.log(`Found ${users.length} users subscribed to morning digest`)
-
-    // Get today's and tomorrow's sessions
-    const todaySessions = await this.scraper.getTodaysSessions().catch(() => [])
-    const tomorrowSessions = await this.scraper.getTomorrowsSessions().catch(() => [])
     
     const results = []
     
     for (const user of users) {
       try {
-        // Filter sessions for user
-        const todayFiltered = this.filterSessionsForUser(todaySessions, user)
-        const tomorrowFiltered = this.filterSessionsForUser(tomorrowSessions, user)
+        // Get sessions based on user's timing preference
+        const sessions = await this.getSessionsForTimingPreference(user)
+        const filteredSessions = this.filterSessionsForUser(sessions, user)
 
-        if (todayFiltered.length === 0 && tomorrowFiltered.length === 0) {
+        if (filteredSessions.length === 0) {
           continue // Skip if no matching sessions
         }
 
-        // Create morning digest message
-        let message = `🌅 *Good Morning, Wave Rider!* ☀️\n\n`
-        
-        if (todayFiltered.length > 0) {
-          message += `🌊 *TODAY'S SESSIONS* (${todayFiltered.length} match${todayFiltered.length === 1 ? '' : 'es'})\n\n`
-          
-          todayFiltered.slice(0, 5).forEach(session => {
-            message += this.formatSession(session)
-          })
-          
-          if (todayFiltered.length > 5) {
-            message += `...and ${todayFiltered.length - 5} more! Use /today for the full list.\n\n`
-          }
-        }
-        
-        if (tomorrowFiltered.length > 0) {
-          message += `🌅 *TOMORROW'S PREVIEW* (${tomorrowFiltered.length} session${tomorrowFiltered.length === 1 ? '' : 's'})\n\n`
-          
-          tomorrowFiltered.slice(0, 3).forEach(session => {
-            message += this.formatSession(session)
-          })
+        // Determine timeframe label
+        const userTimings = user.user_digest_filters?.map(n => n.timing) || []
+        let timeframeLabel = 'Today'
+        if (userTimings.includes('1w')) {
+          timeframeLabel = 'Next 7 Days'
+        } else if (userTimings.includes('48h')) {
+          timeframeLabel = 'Next 2 Days'
         }
 
+        // Create morning digest message
+        let message = `🌅 **Good Morning, Wave Rider!** ☀️\n\n`
+        message += `🌊 **${timeframeLabel.toUpperCase()}** (${filteredSessions.length} match${filteredSessions.length === 1 ? '' : 'es'})\n\n`
+        
+        // Show up to 10 sessions, grouped by date if multiple days
+        const sessionsToShow = filteredSessions.slice(0, 10)
+        let currentDate = ''
+        
+        sessionsToShow.forEach((session, index) => {
+          // Add date header for multi-day views
+          if (timeframeLabel !== 'Today' && session.dateLabel && session.dateLabel !== currentDate) {
+            if (index > 0) message += '\n'
+            message += `**${session.dateLabel}**\n`
+            currentDate = session.dateLabel
+          }
+          message += this.formatSession(session, false)
+        })
+        
+        if (filteredSessions.length > 10) {
+          message += `...and ${filteredSessions.length - 10} more sessions!\n\n`
+        }
+        
+        // Single booking link
+        message += `[🏄‍♂️ **Book at The Wave**](https://ticketing.thewave.com/)\n\n`
+        
+        // Support link
+        message += `[☕ **Support WavePing**](https://buymeacoffee.com/driftwithcaz)\n\n`
+        
         message += this.getQuickCommands()
 
         await this.bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
         results.push({ 
           telegramId: user.telegram_id, 
           status: 'sent', 
-          sessionsToday: todayFiltered.length, 
-          sessionsTomorrow: tomorrowFiltered.length 
+          sessionsFound: filteredSessions.length,
+          timeframe: timeframeLabel
         })
         
       } catch (error) {
@@ -157,64 +193,64 @@ class DigestService {
     
     const users = await this.getDigestUsers('evening')
     console.log(`Found ${users.length} users subscribed to evening digest`)
-
-    // Get tomorrow's sessions and next few days for weekend preview
-    const tomorrowSessions = await this.scraper.getTomorrowsSessions().catch(() => [])
-    const upcomingSessions = await this.scraper.getSessionsInRange(
-      3, 
-      new Date(Date.now() + 24*60*60*1000)
-    ).catch(() => [])
     
     const results = []
     
     for (const user of users) {
       try {
-        // Filter sessions for user
-        const tomorrowFiltered = this.filterSessionsForUser(tomorrowSessions, user)
-        const upcomingFiltered = this.filterSessionsForUser(upcomingSessions, user)
+        // Get sessions based on user's timing preference
+        const sessions = await this.getSessionsForTimingPreference(user)
+        const filteredSessions = this.filterSessionsForUser(sessions, user)
 
-        if (tomorrowFiltered.length === 0 && upcomingFiltered.length === 0) {
+        if (filteredSessions.length === 0) {
           continue // Skip if no matching sessions
         }
 
-        // Create evening digest message  
-        let message = `🌇 *Evening Wave Report* 🌊\n\n`
-        
-        if (tomorrowFiltered.length > 0) {
-          message += `🌅 *TOMORROW'S SESSIONS* (${tomorrowFiltered.length} match${tomorrowFiltered.length === 1 ? '' : 'es'})\n\n`
-          
-          tomorrowFiltered.slice(0, 6).forEach(session => {
-            message += this.formatSession(session)
-          })
-          
-          if (tomorrowFiltered.length > 6) {
-            message += `...and ${tomorrowFiltered.length - 6} more! Use /tomorrow for the full list.\n\n`
-          }
-        }
-        
-        // Weekend preview (if upcoming sessions)
-        if (upcomingFiltered.length > tomorrowFiltered.length) {
-          const weekendSessions = upcomingFiltered.filter(s => 
-            !tomorrowSessions.some(t => t.dateISO === s.dateISO && t.time === s.time)
-          )
-          
-          if (weekendSessions.length > 0) {
-            message += `🗓️ *COMING UP* (Next few days)\n\n`
-            
-            weekendSessions.slice(0, 3).forEach(session => {
-              message += this.formatSession(session, true)
-            })
-          }
+        // Determine timeframe label
+        const userTimings = user.user_digest_filters?.map(n => n.timing) || []
+        let timeframeLabel = 'Tomorrow'
+        if (userTimings.includes('1w')) {
+          timeframeLabel = 'Next 7 Days'
+        } else if (userTimings.includes('48h')) {
+          timeframeLabel = 'Next 2 Days'
         }
 
+        // Create evening digest message
+        let message = `🌇 **Evening Wave Report** 🌊\n\n`
+        message += `🌅 **${timeframeLabel.toUpperCase()}** (${filteredSessions.length} match${filteredSessions.length === 1 ? '' : 'es'})\n\n`
+        
+        // Show up to 12 sessions for evening digest, grouped by date if multiple days
+        const sessionsToShow = filteredSessions.slice(0, 12)
+        let currentDate = ''
+        
+        sessionsToShow.forEach((session, index) => {
+          // Add date header for multi-day views
+          if (timeframeLabel !== 'Tomorrow' && session.dateLabel && session.dateLabel !== currentDate) {
+            if (index > 0) message += '\n'
+            message += `**${session.dateLabel}**\n`
+            currentDate = session.dateLabel
+          }
+          message += this.formatSession(session, false)
+        })
+        
+        if (filteredSessions.length > 12) {
+          message += `...and ${filteredSessions.length - 12} more sessions!\n\n`
+        }
+        
+        // Single booking link
+        message += `[🏄‍♂️ **Book at The Wave**](https://ticketing.thewave.com/)\n\n`
+        
+        // Support link
+        message += `[☕ **Support WavePing**](https://buymeacoffee.com/driftwithcaz)\n\n`
+        
         message += this.getEveningCommands()
 
         await this.bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
         results.push({ 
           telegramId: user.telegram_id, 
           status: 'sent', 
-          sessionsTomorrow: tomorrowFiltered.length,
-          sessionsUpcoming: upcomingFiltered.length
+          sessionsFound: filteredSessions.length,
+          timeframe: timeframeLabel
         })
         
       } catch (error) {
