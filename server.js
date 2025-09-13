@@ -192,13 +192,17 @@ app.post('/api/cron/scrape-schedule',
         const dbSessions = sessions.map(session => ({
           id: `${session.dateISO}_${session.time24}_${session.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
           date: session.dateISO,
-          time: session.time24,
+          start_time: session.time24,
+          end_time: null,
           session_name: session.session_name,
+          level: session.level,
+          side: session.side === 'Left' ? 'L' : session.side === 'Right' ? 'R' : 'A',
+          total_spots: session.spots || 0,
           spots_available: session.spots_available || 0,
-          spots_total: session.spots_total || 0,
-          level: session.level?.toLowerCase() || 'unknown',
-          side: session.side || 'unknown',
-          day_of_week: session.dayOfWeek
+          book_url: session.booking_url,
+          instructor: null,
+          is_active: true,
+          last_updated: new Date().toISOString()
         }))
         
         const { error: insertError } = await supabase
