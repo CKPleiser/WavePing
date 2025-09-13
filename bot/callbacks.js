@@ -560,7 +560,7 @@ const callbacks = {
             notification_enabled: true
           }).eq('id', userProfile.id)
           
-          ctx.answerCbQuery('✅ Notifications enabled!')
+          ctx.answerCbQuery('Alerts on. We’ll ping you as soon as a spot opens.')
           return commands.notifications(supabase, ctx)
           
         case 'disable':
@@ -568,7 +568,7 @@ const callbacks = {
             notification_enabled: false
           }).eq('id', userProfile.id)
           
-          ctx.answerCbQuery('❌ Notifications disabled!')
+          ctx.answerCbQuery('Alerts off. You won’t receive instant notifications.')
           return commands.notifications(supabase, ctx)
           
         case 'test':

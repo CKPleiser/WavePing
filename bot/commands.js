@@ -84,18 +84,18 @@ const commands = {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '🌊 Today', callback_data: 'menu_today' },
-              { text: '🌅 Tomorrow', callback_data: 'menu_tomorrow' }
+              { text: '🌊 Today at The Wave', callback_data: 'menu_today' },
+              { text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }
             ],
             [
-              { text: '⚙️ Preferences', callback_data: 'menu_preferences' }
+              { text: '🛠 Your Setup', callback_data: 'menu_preferences' }
             ],
             [
-              { text: '🔔 Notifications', callback_data: 'menu_notifications' },
-              { text: '❓ Help', callback_data: 'menu_help' }
+              { text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' },
+              { text: '❓ Help & Support', callback_data: 'menu_help' }
             ],
             [
-              { text: '☕ Support WavePing', callback_data: 'menu_support' }
+              { text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }
             ]
           ]
         }
@@ -104,8 +104,25 @@ const commands = {
       
     } else {
       console.log('🎉 Existing user found, sending welcome back message')
+      
+      // Try to get session counts for dynamic urgency line (optional)
+      let dynamicUrgency = ''
+      try {
+        const WaveScheduleScraper = require('../lib/wave-scraper-final')
+        const scraper = new WaveScheduleScraper()
+        const todaySessions = await scraper.getTodaysSessions()
+        const filteredSessions = scraper.filterSessionsForUser(todaySessions, userProfile)
+        
+        if (filteredSessions.length > 0) {
+          dynamicUrgency = `\n\n🔥 ${filteredSessions.length} session${filteredSessions.length !== 1 ? 's' : ''} match${filteredSessions.length === 1 ? 'es' : ''} your setup today`
+        }
+      } catch (error) {
+        // Silently ignore if we can't get sessions
+        console.log('Could not fetch sessions for dynamic urgency:', error.message)
+      }
+      
       // Welcome back existing user
-      const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile)
+      const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile) + dynamicUrgency
       
       console.log('🔧 DEBUG: About to call ctx.reply():', {
         hasCtx: !!ctx,
@@ -119,18 +136,18 @@ const commands = {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '🌊 Today', callback_data: 'menu_today' },
-              { text: '🌅 Tomorrow', callback_data: 'menu_tomorrow' }
+              { text: '🌊 Today at The Wave', callback_data: 'menu_today' },
+              { text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }
             ],
             [
-              { text: '⚙️ Preferences', callback_data: 'menu_preferences' }
+              { text: '🛠 Your Setup', callback_data: 'menu_preferences' }
             ],
             [
-              { text: '🔔 Notifications', callback_data: 'menu_notifications' },
-              { text: '❓ Help', callback_data: 'menu_help' }
+              { text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' },
+              { text: '❓ Help & Support', callback_data: 'menu_help' }
             ],
             [
-              { text: '☕ Support WavePing', callback_data: 'menu_support' }
+              { text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }
             ]
           ]
         }

@@ -129,16 +129,16 @@ Choose what you'd like to do:
       }
     } else if (userProfile && filteredSessions.length === 0) {
       // User has preferences but no matches
-      message += `🎯 *No sessions match your preferences today*\n\n`
-      message += `Here are all available sessions:\n\n`
+      message += `No matching sessions right now.\n\n`
+      message += `💡 *Tip:* broaden time windows or set Min spots to 1+.\n\n`
       message += `🌊 *All Available Sessions* (${allSessions.length})\n\n`
     } else {
       // No user profile  
       message += `🌊 *All Available Sessions* (${allSessions.length})\n\n`
       
       if (allSessions.length === 0) {
-        message += `😴 No sessions with available spots right now.\n`
-        message += `Check back later or set up notifications! 🔔`
+        message += `No sessions with available spots right now.\n\n`
+        message += `💡 *Tip:* Set up alerts to get notified when spots open.`
         return message
       }
       
