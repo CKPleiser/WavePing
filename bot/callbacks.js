@@ -98,6 +98,7 @@ const callbacks = {
           })
           
         case 'support':
+        case 'menu_support':
           const supportMessage = ui.supportMessage()
           return await ctx.editMessageText(supportMessage, {
             parse_mode: 'Markdown',

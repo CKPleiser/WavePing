@@ -503,7 +503,7 @@ const commands = {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/waveping' }],
+            [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],
             [{ text: '💬 Contact Developer', callback_data: 'support_contact' }],
             [{ text: '📈 Feature Request', callback_data: 'support_feature' }],
             [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]

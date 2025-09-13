@@ -11,7 +11,7 @@ describe('DigestService', () => {
     mockSupabase = {
       from: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ data: [], error: null }),
       gte: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis()
     }
@@ -39,17 +39,12 @@ describe('DigestService', () => {
         { 
           id: '1', 
           telegram_id: 123, 
-          user_notifications: [{ timing: '24h' }]
+          user_digest_preferences: [{ digest_type: 'morning' }]
         }
       ]
-      const mockDigestUsers = [{ user_id: '1' }]
 
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: mockProfiles, 
-        error: null 
-      })
-      mockSupabase.eq.mockResolvedValueOnce({ 
-        data: mockDigestUsers, 
         error: null 
       })
 
@@ -58,25 +53,16 @@ describe('DigestService', () => {
       expect(users).toHaveLength(1)
       expect(users[0].telegram_id).toBe(123)
       expect(mockSupabase.from).toHaveBeenCalledWith('profiles')
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_digest_preferences')
     })
 
     test('should filter out users without notification preferences', async () => {
       const mockProfiles = [
-        { id: '1', telegram_id: 123, user_notifications: [] },
-        { id: '2', telegram_id: 456, user_notifications: [{ timing: '24h' }] }
-      ]
-      const mockDigestUsers = [
-        { user_id: '1' },
-        { user_id: '2' }
+        { id: '1', telegram_id: 123, user_digest_preferences: [] },
+        { id: '2', telegram_id: 456, user_digest_preferences: [{ digest_type: 'morning' }] }
       ]
 
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: mockProfiles, 
-        error: null 
-      })
-      mockSupabase.eq.mockResolvedValueOnce({ 
-        data: mockDigestUsers, 
         error: null 
       })
 
@@ -87,7 +73,7 @@ describe('DigestService', () => {
     })
 
     test('should throw error on database error', async () => {
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: null, 
         error: new Error('Database error') 
       })
@@ -176,7 +162,7 @@ describe('DigestService', () => {
         telegram_id: 123,
         min_spots: 1,
         user_levels: [{ level: 'beginner' }],
-        user_notifications: [{ timing: '24h' }]
+        user_digest_preferences: [{ digest_type: 'morning' }]
       }
 
       const mockSessions = [
@@ -188,12 +174,8 @@ describe('DigestService', () => {
         }
       ]
 
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: [mockUser], 
-        error: null 
-      })
-      mockSupabase.eq.mockResolvedValueOnce({ 
-        data: [{ user_id: '1' }], 
         error: null 
       })
 
@@ -218,15 +200,11 @@ describe('DigestService', () => {
         telegram_id: 123,
         min_spots: 10,
         user_levels: [{ level: 'pro' }],
-        user_notifications: [{ timing: '24h' }]
+        user_digest_filters: [{ timing: '24h' }]
       }
 
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: [mockUser], 
-        error: null 
-      })
-      mockSupabase.eq.mockResolvedValueOnce({ 
-        data: [{ user_id: '1' }], 
         error: null 
       })
 
@@ -244,15 +222,11 @@ describe('DigestService', () => {
         id: '1',
         telegram_id: 123,
         min_spots: 1,
-        user_notifications: [{ timing: '24h' }]
+        user_digest_preferences: [{ digest_type: 'morning' }]
       }
 
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: [mockUser], 
-        error: null 
-      })
-      mockSupabase.eq.mockResolvedValueOnce({ 
-        data: [{ user_id: '1' }], 
         error: null 
       })
 
@@ -277,7 +251,7 @@ describe('DigestService', () => {
         id: '1',
         telegram_id: 456,
         min_spots: 1,
-        user_notifications: [{ timing: '12h' }]
+        user_digest_preferences: [{ digest_type: 'evening' }]
       }
 
       const tomorrowSessions = [
@@ -300,12 +274,8 @@ describe('DigestService', () => {
         }
       ]
 
-      mockSupabase.eq.mockResolvedValueOnce({ 
+      mockSupabase.eq.mockResolvedValue({ 
         data: [mockUser], 
-        error: null 
-      })
-      mockSupabase.eq.mockResolvedValueOnce({ 
-        data: [{ user_id: '1' }], 
         error: null 
       })
 

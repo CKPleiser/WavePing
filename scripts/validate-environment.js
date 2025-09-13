@@ -184,7 +184,7 @@ class EnvironmentValidator {
       this.log('Database connection successful', 'success')
 
       // Check table existence
-      const tables = ['profiles', 'sessions', 'user_levels', 'user_notifications']
+      const tables = ['profiles', 'sessions', 'user_levels', 'user_digest_filters', 'user_digest_preferences']
       for (const table of tables) {
         const { error: tableError } = await supabase
           .from(table)

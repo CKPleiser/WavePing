@@ -157,8 +157,8 @@ Choose what you'd like to do:
         message += `\n_...and ${allSessions.length - 8} more sessions!_`
       }
     }
-    
-    message += `\n\n🔗 [Book at The Wave](https://thewave.com/bristol/book/)`
+  
+    message += `\n🔗 [Book at The Wave](https://ticketing.thewave.com/)`
     
     return message
   },
@@ -385,7 +385,7 @@ If you love using WavePing, consider supporting development!
 Use /support to see how you can help.
 
 🆘 *Need More Help?*
-Contact @WavePingSupport for assistance!
+Contact @driftwithcaz for assistance!
 
 *Happy surfing!* 🤙`
   },
@@ -448,9 +448,8 @@ WavePing is built with ❤️ by an independent developer. Your support helps:
 Have questions, feedback, or found a bug?
 
 *Get in Touch:*
-• 📧 Email: support@waveping.app
-• 🐦 Twitter: @WavePingBot
-• 💬 Telegram: @WavePingSupport
+• 📧 Email: ckpleiser@gmail.com
+• 💬 Telegram: @driftwithcaz
 
 *Response Time:*
 Usually within 24 hours! 🚀
@@ -479,7 +478,7 @@ Got an idea to make WavePing even better?
 • 📊 Session analytics
 
 *How to Submit:*
-1️⃣ Contact @WavePingSupport with your idea
+1️⃣ Contact @Driftwithcaz with your idea
 2️⃣ Describe how it would help you
 3️⃣ We'll consider it for the roadmap!
 

@@ -31,7 +31,7 @@ async function verifyDatabase() {
     
     const tables = [
       'profiles', 'sessions', 'user_levels', 'user_sides', 'user_days',
-      'user_time_windows', 'user_notifications', 'user_sessions',
+      'user_time_windows', 'user_digest_filters', 'user_sessions',
       'notifications_sent', 'session_changes', 'weather_cache'
     ];
     

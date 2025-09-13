@@ -12,7 +12,7 @@ export interface UserProfile {
   user_sides?: UserSide[]
   user_days?: UserDay[]
   user_time_windows?: UserTimeWindow[]
-  user_notifications?: UserNotification[]
+  user_digest_filters?: UserDigestFilter[]
 }
 
 export interface UserLevel {
@@ -32,8 +32,8 @@ export interface UserTimeWindow {
   end_time: string    // HH:MM format
 }
 
-export interface UserNotification {
-  timing: '24h' | '12h' | '6h' | '3h' | '1h'
+export interface UserDigestFilter {
+  timing: '1w' | '48h' | '24h' | '12h' | '2h'
 }
 
 // Session types
