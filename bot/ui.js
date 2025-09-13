@@ -169,7 +169,7 @@ Choose what you'd like to do:
    * Preferences display
    */
   createPreferencesMessage(userProfile) {
-    let message = `⚙️ *Your Surf Preferences* 🏄‍♂️\n\n`
+    let message = `🛠 *Your Setup* 🏄‍♂️\n\n`
     
     // Levels
     const levels = userProfile.user_levels?.map(ul => ul.level) || []
@@ -219,7 +219,7 @@ Choose what you'd like to do:
     // Status
     message += `📱 Status: ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n`
     
-    message += `\nUse the buttons below to make changes! 👇`
+    message += `\n*Tap any setting below to change it:*`
     
     return message
   },

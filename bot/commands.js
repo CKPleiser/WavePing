@@ -376,7 +376,8 @@ const commands = {
     }
     
     // Complete preferences menu with all options
-    await ctx.reply('⚙️ *Your Preferences*\n\nClick a button to modify:', {
+    const preferencesMessage = ui.createPreferencesMessage(userProfile)
+    await ctx.reply(preferencesMessage, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
