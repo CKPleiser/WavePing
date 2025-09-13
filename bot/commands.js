@@ -102,8 +102,19 @@ const commands = {
       try {
         const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
         const scraper = new WaveScheduleScraper()
-        const todaySessions = await scraper.getTodaysSessions()
-        const filteredSessions = scraper.filterSessionsForUser(todaySessions, userProfile)
+        const todaySessions = await scraper.getTodaysFutureSessions()
+        
+        // Extract user preferences in correct format
+        const userLevels = userProfile.user_levels?.map(ul => ul.level) || []
+        const userSides = userProfile.user_sides?.map(us => 
+          us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
+        ) || []
+        const userDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
+        const userTimeWindows = userProfile.user_time_windows || []
+        
+        const filteredSessions = scraper.filterSessionsForUser(
+          todaySessions, userLevels, userSides, userDays, true, userTimeWindows
+        ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
         
         if (filteredSessions.length > 0) {
           dynamicUrgency = `\n\n🔥 ${filteredSessions.length} session${filteredSessions.length !== 1 ? 's' : ''} match${filteredSessions.length === 1 ? 'es' : ''} your setup today`
