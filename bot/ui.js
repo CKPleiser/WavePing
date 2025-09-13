@@ -147,10 +147,9 @@ Choose what you'd like to do:
         const level = this.capitalizeWords(session.level)
         const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
         
-        message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+        message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
       
-      message += `\n\n_Tip: Side = [L] left, [R] right._`
       
     } else if (userProfile && filteredSessions.length === 0) {
       // User has preferences but no matches
@@ -165,10 +164,9 @@ Choose what you'd like to do:
           const level = this.capitalizeWords(session.level)
           const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
           
-          message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+          message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
         })
-        message += `\n\n_Tip: Side = [L] left, [R] right._`
-      }
+        }
       
     } else {
       // No user profile  
@@ -184,10 +182,9 @@ Choose what you'd like to do:
         const level = this.capitalizeWords(session.level)
         const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
         
-        message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+        message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
       
-      message += `\n\n_Tip: Side = [L] left, [R] right._`
     }
     
     return message
