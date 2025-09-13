@@ -382,13 +382,13 @@ const commands = {
       reply_markup: {
         inline_keyboard: [
           [{ text: '🎯 Skill Levels', callback_data: 'pref_levels' }],
-          [{ text: '🏄 Wave Sides', callback_data: 'pref_sides' }],
+          [{ text: '🏄 Wave Side', callback_data: 'pref_sides' }],
           [{ text: '📅 Surf Days', callback_data: 'pref_days' }],
-          [{ text: '🕐 Time Windows', callback_data: 'pref_times' }],
-          [{ text: '💺 Min Spots', callback_data: 'pref_spots' }],
+          [{ text: '🕒 Time Windows', callback_data: 'pref_times' }],
+          [{ text: '🔢 Min Spots', callback_data: 'pref_spots' }],
           [{ text: '🔔 Notification Timing', callback_data: 'pref_notifications' }],
-          [{ text: '📱 Daily Digests', callback_data: 'pref_digests' }],
-          [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+          [{ text: '🗞 Daily Digests', callback_data: 'pref_digests' }],
+          [{ text: '⬅️ Main Menu', callback_data: 'menu_main' }]
         ]
       }
     })

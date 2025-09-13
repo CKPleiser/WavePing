@@ -218,57 +218,65 @@ Choose what you'd like to do:
    * Preferences display
    */
   createPreferencesMessage(userProfile) {
-    let message = `🛠 *Your Setup* 🏄‍♂️\n\n`
+    let message = `🛠 *Your Setup*\n\n`
     
-    // Levels
-    const levels = userProfile.user_levels?.map(ul => ul.level) || []
-    if (levels.length > 0) {
-      const levelEmojis = levels.map(l => `${this.getLevelEmoji(l)} ${this.capitalizeWords(l)}`).join(', ')
-      message += `🎯 Skill Levels: ${levelEmojis}\n`
-    } else {
-      message += `🎯 Skill Levels: Not set\n`
-    }
+    // Levels - clean, no emojis
+    const levels = userProfile.user_levels?.map(ul => this.capitalizeWords(ul.level)) || []
+    const levelText = levels.length > 0 ? levels.join(', ') : 'Not set'
+    message += `• **Level:** ${levelText}\n`
     
-    // Sides
+    // Sides - clean
     const sides = userProfile.user_sides?.map(us => 
       us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
     ) || []
-    const sideText = sides.length > 0 ? sides.join(', ') : 'Any side'
-    message += `🏄 Wave Side: ${sideText}\n`
+    const sideText = sides.length > 0 ? sides.join(', ') : 'Any'
+    message += `• **Wave side:** ${sideText}\n`
     
-    // Days
+    // Days - compact format
     const days = userProfile.user_days?.map(ud => {
       const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
       return dayNames[ud.day_of_week]
     }) || []
-    const daysText = days.length > 0 ? days.join(', ') : 'Any day'
-    message += `📅 Surf Days: ${daysText}\n`
+    let daysText = 'Mon–Sun'
+    if (days.length === 5 && !days.includes('Sat') && !days.includes('Sun')) {
+      daysText = 'Mon–Fri'
+    } else if (days.length === 2 && days.includes('Sat') && days.includes('Sun')) {
+      daysText = 'Weekends'
+    } else if (days.length > 0 && days.length < 7) {
+      daysText = days.join(', ')
+    }
+    message += `• **Days:** ${daysText}\n`
     
-    // Time windows
-    const times = userProfile.user_time_windows?.map(tw => 
-      `${tw.start_time}-${tw.end_time}`
-    ) || []
-    const timesText = times.length > 0 ? times.join(', ') : 'Any time'
-    message += `🕐 Time Windows: ${timesText}\n`
+    // Time windows - chip format
+    const times = userProfile.user_time_windows?.map(tw => {
+      const start = parseInt(tw.start_time.split(':')[0])
+      const end = parseInt(tw.end_time.split(':')[0])
+      return `${start}–${end}`
+    }) || []
+    const timesText = times.length > 0 ? times.join(', ') : 'Any'
+    message += `• **Time windows:** ${timesText}\n`
     
     // Min spots
-    message += `💺 Min Spots: ${userProfile.min_spots || 1}\n`
+    const minSpots = userProfile.min_spots || 1
+    message += `• **Min spots:** ${minSpots}+\n`
     
-    // Digest preferences (when to receive digests)
+    // Digest preferences - clean format
     const digestPrefs = userProfile.user_digest_preferences || []
+    let digestText = 'None'
     if (digestPrefs.length > 0) {
-      const digestText = digestPrefs.map(pref => {
-        return pref.digest_type === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
-      }).join(', ')
-      message += `🔔 Digest delivery: ${digestText}\n`
-    } else {
-      message += `🔔 Notifications: None set\n`
+      const digestItems = digestPrefs.map(pref => {
+        const time = pref.digest_type === 'morning' ? '08:00' : '18:00'
+        return `${this.capitalizeWords(pref.digest_type)} ${time}`
+      })
+      digestText = digestItems.join(', ')
     }
+    message += `• **Digests:** ${digestText}\n`
     
-    // Status
-    message += `📱 Status: ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n`
+    // Alerts status - clean
+    const alertsStatus = userProfile.notification_enabled ? 'On' : 'Off'
+    message += `• **Alerts:** ${alertsStatus}\n`
     
-    message += `\n*Tap any setting below to change it:*`
+    message += `\n*Tap a setting below to change it:*`
     
     return message
   },
