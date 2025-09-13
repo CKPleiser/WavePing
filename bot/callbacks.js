@@ -103,7 +103,6 @@ const callbacks = {
             parse_mode: 'Markdown',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
-              [Markup.button.url('💖 GitHub Sponsors', 'https://github.com/sponsors/waveping')],
               [Markup.button.callback('💬 Contact Developer', 'support_contact')],
               [Markup.button.callback('📈 Feature Request', 'support_feature')],
               [Markup.button.callback('🏠 Main Menu', 'menu_main')]
@@ -817,7 +816,17 @@ const callbacks = {
       levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
       levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
       
-      return ctx.editMessageReplyMarkup({ inline_keyboard: levelButtons })
+      // Try to update the message markup, but ignore "message not modified" errors
+      try {
+        return await ctx.editMessageReplyMarkup({ inline_keyboard: levelButtons })
+      } catch (editError) {
+        // If message is not modified (content is same), that's fine - just ignore
+        if (editError.description && editError.description.includes('message is not modified')) {
+          console.log('📝 Message markup unchanged, skipping update')
+          return // Silent success
+        }
+        throw editError // Re-throw other errors
+      }
     } catch (error) {
       console.error('🚨 Toggle level error:', error)
       return ctx.answerCbQuery('❌ Error updating level')
