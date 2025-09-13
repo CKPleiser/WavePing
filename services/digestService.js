@@ -11,7 +11,7 @@ class DigestService {
    * Get users for a specific digest type
    */
   async getDigestUsers(digestType) {
-    // Get all users with notifications enabled
+    // Get all users with notifications enabled who have the specific digest timing
     const { data: profiles, error: profilesError } = await this.supabase
       .from('profiles')
       .select(`
@@ -28,22 +28,14 @@ class DigestService {
     
     if (profilesError) throw profilesError
 
-    // Get users who have specific digest preference
-    const { data: digestUsers, error: digestError } = await this.supabase
-      .from('user_digest_preferences')
-      .select('user_id')
-      .eq('digest_type', digestType)
-    
-    if (digestError) throw digestError
-    
-    const digestUserIds = new Set(digestUsers?.map(u => u.user_id) || [])
-    
-    // Filter profiles to only those who want this digest type AND have notification timing preferences
-    return profiles?.filter(user => 
-      digestUserIds.has(user.id) && 
-      user.user_notifications && 
-      user.user_notifications.length > 0
-    ) || []
+    // Filter profiles to only those who want this specific digest type
+    return profiles?.filter(user => {
+      // Check if user has this digest type in their notifications
+      const hasDigestTiming = user.user_notifications?.some(
+        notif => notif.timing === digestType
+      )
+      return hasDigestTiming
+    }) || []
   }
 
   /**
@@ -79,9 +71,9 @@ class DigestService {
     if (includeDate && session.dateLabel) {
       message += `*${session.dateLabel}* `
     }
-    message += `*${session.time}* - ${session.session_name}\\n`
-    message += `${spots} spot${spots === 1 ? '' : 's'} available\\n`
-    message += `[Book Now](${bookingUrl})\\n\\n`
+    message += `*${session.time}* - ${session.session_name}\n`
+    message += `${spots} spot${spots === 1 ? '' : 's'} available\n`
+    message += `[Book Now](${bookingUrl})\n\n`
     
     return message
   }
@@ -112,22 +104,22 @@ class DigestService {
         }
 
         // Create morning digest message
-        let message = `🌅 *Good Morning, Wave Rider!* ☀️\\n\\n`
+        let message = `🌅 *Good Morning, Wave Rider!* ☀️\n\n`
         
         if (todayFiltered.length > 0) {
-          message += `🌊 *TODAY'S SESSIONS* (${todayFiltered.length} match${todayFiltered.length === 1 ? '' : 'es'})\\n\\n`
+          message += `🌊 *TODAY'S SESSIONS* (${todayFiltered.length} match${todayFiltered.length === 1 ? '' : 'es'})\n\n`
           
           todayFiltered.slice(0, 5).forEach(session => {
             message += this.formatSession(session)
           })
           
           if (todayFiltered.length > 5) {
-            message += `...and ${todayFiltered.length - 5} more! Use /today for the full list.\\n\\n`
+            message += `...and ${todayFiltered.length - 5} more! Use /today for the full list.\n\n`
           }
         }
         
         if (tomorrowFiltered.length > 0) {
-          message += `🌅 *TOMORROW'S PREVIEW* (${tomorrowFiltered.length} session${tomorrowFiltered.length === 1 ? '' : 's'})\\n\\n`
+          message += `🌅 *TOMORROW'S PREVIEW* (${tomorrowFiltered.length} session${tomorrowFiltered.length === 1 ? '' : 's'})\n\n`
           
           tomorrowFiltered.slice(0, 3).forEach(session => {
             message += this.formatSession(session)
@@ -186,17 +178,17 @@ class DigestService {
         }
 
         // Create evening digest message  
-        let message = `🌇 *Evening Wave Report* 🌊\\n\\n`
+        let message = `🌇 *Evening Wave Report* 🌊\n\n`
         
         if (tomorrowFiltered.length > 0) {
-          message += `🌅 *TOMORROW'S SESSIONS* (${tomorrowFiltered.length} match${tomorrowFiltered.length === 1 ? '' : 'es'})\\n\\n`
+          message += `🌅 *TOMORROW'S SESSIONS* (${tomorrowFiltered.length} match${tomorrowFiltered.length === 1 ? '' : 'es'})\n\n`
           
           tomorrowFiltered.slice(0, 6).forEach(session => {
             message += this.formatSession(session)
           })
           
           if (tomorrowFiltered.length > 6) {
-            message += `...and ${tomorrowFiltered.length - 6} more! Use /tomorrow for the full list.\\n\\n`
+            message += `...and ${tomorrowFiltered.length - 6} more! Use /tomorrow for the full list.\n\n`
           }
         }
         
@@ -207,7 +199,7 @@ class DigestService {
           )
           
           if (weekendSessions.length > 0) {
-            message += `🗓️ *COMING UP* (Next few days)\\n\\n`
+            message += `🗓️ *COMING UP* (Next few days)\n\n`
             
             weekendSessions.slice(0, 3).forEach(session => {
               message += this.formatSession(session, true)
@@ -242,10 +234,10 @@ class DigestService {
    * Get quick commands for morning digest
    */
   getQuickCommands() {
-    return `💡 *Quick Commands:*\\n` +
-           `• /today - See all today's sessions\\n` +
-           `• /tomorrow - Check tomorrow's lineup\\n` +
-           `• /prefs - Update your preferences\\n\\n` +
+    return `💡 *Quick Commands:*\n` +
+           `• /today - See all today's sessions\n` +
+           `• /tomorrow - Check tomorrow's lineup\n` +
+           `• /prefs - Update your preferences\n\n` +
            `🌊 Ready to catch some waves? 🤙`
   }
 
@@ -253,10 +245,10 @@ class DigestService {
    * Get quick commands for evening digest
    */
   getEveningCommands() {
-    return `💡 *Plan Your Sessions:*\\n` +
-           `• /tomorrow - Full tomorrow schedule\\n` +
-           `• /prefs - Update preferences\\n` +
-           `• /notify - Manage notifications\\n\\n` +
+    return `💡 *Plan Your Sessions:*\n` +
+           `• /tomorrow - Full tomorrow schedule\n` +
+           `• /prefs - Update preferences\n` +
+           `• /notify - Manage notifications\n\n` +
            `🌙 Rest well, wave rider! 🏄‍♂️`
   }
 }
