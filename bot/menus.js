@@ -34,6 +34,11 @@ const menus = {
   sessionMenu(timeframe, hasMatches, sessions = []) {
     const buttons = []
     
+    console.log(`🔧 sessionMenu DEBUG: timeframe=${timeframe}, hasMatches=${hasMatches}, sessions.length=${sessions.length}`)
+    if (sessions.length > 0) {
+      console.log('🔧 First session structure:', JSON.stringify(sessions[0], null, 2))
+    }
+    
     // Individual session booking buttons (max 10 to avoid Telegram limits)
     const displaySessions = sessions.slice(0, 10)
     displaySessions.forEach((session, i) => {
