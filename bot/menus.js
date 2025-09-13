@@ -43,7 +43,7 @@ const menus = {
       
       const buttonText = `${i + 1}) ${session.time} • ${level} • ${sideChip} • ${spots} spots`
       buttons.push([
-        Markup.button.url(buttonText, session.book_url || 'https://ticketing.thewave.com/')
+        Markup.button.url(buttonText, session.booking_url || 'https://ticketing.thewave.com/')
       ])
     })
     

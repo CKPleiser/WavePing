@@ -100,7 +100,7 @@ const commands = {
       // Try to get session counts for dynamic urgency line (optional)
       let dynamicUrgency = ''
       try {
-        const WaveScheduleScraper = require('../lib/wave-scraper-final')
+        const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
         const scraper = new WaveScheduleScraper()
         const todaySessions = await scraper.getTodaysSessions()
         const filteredSessions = scraper.filterSessionsForUser(todaySessions, userProfile)
