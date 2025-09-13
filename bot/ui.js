@@ -146,7 +146,7 @@ Choose what you'd like to do:
       displaySessions.forEach((session, i) => {
         const spots = session.spots_available || 0
         const level = this.capitalizeWords(session.level)
-        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : '[Any]'
+        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
         
         message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
@@ -169,7 +169,7 @@ Choose what you'd like to do:
         availableSessions.forEach((session, i) => {
           const spots = session.spots_available || 0
           const level = this.capitalizeWords(session.level)
-          const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : '[Any]'
+          const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
           
           message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
         })
@@ -192,7 +192,7 @@ Choose what you'd like to do:
       displaySessions.forEach((session, i) => {
         const spots = session.spots_available || 0
         const level = this.capitalizeWords(session.level)
-        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : '[Any]'
+        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
         
         message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
