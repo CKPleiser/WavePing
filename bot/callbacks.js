@@ -21,7 +21,7 @@ async function getUserProfile(supabase, telegramId) {
       user_sides (side),
       user_days (day_of_week),
       user_time_windows (start_time, end_time),
-      user_notifications (timing),
+      user_digest_filters (timing),
       user_digest_preferences (digest_type)
     `)
     .eq('telegram_id', telegramId)
@@ -249,7 +249,7 @@ const callbacks = {
           )
           
         case 'notifications':
-          const currentNotifications = userProfile.user_notifications?.map(un => un.timing) || []
+          const currentNotifications = userProfile.user_digest_filters?.map(un => un.timing) || []
           return ctx.editMessageText(
             '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
             {
@@ -259,7 +259,7 @@ const callbacks = {
           )
           
         case 'digests':
-          const currentDigests = userProfile.user_notifications?.map(un => un.timing) || []
+          const currentDigests = userProfile.user_digest_preferences?.map(udp => udp.digest_type) || []
           return ctx.editMessageText(
             '📱 *Daily Digest Timing*\n\nWhen would you like daily summaries?\n\n🌅 *Morning Digest (8 AM)*\nPlan your surf day with today\'s sessions\n\n🌇 *Evening Digest (6 PM)*\nPreview tomorrow\'s available sessions',
             {
@@ -281,7 +281,7 @@ const callbacks = {
           })
           
         case 'notifications':
-          const currentNotificationTimings = userProfile.user_notifications?.map(un => un.timing) || []
+          const currentNotificationTimings = userProfile.user_digest_filters?.map(un => un.timing) || []
           return ctx.editMessageText(
             '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
             {
@@ -894,14 +894,14 @@ const callbacks = {
   async setUserNotificationPreference(supabase, userProfile, timing) {
     // Clear existing notifications
     await supabase
-      .from('user_notifications')
+      .from('user_digest_filters')
       .delete()
       .eq('user_id', userProfile.id)
 
     if (timing === 'digest') {
       // Set up digest preference using new enum system
       await supabase
-        .from('user_notifications')
+        .from('user_digest_filters')
         .insert({
           user_id: userProfile.id,
           timing: 'morning'
@@ -917,7 +917,7 @@ const callbacks = {
       }
       
       await supabase
-        .from('user_notifications')
+        .from('user_digest_filters')
         .insert({
           user_id: userProfile.id,
           timing: timingMap[timing] || 'morning'
@@ -1057,20 +1057,20 @@ const callbacks = {
     }).eq('id', userProfile.id)
     
     // Save notifications using new digest system
-    await supabase.from('user_notifications').delete().eq('user_id', userProfile.id)
+    await supabase.from('user_digest_filters').delete().eq('user_id', userProfile.id)
     
     if (notificationChoice === 'morning') {
-      await supabase.from('user_notifications').insert({
+      await supabase.from('user_digest_filters').insert({
         user_id: userProfile.id,
         timing: 'morning'
       })
     } else if (notificationChoice === 'evening') {
-      await supabase.from('user_notifications').insert({
+      await supabase.from('user_digest_filters').insert({
         user_id: userProfile.id,
         timing: 'evening'
       })
     } else if (notificationChoice === 'both') {
-      await supabase.from('user_notifications').insert([
+      await supabase.from('user_digest_filters').insert([
         { user_id: userProfile.id, timing: 'morning' },
         { user_id: userProfile.id, timing: 'evening' }
       ])
@@ -1272,29 +1272,29 @@ const callbacks = {
   async toggleDigestPreference(supabase, ctx, userProfile, digestType) {
     try {
       const { data: existing } = await supabase
-        .from('user_notifications')
-        .select('timing')
+        .from('user_digest_preferences')
+        .select('digest_type')
         .eq('user_id', userProfile.id)
-        .eq('timing', digestType)
+        .eq('digest_type', digestType)
         .single()
 
       if (existing) {
         await supabase
-          .from('user_notifications')
+          .from('user_digest_preferences')
           .delete()
           .eq('user_id', userProfile.id)
-          .eq('timing', digestType)
+          .eq('digest_type', digestType)
       } else {
         await supabase
-          .from('user_notifications')
+          .from('user_digest_preferences')
           .insert({
             user_id: userProfile.id,
-            timing: digestType
+            digest_type: digestType
           })
       }
 
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
-      const currentDigests = updatedProfile.user_notifications?.map(un => un.timing) || []
+      const currentDigests = updatedProfile.user_digest_preferences?.map(udp => udp.digest_type) || []
       
       return ctx.editMessageReplyMarkup(
         menus.digestMenu(currentDigests).reply_markup
@@ -1308,7 +1308,7 @@ const callbacks = {
   async toggleNotificationTiming(supabase, ctx, userProfile, timingKey) {
     try {
       const { data: existing } = await supabase
-        .from('user_notifications')
+        .from('user_digest_filters')
         .select('timing')
         .eq('user_id', userProfile.id)
         .eq('timing', timingKey)
@@ -1316,13 +1316,13 @@ const callbacks = {
 
       if (existing) {
         await supabase
-          .from('user_notifications')
+          .from('user_digest_filters')
           .delete()
           .eq('user_id', userProfile.id)
           .eq('timing', timingKey)
       } else {
         await supabase
-          .from('user_notifications')
+          .from('user_digest_filters')
           .insert({
             user_id: userProfile.id,
             timing: timingKey
@@ -1330,7 +1330,7 @@ const callbacks = {
       }
 
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
-      const currentTimings = updatedProfile.user_notifications?.map(un => un.timing) || []
+      const currentTimings = updatedProfile.user_digest_filters?.map(un => un.timing) || []
       
       return ctx.editMessageReplyMarkup(
         menus.notificationTimingMenu(currentTimings).reply_markup
@@ -1407,7 +1407,7 @@ const callbacks = {
             supabase.from('user_sides').delete().eq('user_id', userProfile.id),
             supabase.from('user_days').delete().eq('user_id', userProfile.id),
             supabase.from('user_time_windows').delete().eq('user_id', userProfile.id),
-            supabase.from('user_notifications').delete().eq('user_id', userProfile.id)
+            supabase.from('user_digest_filters').delete().eq('user_id', userProfile.id)
           ])
           
           // Reset min_spots to default

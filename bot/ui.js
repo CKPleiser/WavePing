@@ -31,7 +31,7 @@ Get instant notifications when surf sessions matching your preferences become av
     
     if (hasPreferences) {
       const levels = userProfile.user_levels.map(ul => ul.level).join(', ')
-      const notifications = userProfile.user_notifications?.length || 0
+      const notifications = userProfile.user_digest_filters?.length || 0
       
       return `🌊 *Welcome back, ${firstName}!* 🏄‍♂️
 
@@ -205,13 +205,13 @@ Choose what you'd like to do:
     // Min spots
     message += `💺 Min Spots: ${userProfile.min_spots || 1}\n`
     
-    // Notifications (updated for digest system)
-    const notifications = userProfile.user_notifications?.map(un => un.timing) || []
-    if (notifications.length > 0) {
-      const digestText = notifications.map(timing => {
-        return timing === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
+    // Digest preferences (when to receive digests)
+    const digestPrefs = userProfile.user_digest_preferences || []
+    if (digestPrefs.length > 0) {
+      const digestText = digestPrefs.map(pref => {
+        return pref.digest_type === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
       }).join(', ')
-      message += `🔔 Notifications: ${digestText}\n`
+      message += `🔔 Digest delivery: ${digestText}\n`
     } else {
       message += `🔔 Notifications: None set\n`
     }
@@ -269,10 +269,10 @@ Choose what you'd like to do:
     message += `💺 *Min Spots:* ${userProfile.min_spots || 1}\n`
     
     // Notifications
-    const notifications = userProfile.user_notifications?.map(un => un.timing) || []
-    if (notifications.length > 0) {
-      const digestText = notifications.map(timing => {
-        return timing === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
+    const digestPrefs = userProfile.user_digest_preferences || []
+    if (digestPrefs.length > 0) {
+      const digestText = digestPrefs.map(pref => {
+        return pref.digest_type === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
       }).join(', ')
       message += `🔔 *Daily Digests:* ${digestText}\n`
     } else {
@@ -292,31 +292,28 @@ Choose what you'd like to do:
     
     message += `*Current Status:* ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n\n`
     
-    const notifications = userProfile.user_notifications || []
-    if (notifications.length > 0) {
-      message += `*Daily Digests Active:*\n`
-      notifications.forEach(notif => {
-        const emoji = {
-          'morning': '🌅',
-          'evening': '🌇'
-        }[notif.timing] || '🔔'
-        
-        const time = notif.timing === 'morning' ? '8:00 AM' : '6:00 PM'
-        message += `${emoji} ${this.capitalizeWords(notif.timing)} digest at ${time}\n`
+    // Show digest delivery preferences (morning/evening)
+    const digestPrefs = userProfile.user_digest_preferences || []
+    if (digestPrefs.length > 0) {
+      message += `*Daily Digest Delivery:*\n`
+      digestPrefs.forEach(pref => {
+        const emoji = pref.digest_type === 'morning' ? '🌅' : '🌇'
+        const time = pref.digest_type === 'morning' ? '8:00 AM' : '6:00 PM'
+        message += `${emoji} ${this.capitalizeWords(pref.digest_type)} digest at ${time}\n`
       })
     } else {
-      message += `*No notification timings set*\n`
-      message += `Set up when you want to be alerted! ⏰`
+      message += `*No digest delivery preferences set*\n`
+      message += `Choose when you want to receive daily surf summaries! ⏰`
     }
     
-    const digests = userProfile.user_digest_preferences || []
-    if (digests.length > 0) {
-      message += `\n*Daily Digests:*\n`
-      digests.forEach(digest => {
-        const emoji = digest.digest_type === 'morning' ? '🌅' : '🌇'
-        const time = digest.digest_type === 'morning' ? '8:00 AM' : '6:00 PM'
-        message += `${emoji} ${this.capitalizeWords(digest.digest_type)} digest at ${time}\n`
-      })
+    // Show session filters (what sessions to include)
+    const sessionFilters = userProfile.user_digest_filters || []
+    if (sessionFilters.length > 0) {
+      message += `\n*Session Filters:*\n`
+      message += `Include sessions starting within: ${sessionFilters.map(f => f.timing).join(', ')}\n`
+    } else {
+      message += `\n*No session filters set*\n`
+      message += `Choose how far ahead to look for sessions! 🔍`
     }
     
     return message

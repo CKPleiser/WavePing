@@ -17,6 +17,9 @@ dist/
 .env.test.local
 .env.production.local
 
+# MCP configuration (contains sensitive tokens)
+.mcp.json
+
 # Logs
 *.log
 npm-debug.log*

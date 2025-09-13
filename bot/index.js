@@ -160,7 +160,7 @@ class BotHandler {
         user_sides (side),
         user_days (day_of_week),
         user_time_windows (start_time, end_time),
-        user_notifications (timing),
+        user_digest_filters (timing),
         user_digest_preferences (digest_type)
       `)
       .eq('telegram_id', telegramId)
