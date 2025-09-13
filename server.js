@@ -165,19 +165,17 @@ app.post('/api/cron/cleanup-database',
     serverLogger.info('Starting database cleanup...')
     
     try {
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayISO = yesterday.toISOString().split('T')[0]
+      const today = new Date().toISOString().split('T')[0]
       
       const threeDaysAgo = new Date()
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
       const threeDaysAgoISO = threeDaysAgo.toISOString().split('T')[0]
       
-      // Clean old sessions (keep yesterday and future)
+      // Clean old sessions (keep today and future)
       const { error: sessionsError, count: sessionsDeleted } = await supabase
         .from('sessions')
         .delete({ count: 'exact' })
-        .lt('date', yesterdayISO)
+        .lt('date', today)
       
       if (sessionsError) throw sessionsError
       
