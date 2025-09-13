@@ -11,7 +11,7 @@ class DigestService {
    * Get users for a specific digest type
    */
   async getDigestUsers(digestType) {
-    // Get all users with notifications enabled who have the specific digest timing
+    // Get all users with notifications enabled who have the specific digest preference
     const { data: profiles, error: profilesError } = await this.supabase
       .from('profiles')
       .select(`
@@ -22,7 +22,7 @@ class DigestService {
         user_sides (side),
         user_days (day_of_week),
         user_time_windows (start_time, end_time),
-        user_notifications (timing)
+        user_digest_preferences (digest_type)
       `)
       .eq('notification_enabled', true)
     
@@ -30,11 +30,11 @@ class DigestService {
 
     // Filter profiles to only those who want this specific digest type
     return profiles?.filter(user => {
-      // Check if user has this digest type in their notifications
-      const hasDigestTiming = user.user_notifications?.some(
-        notif => notif.timing === digestType
+      // Check if user has this digest type in their preferences
+      const hasDigestPreference = user.user_digest_preferences?.some(
+        pref => pref.digest_type === digestType
       )
-      return hasDigestTiming
+      return hasDigestPreference
     }) || []
   }
 
