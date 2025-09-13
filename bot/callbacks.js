@@ -774,28 +774,38 @@ const callbacks = {
       console.log(`🔄 Toggling level: ${level} for user ${userProfile.id}`)
       
       // Check if level exists - don't use .single() as it throws error when no row exists
-      const { data: existingLevels } = await supabase
+      const { data: existingLevels, error: queryError } = await supabase
         .from('user_levels')
         .select('id')
         .eq('user_id', userProfile.id)
         .eq('level', level)
 
+      console.log(`🔍 Query result for ${level}:`, { existingLevels, error: queryError })
+
       if (existingLevels && existingLevels.length > 0) {
         // Remove level
-        console.log(`➖ Removing level: ${level}`)
-        await supabase
+        console.log(`➖ Removing level: ${level} (id: ${existingLevels[0].id})`)
+        const { error: deleteError } = await supabase
           .from('user_levels')
           .delete()
           .eq('id', existingLevels[0].id)
+        
+        if (deleteError) {
+          console.error(`❌ Error deleting level:`, deleteError)
+        }
       } else {
         // Add level
         console.log(`➕ Adding level: ${level}`)
-        await supabase
+        const { error: insertError } = await supabase
           .from('user_levels')
           .insert({
             user_id: userProfile.id,
             level: level
           })
+        
+        if (insertError) {
+          console.error(`❌ Error inserting level:`, insertError)
+        }
       }
 
       // Small delay to ensure database transaction is committed
