@@ -773,22 +773,23 @@ const callbacks = {
     try {
       console.log(`🔄 Toggling level: ${level} for user ${userProfile.id}`)
       
-      // Check if level exists - don't use .single() as it throws error when no row exists
+      // Check if level exists - query for the composite key columns
       const { data: existingLevels, error: queryError } = await supabase
         .from('user_levels')
-        .select('id')
+        .select('user_id, level')
         .eq('user_id', userProfile.id)
         .eq('level', level)
 
       console.log(`🔍 Query result for ${level}:`, { existingLevels, error: queryError })
 
       if (existingLevels && existingLevels.length > 0) {
-        // Remove level
-        console.log(`➖ Removing level: ${level} (id: ${existingLevels[0].id})`)
+        // Remove level using composite key
+        console.log(`➖ Removing level: ${level}`)
         const { error: deleteError } = await supabase
           .from('user_levels')
           .delete()
-          .eq('id', existingLevels[0].id)
+          .eq('user_id', userProfile.id)
+          .eq('level', level)
         
         if (deleteError) {
           console.error(`❌ Error deleting level:`, deleteError)
