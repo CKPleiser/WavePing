@@ -42,11 +42,8 @@ const menus = {
       const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
       
       const buttonText = `${i + 1}) ${session.time} • ${level} • ${sideChip} • ${spots} spots`
-      console.log(`🔧 sessionMenu: Creating button ${i + 1}: ${buttonText}`)
       return [Markup.button.url(buttonText, session.booking_url || 'https://ticketing.thewave.com/')]
     })
-    
-    console.log(`🔧 sessionMenu: Created ${sessionButtons.length} session buttons`)
     buttons.push(...sessionButtons)
     
     // If more than 10 sessions, add a general booking button
