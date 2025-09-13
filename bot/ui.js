@@ -88,7 +88,7 @@ Get instant notifications when surf sessions matching your preferences become av
 • *Tomorrow at The Wave* — plan ahead
 
 *Your setup*
-• *Level:* ${levelText}  • Side: ${sideText}
+• *Level:* ${levelText}  • *Side:* ${sideText}
 • *Days:* ${daysText}
 • *Times:* ${timesText}
 • *Min spots:* ${minSpots}+  • *Alerts:* ${alertsStatus}  • *Digests:* ${digestText}`
