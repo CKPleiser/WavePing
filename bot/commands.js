@@ -227,6 +227,9 @@ const commands = {
         userProfile
       )
       
+      const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
+      console.log(`🔧 TODAY: Passing ${sessionsToPass.length} sessions to sessionMenu`)
+      
       await ctx.telegram.editMessageText(
         ctx.chat.id,
         loadingMsg.message_id,
@@ -234,7 +237,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menus.sessionMenu('today', filteredSessions.length > 0, filteredSessions.length > 0 ? filteredSessions : allAvailableSessions)
+          reply_markup: menus.sessionMenu('today', filteredSessions.length > 0, sessionsToPass)
         }
       )
       
@@ -315,6 +318,9 @@ const commands = {
         userProfile
       )
       
+      const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
+      console.log(`🔧 TOMORROW: Passing ${sessionsToPass.length} sessions to sessionMenu`)
+      
       await ctx.telegram.editMessageText(
         ctx.chat.id,
         loadingMsg.message_id,
@@ -322,7 +328,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menus.sessionMenu('tomorrow', filteredSessions.length > 0, filteredSessions.length > 0 ? filteredSessions : allAvailableSessions)
+          reply_markup: menus.sessionMenu('tomorrow', filteredSessions.length > 0, sessionsToPass)
         }
       )
       
