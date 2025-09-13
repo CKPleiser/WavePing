@@ -158,6 +158,68 @@ Use /prefs to manage your notification settings.`
   })
 )
 
+// Scrape schedule cron endpoint - fetches and stores sessions from The Wave
+app.post('/api/cron/scrape-schedule',
+  authenticateCron,
+  asyncHandler(async (req, res) => {
+    serverLogger.info('Starting schedule scrape...')
+    
+    try {
+      // Clear existing sessions from today onwards
+      const today = new Date().toISOString().split('T')[0]
+      const { error: clearError } = await supabase
+        .from('sessions')
+        .delete()
+        .gte('date', today)
+      
+      if (clearError) throw clearError
+      
+      // Fetch fresh sessions using scraper
+      const scraper = new WaveScheduleScraper()
+      const sessions = await scraper.getSessionsInRange(14) // Get 14 days of data
+      
+      serverLogger.info(`Found ${sessions.length} sessions to insert`)
+      
+      // Insert fresh sessions
+      if (sessions.length > 0) {
+        const dbSessions = sessions.map(session => ({
+          id: `${session.dateISO}_${session.time24}_${session.session_name}`.replace(/[^a-zA-Z0-9-_]/g, '_'),
+          date: session.dateISO,
+          time: session.time24,
+          session_name: session.session_name,
+          spots_available: session.spots_available || 0,
+          spots_total: session.spots_total || 0,
+          level: session.level?.toLowerCase() || 'unknown',
+          side: session.side || 'unknown',
+          day_of_week: session.dayOfWeek
+        }))
+        
+        const { error: insertError } = await supabase
+          .from('sessions')
+          .upsert(dbSessions, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
+        
+        if (insertError) throw insertError
+      }
+      
+      res.json({
+        success: true,
+        message: 'Schedule scraped successfully',
+        sessionsScraped: sessions.length,
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      serverLogger.error('Scraping error:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+)
+
 // Morning digest cron endpoint (8 AM) - Refactored to use service
 app.post('/api/cron/send-morning-digest', 
   authenticateCron,
