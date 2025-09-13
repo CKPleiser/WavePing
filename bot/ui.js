@@ -223,14 +223,14 @@ Choose what you'd like to do:
     // Levels - clean, no emojis
     const levels = userProfile.user_levels?.map(ul => this.capitalizeWords(ul.level)) || []
     const levelText = levels.length > 0 ? levels.join(', ') : 'Not set'
-    message += `• **Level:** ${levelText}\n`
+    message += `**Level:** ${levelText}\n`
     
     // Sides - clean
     const sides = userProfile.user_sides?.map(us => 
       us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
     ) || []
     const sideText = sides.length > 0 ? sides.join(', ') : 'Any'
-    message += `• **Wave side:** ${sideText}\n`
+    message += `**Wave side:** ${sideText}\n`
     
     // Days - compact format
     const days = userProfile.user_days?.map(ud => {
@@ -245,7 +245,7 @@ Choose what you'd like to do:
     } else if (days.length > 0 && days.length < 7) {
       daysText = days.join(', ')
     }
-    message += `• **Days:** ${daysText}\n`
+    message += `**Days:** ${daysText}\n`
     
     // Time windows - chip format
     const times = userProfile.user_time_windows?.map(tw => {
@@ -254,11 +254,11 @@ Choose what you'd like to do:
       return `${start}–${end}`
     }) || []
     const timesText = times.length > 0 ? times.join(', ') : 'Any'
-    message += `• **Time windows:** ${timesText}\n`
+    message += `**Time windows:** ${timesText}\n`
     
     // Min spots
     const minSpots = userProfile.min_spots || 1
-    message += `• **Min spots:** ${minSpots}+\n`
+    message += `**Min spots:** ${minSpots}+\n`
     
     // Digest preferences - clean format
     const digestPrefs = userProfile.user_digest_preferences || []
@@ -270,11 +270,11 @@ Choose what you'd like to do:
       })
       digestText = digestItems.join(', ')
     }
-    message += `• **Digests:** ${digestText}\n`
+    message += `**Digests:** ${digestText}\n`
     
     // Alerts status - clean
     const alertsStatus = userProfile.notification_enabled ? 'On' : 'Off'
-    message += `• **Alerts:** ${alertsStatus}\n`
+    message += `**Alerts:** ${alertsStatus}\n`
     
     message += `\n*Tap a setting below to change it:*`
     

@@ -83,20 +83,12 @@ const commands = {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [
-              { text: '🌊 Today at The Wave', callback_data: 'menu_today' },
-              { text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }
-            ],
-            [
-              { text: '🛠 Your Setup', callback_data: 'menu_preferences' }
-            ],
-            [
-              { text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' },
-              { text: '❓ Help & Support', callback_data: 'menu_help' }
-            ],
-            [
-              { text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }
-            ]
+            [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
+            [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
+            [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
+            [{ text: '❓ Help & Support', callback_data: 'menu_help' }],
+            [{ text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }]
           ]
         }
       })
@@ -135,20 +127,12 @@ const commands = {
         parse_mode: 'Markdown',  
         reply_markup: {
           inline_keyboard: [
-            [
-              { text: '🌊 Today at The Wave', callback_data: 'menu_today' },
-              { text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }
-            ],
-            [
-              { text: '🛠 Your Setup', callback_data: 'menu_preferences' }
-            ],
-            [
-              { text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' },
-              { text: '❓ Help & Support', callback_data: 'menu_help' }
-            ],
-            [
-              { text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }
-            ]
+            [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
+            [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
+            [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
+            [{ text: '❓ Help & Support', callback_data: 'menu_help' }],
+            [{ text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }]
           ]
         }
       })
@@ -381,13 +365,13 @@ const commands = {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🎯 Skill Levels', callback_data: 'pref_levels' }],
-          [{ text: '🏄 Wave Side', callback_data: 'pref_sides' }],
-          [{ text: '📅 Surf Days', callback_data: 'pref_days' }],
-          [{ text: '🕒 Time Windows', callback_data: 'pref_times' }],
-          [{ text: '🔢 Min Spots', callback_data: 'pref_spots' }],
-          [{ text: '🔔 Notification Timing', callback_data: 'pref_notifications' }],
-          [{ text: '🗞 Daily Digests', callback_data: 'pref_digests' }],
+          [{ text: 'Skill Levels', callback_data: 'pref_levels' }],
+          [{ text: 'Wave Side', callback_data: 'pref_sides' }],
+          [{ text: 'Surf Days', callback_data: 'pref_days' }],
+          [{ text: 'Time Windows', callback_data: 'pref_times' }],
+          [{ text: 'Min Spots', callback_data: 'pref_spots' }],
+          [{ text: 'Notification Timing', callback_data: 'pref_notifications' }],
+          [{ text: 'Daily Digests', callback_data: 'pref_digests' }],
           [{ text: '⬅️ Main Menu', callback_data: 'menu_main' }]
         ]
       }
