@@ -197,6 +197,13 @@ const callbacks = {
           
         case 'times':
           const currentTimes = userProfile.user_time_windows || []
+          const hasAnyTime = currentTimes.length === 0
+          
+          // Start with "Any time" option
+          const timeButtons = []
+          timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
+          
+          // Add specific time windows
           const timeWindows = [
             { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
             { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
@@ -204,19 +211,21 @@ const callbacks = {
             { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
             { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
           ]
-          const timeButtons = timeWindows.map((time, index) => {
+          
+          timeWindows.forEach((time, index) => {
             const isSelected = currentTimes.some(ct => 
               (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
               (ct.end_time === time.end || ct.end_time === time.end + ':00')
             )
             const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-            return [{ text, callback_data: `pref_time_toggle_${index}` }]
+            timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
           })
+          
           timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
           timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?',
+            '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?\n\n🌊 *Any Time*: Match all session times\n🕐 *Specific Times*: Only match selected time windows',
             {
               parse_mode: 'Markdown',
               reply_markup: { inline_keyboard: timeButtons }
@@ -250,21 +259,50 @@ const callbacks = {
           
         case 'notifications':
           const currentNotifications = userProfile.user_digest_filters?.map(un => un.timing) || []
+          const timingOptions = [
+            { key: '1w', desc: '📅 1 week before' },
+            { key: '48h', desc: '🌅 48 hours before' },
+            { key: '24h', desc: '📅 24 hours before' },
+            { key: '12h', desc: '🌅 12 hours before' },
+            { key: '2h', desc: '⏰ 2 hours before' }
+          ]
+          
+          const notificationButtons = timingOptions.map(timing => {
+            const isSelected = currentNotifications.includes(timing.key)
+            const text = `${isSelected ? '✅ ' : ''}${timing.desc}`
+            return [{ text, callback_data: `pref_notification_toggle_${timing.key}` }]
+          })
+          notificationButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_notification_save' }])
+          notificationButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
           return ctx.editMessageText(
-            '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
+            '🔔 *Notification Timing*\n\nHow far in advance should sessions be included in your digests?',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.notificationTimingMenu(currentNotifications)
+              reply_markup: { inline_keyboard: notificationButtons }
             }
           )
           
         case 'digests':
           const currentDigests = userProfile.user_digest_preferences?.map(udp => udp.digest_type) || []
+          const digestOptions = [
+            { key: 'morning', desc: '🌅 Morning Digest (8 AM)' },
+            { key: 'evening', desc: '🌇 Evening Digest (6 PM)' }
+          ]
+          
+          const digestButtons = digestOptions.map(digest => {
+            const isSelected = currentDigests.includes(digest.key)
+            const text = `${isSelected ? '✅ ' : ''}${digest.desc}`
+            return [{ text, callback_data: `pref_digest_toggle_${digest.key}` }]
+          })
+          digestButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_digest_save' }])
+          digestButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
           return ctx.editMessageText(
-            '📱 *Daily Digest Timing*\n\nWhen would you like daily summaries?\n\n🌅 *Morning Digest (8 AM)*\nPlan your surf day with today\'s sessions\n\n🌇 *Evening Digest (6 PM)*\nPreview tomorrow\'s available sessions',
+            '📱 *Daily Digest Timing*\n\nWhen would you like daily summaries?\n\n🌅 *Morning*: Plan your surf day with today\'s sessions\n🌇 *Evening*: Preview tomorrow\'s available sessions\n\nSelect morning, evening, both, or neither:',
             {
               parse_mode: 'Markdown',
-              reply_markup: menus.digestMenu(currentDigests)
+              reply_markup: { inline_keyboard: digestButtons }
             }
           )
           
@@ -360,6 +398,13 @@ const callbacks = {
             reply_markup: menus.mainMenu()
           })
           
+        // Time toggles - Any time option
+        case 'time_toggle_any':
+          // Clear all existing time windows (Any time = no specific restrictions)
+          await supabase.from('user_time_windows').delete().eq('user_id', userProfile.id)
+          ctx.answerCbQuery('✅ Set to Any Time!')
+          return commands.preferences(supabase, ctx)
+          
         // Time toggles (using numeric IDs instead of time strings to avoid parsing issues)
         case 'time_toggle_0': // 06:00-09:00
         case 'time_toggle_1': // 09:00-12:00  
@@ -416,6 +461,33 @@ const callbacks = {
             parse_mode: 'Markdown',
             reply_markup: menus.mainMenu()
           })
+          
+        // Notification timing toggles
+        case 'notification_toggle_1w':
+        case 'notification_toggle_48h':
+        case 'notification_toggle_24h':
+        case 'notification_toggle_12h':
+        case 'notification_toggle_2h':
+          const timingToToggle = action.split('_')[2]
+          return await callbacks.toggleNotificationTiming(supabase, ctx, userProfile, timingToToggle)
+          
+        case 'notification_save':
+          ctx.answerCbQuery('💾 Notification timings saved!')
+          
+          // Redirect to preferences menu
+          return commands.preferences(supabase, ctx)
+          
+        // Digest preference toggles  
+        case 'digest_toggle_morning':
+        case 'digest_toggle_evening':
+          const digestToToggle = action.split('_')[2]
+          return await callbacks.toggleDigestPreference(supabase, ctx, userProfile, digestToToggle)
+          
+        case 'digest_save':
+          ctx.answerCbQuery('💾 Digest preferences saved!')
+          
+          // Redirect to preferences menu
+          return commands.preferences(supabase, ctx)
           
         default:
           return ctx.answerCbQuery('Unknown preference option')
