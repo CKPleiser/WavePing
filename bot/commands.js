@@ -88,7 +88,7 @@ const commands = {
             [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
             [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
             [{ text: '❓ Help & Support', callback_data: 'menu_help' }],
-            [{ text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }]
+            [{ text: '☕ Buy the dev a coffee', url: 'https://buymeacoffee.com/driftwithcaz' }]
           ]
         }
       })
@@ -132,7 +132,7 @@ const commands = {
             [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
             [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
             [{ text: '❓ Help & Support', callback_data: 'menu_help' }],
-            [{ text: '☕ Buy the dev a coffee', callback_data: 'menu_support' }]
+            [{ text: '☕ Buy the dev a coffee', url: 'https://buymeacoffee.com/driftwithcaz' }]
           ]
         }
       })

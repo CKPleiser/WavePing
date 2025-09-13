@@ -239,9 +239,9 @@ const callbacks = {
           const currentMinSpots = userProfile.min_spots || 1
           const spotOptions = [
             { value: 1, desc: "1+ (I'll take any spot!)" },
-            { value: 2, desc: '2+ (Small group)' },
-            { value: 3, desc: '3+ (Want options)' },
-            { value: 5, desc: '5+ (Plenty of space)' },
+            { value: 2, desc: '2+' },
+            { value: 3, desc: '3+' },
+            { value: 5, desc: '5+' },
             { value: 10, desc: '10+ (Lots of availability)' }
           ]
           const spotButtons = spotOptions.map(option => {
