@@ -415,6 +415,21 @@ Contact @driftwithcaz for assistance!
   },
 
   /**
+   * Post-save confirmation message with clear next actions
+   */
+  createSavedPreferencesMessage(settingType = 'session filters') {
+    return `✅ *Saved.* Your ${settingType} are updated.
+
+*What's next?*
+• */today* — See matches you can book now at The Wave
+• */tomorrow* — Preview tomorrow's sessions
+
+*Need tweaks?*
+• *Alerts & Digests* — instant pings + daily summaries
+• *Your Setup* — levels, sides, days, times, spots`
+  },
+
+  /**
    * Support message - Buy Me a Coffee integration
    */
   supportMessage() {

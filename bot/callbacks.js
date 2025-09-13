@@ -354,13 +354,18 @@ const callbacks = {
           
         // Save level changes
         case 'level_save':
-          ctx.answerCbQuery('💾 Skill levels saved!')
-          
-          // Redirect to main menu with interactive buttons
-          const mainMessageLevels = ui.mainMenuMessage()
-          return await ctx.editMessageText(mainMessageLevels, {
+          const savedLevelsMessage = ui.createSavedPreferencesMessage('skill levels')
+          return await ctx.editMessageText(savedLevelsMessage, {
             parse_mode: 'Markdown',
-            reply_markup: menus.mainMenu()
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
+                [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
+                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
           })
           
         // Side toggles
@@ -371,13 +376,18 @@ const callbacks = {
           return await callbacks.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
           
         case 'side_save':
-          ctx.answerCbQuery('💾 Wave sides saved!')
-          
-          // Redirect to main menu with interactive buttons
-          const mainMessageSides = ui.mainMenuMessage()
-          return await ctx.editMessageText(mainMessageSides, {
+          const savedSidesMessage = ui.createSavedPreferencesMessage('wave side preferences')
+          return await ctx.editMessageText(savedSidesMessage, {
             parse_mode: 'Markdown',
-            reply_markup: menus.mainMenu()
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
+                [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
+                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
           })
           
         // Day toggles
@@ -463,13 +473,18 @@ const callbacks = {
           return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, selectedTimeWindow.start, selectedTimeWindow.end)
           
         case 'time_save':
-          ctx.answerCbQuery('💾 Time windows saved!')
-          
-          // Redirect to main menu with interactive buttons
-          const mainMessageTimes = ui.mainMenuMessage()
-          return await ctx.editMessageText(mainMessageTimes, {
+          const savedTimesMessage = ui.createSavedPreferencesMessage('time windows')
+          return await ctx.editMessageText(savedTimesMessage, {
             parse_mode: 'Markdown',
-            reply_markup: menus.mainMenu()
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
+                [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
+                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
           })
           
         // Min spots toggles (new toggle + save pattern)
