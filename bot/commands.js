@@ -228,7 +228,6 @@ const commands = {
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
-      console.log(`🔧 TODAY: Passing ${sessionsToPass.length} sessions to sessionMenu`)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,
@@ -319,7 +318,6 @@ const commands = {
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
-      console.log(`🔧 TOMORROW: Passing ${sessionsToPass.length} sessions to sessionMenu`)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,

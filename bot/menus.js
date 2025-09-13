@@ -34,20 +34,18 @@ const menus = {
   sessionMenu(timeframe, hasMatches, sessions = []) {
     const buttons = []
     
-    console.log(`🔧 sessionMenu: ${timeframe}, sessions=${sessions.length}`)
-    
     // Individual session booking buttons (max 10 to avoid Telegram limits)
     const displaySessions = sessions.slice(0, 10)
-    displaySessions.forEach((session, i) => {
+    const sessionButtons = displaySessions.map((session, i) => {
       const spots = session.spots_available || 0
       const level = session.level ? session.level.charAt(0).toUpperCase() + session.level.slice(1) : ''
       const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
       
       const buttonText = `${i + 1}) ${session.time} • ${level} • ${sideChip} • ${spots} spots`
-      buttons.push([
-        Markup.button.url(buttonText, session.booking_url || 'https://ticketing.thewave.com/')
-      ])
+      return [Markup.button.url(buttonText, session.booking_url || 'https://ticketing.thewave.com/')]
     })
+    
+    buttons.push(...sessionButtons)
     
     // If more than 10 sessions, add a general booking button
     if (sessions.length > 10) {
