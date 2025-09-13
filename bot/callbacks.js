@@ -403,9 +403,44 @@ const callbacks = {
           // Clear all existing time windows (Any time = no specific restrictions)
           await supabase.from('user_time_windows').delete().eq('user_id', userProfile.id)
           ctx.answerCbQuery('✅ Set to Any Time!')
+          
           // Refresh the time selection screen to show the updated checkboxes
           const updatedProfile = await getUserProfile(supabase, ctx.from.id)
-          return handlePreferenceAction(supabase, ctx, 'times', updatedProfile)
+          const currentTimesAny = updatedProfile.user_time_windows || []
+          const hasAnyTimeNow = currentTimesAny.length === 0
+          
+          // Start with "Any time" option
+          const timeButtonsAny = []
+          timeButtonsAny.push([{ text: `${hasAnyTimeNow ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
+          
+          // Add specific time windows
+          const timeWindowsAny = [
+            { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
+            { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
+            { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
+            { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
+            { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
+          ]
+          
+          timeWindowsAny.forEach((time, index) => {
+            const isSelected = currentTimesAny.some(ct => 
+              (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
+              (ct.end_time === time.end || ct.end_time === time.end + ':00')
+            )
+            const text = `${isSelected ? '✅ ' : ''}${time.desc}`
+            timeButtonsAny.push([{ text, callback_data: `pref_time_toggle_${index}` }])
+          })
+          
+          timeButtonsAny.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
+          timeButtonsAny.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          
+          return ctx.editMessageText(
+            '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?\n\n🌊 *Any Time*: Match all session times\n🕐 *Specific Times*: Only match selected time windows',
+            {
+              parse_mode: 'Markdown',
+              reply_markup: { inline_keyboard: timeButtonsAny }
+            }
+          )
           
         // Time toggles (using numeric IDs instead of time strings to avoid parsing issues)
         case 'time_toggle_0': // 06:00-09:00
