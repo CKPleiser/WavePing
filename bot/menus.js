@@ -295,17 +295,17 @@ const menus = {
    */
   notificationTimingMenu(currentTimings = []) {
     const timings = [
+      { key: '1w', desc: '📅 1 week before' },
+      { key: '48h', desc: '🌅 48 hours before' },
       { key: '24h', desc: '📅 24 hours before' },
       { key: '12h', desc: '🌅 12 hours before' },
-      { key: '6h', desc: '⏰ 6 hours before' },
-      { key: '3h', desc: '⚡ 3 hours before' },
-      { key: '1h', desc: '🚨 1 hour before' }
+      { key: '2h', desc: '⏰ 2 hours before' }
     ]
     
     const buttons = timings.map(timing => {
       const isSelected = currentTimings.includes(timing.key)
       const text = `${isSelected ? '✅ ' : ''}${timing.desc}`
-      return [Markup.button.callback(text, `notif_timing_toggle_${timing.key}`)]
+      return [Markup.button.callback(text, `timing_toggle_${timing.key}`)]
     })
     
     buttons.push(

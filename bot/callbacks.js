@@ -472,15 +472,16 @@ const callbacks = {
           const digestType = action.split('_')[2]
           return await this.toggleDigestPreference(supabase, ctx, userProfile, digestType)
           
+        case 'timing_toggle_1w':
+        case 'timing_toggle_48h':
         case 'timing_toggle_24h':
         case 'timing_toggle_12h':
-        case 'timing_toggle_6h':
-        case 'timing_toggle_3h':
-        case 'timing_toggle_1h':
+        case 'timing_toggle_2h':
           const timingKey = action.split('_')[2]
           return await this.toggleNotificationTiming(supabase, ctx, userProfile, timingKey)
           
         case 'timing_save':
+        case 'notif_timing_save':
           ctx.answerCbQuery('💾 Notification timing saved!')
           
           // Redirect to main menu with interactive buttons
