@@ -403,7 +403,9 @@ const callbacks = {
           // Clear all existing time windows (Any time = no specific restrictions)
           await supabase.from('user_time_windows').delete().eq('user_id', userProfile.id)
           ctx.answerCbQuery('✅ Set to Any Time!')
-          return commands.preferences(supabase, ctx)
+          // Refresh the time selection screen to show the updated checkboxes
+          const updatedProfile = await getUserProfile(supabase, ctx.from.id)
+          return handlePreferenceAction(supabase, ctx, 'times', updatedProfile)
           
         // Time toggles (using numeric IDs instead of time strings to avoid parsing issues)
         case 'time_toggle_0': // 06:00-09:00
@@ -1317,6 +1319,14 @@ const callbacks = {
       const currentTimes = updatedProfile.user_time_windows || []
       console.log(`📊 Current time windows after toggle: ${currentTimes.map(t => `${t.start_time}-${t.end_time}`).join(', ')}`)
       
+      // Check if "Any Time" is selected (no specific time windows)
+      const hasAnyTime = currentTimes.length === 0
+      
+      // Start with "Any time" option
+      const timeButtons = []
+      timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
+      
+      // Add specific time windows
       const timeWindows = [
         { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
         { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
@@ -1324,13 +1334,14 @@ const callbacks = {
         { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
         { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
       ]
-      const timeButtons = timeWindows.map((time, index) => {
+      
+      timeWindows.forEach((time, index) => {
         const isSelected = currentTimes.some(ct => 
           (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
           (ct.end_time === time.end || ct.end_time === time.end + ':00')
         )
         const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-        return [{ text, callback_data: `pref_time_toggle_${index}` }]
+        timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
       })
       timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
       timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
