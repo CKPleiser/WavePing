@@ -228,6 +228,10 @@ const commands = {
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
+      console.log(`🔧 TODAY: filtered=${filteredSessions.length}, all=${allAvailableSessions.length}, passing=${sessionsToPass.length}`)
+      
+      const menu = menus.sessionMenu('today', filteredSessions.length > 0, sessionsToPass)
+      console.log(`🔧 TODAY: Created menu with ${menu.reply_markup.inline_keyboard.length} button rows`)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,
@@ -236,7 +240,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menus.sessionMenu('today', filteredSessions.length > 0, sessionsToPass)
+          reply_markup: menu
         }
       )
       
@@ -318,6 +322,10 @@ const commands = {
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
+      console.log(`🔧 TOMORROW: filtered=${filteredSessions.length}, all=${allAvailableSessions.length}, passing=${sessionsToPass.length}`)
+      
+      const menu = menus.sessionMenu('tomorrow', filteredSessions.length > 0, sessionsToPass)
+      console.log(`🔧 TOMORROW: Created menu with ${menu.reply_markup.inline_keyboard.length} button rows`)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,
@@ -326,7 +334,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menus.sessionMenu('tomorrow', filteredSessions.length > 0, sessionsToPass)
+          reply_markup: menu
         }
       )
       

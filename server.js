@@ -158,6 +158,73 @@ Use /setup to manage your notification settings.`
   })
 )
 
+// Database cleanup cron endpoint - removes old historical data
+app.post('/api/cron/cleanup-database',
+  authenticateCron,
+  asyncHandler(async (req, res) => {
+    serverLogger.info('Starting database cleanup...')
+    
+    try {
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayISO = yesterday.toISOString().split('T')[0]
+      
+      const threeDaysAgo = new Date()
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+      const threeDaysAgoISO = threeDaysAgo.toISOString().split('T')[0]
+      
+      // Clean old sessions (keep yesterday and future)
+      const { error: sessionsError, count: sessionsDeleted } = await supabase
+        .from('sessions')
+        .delete({ count: 'exact' })
+        .lt('date', yesterdayISO)
+      
+      if (sessionsError) throw sessionsError
+      
+      // Clean old weather cache (keep last 3 days)
+      const { error: weatherError, count: weatherDeleted } = await supabase
+        .from('weather_cache')
+        .delete({ count: 'exact' })
+        .lt('date', threeDaysAgoISO)
+      
+      if (weatherError) throw weatherError
+      
+      // Clean old notifications (keep last 30 days)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      
+      const { error: notifError, count: notifDeleted } = await supabase
+        .from('notifications_sent')
+        .delete({ count: 'exact' })
+        .lt('sent_at', thirtyDaysAgo.toISOString())
+      
+      if (notifError) throw notifError
+      
+      serverLogger.info('Database cleanup completed', {
+        sessionsDeleted: sessionsDeleted || 0,
+        weatherDeleted: weatherDeleted || 0,
+        notificationsDeleted: notifDeleted || 0
+      })
+      
+      res.json({
+        success: true,
+        message: 'Database cleanup completed',
+        deleted: {
+          sessions: sessionsDeleted || 0,
+          weather: weatherDeleted || 0, 
+          notifications: notifDeleted || 0
+        }
+      })
+    } catch (error) {
+      serverLogger.error('Database cleanup failed:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+)
+
 // Scrape schedule cron endpoint - fetches and stores sessions from The Wave
 app.post('/api/cron/scrape-schedule',
   authenticateCron,
