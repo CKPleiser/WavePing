@@ -375,6 +375,10 @@ const commands = {
             { text: '💺 Min Spots', callback_data: 'pref_spots' }
           ],
           [
+            { text: '🔔 Notification Timing', callback_data: 'pref_notifications' },
+            { text: '📱 Daily Digests', callback_data: 'pref_digests' }
+          ],
+          [
             { text: '🏠 Main Menu', callback_data: 'menu_main' }
           ]
         ]

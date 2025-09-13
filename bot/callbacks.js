@@ -774,21 +774,20 @@ const callbacks = {
     try {
       console.log(`🔄 Toggling level: ${level} for user ${userProfile.id}`)
       
-      // Check if level exists
-      const { data: existingLevel } = await supabase
+      // Check if level exists - don't use .single() as it throws error when no row exists
+      const { data: existingLevels } = await supabase
         .from('user_levels')
         .select('id')
         .eq('user_id', userProfile.id)
         .eq('level', level)
-        .single()
 
-      if (existingLevel) {
+      if (existingLevels && existingLevels.length > 0) {
         // Remove level
         console.log(`➖ Removing level: ${level}`)
         await supabase
           .from('user_levels')
           .delete()
-          .eq('id', existingLevel.id)
+          .eq('id', existingLevels[0].id)
       } else {
         // Add level
         console.log(`➕ Adding level: ${level}`)
