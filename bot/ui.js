@@ -142,18 +142,13 @@ Choose what you'd like to do:
     if (userProfile && filteredSessions.length > 0) {
       message += `*Your matches (${filteredSessions.length})*\n\n`
       
-      const displaySessions = filteredSessions.slice(0, 4)
-      displaySessions.forEach((session, i) => {
+      filteredSessions.forEach((session, i) => {
         const spots = session.spots_available || 0
         const level = this.capitalizeWords(session.level)
         const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
         
         message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
-      
-      if (filteredSessions.length > 10) {
-        message += `\n_...and ${filteredSessions.length - 10} more matches_`
-      }
       
       message += `\n\n_Tip: Side = [L] left, [R] right._`
       
@@ -162,20 +157,16 @@ Choose what you'd like to do:
       message += `*No matches right now*\n\n`
       message += `Try widening time windows or set Min spots to 1+.\n\n`
       
-      // Show some available sessions
-      const availableSessions = allSessions.slice(0, 4)
-      if (availableSessions.length > 0) {
+      // Show all available sessions
+      if (allSessions.length > 0) {
         message += `*Other available sessions (${allSessions.length})*\n\n`
-        availableSessions.forEach((session, i) => {
+        allSessions.forEach((session, i) => {
           const spots = session.spots_available || 0
           const level = this.capitalizeWords(session.level)
           const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
           
           message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
         })
-        if (allSessions.length > 4) {
-          message += `\n_...and ${allSessions.length - 4} more available_`
-        }
         message += `\n\n_Tip: Side = [L] left, [R] right._`
       }
       
@@ -188,18 +179,13 @@ Choose what you'd like to do:
         return message
       }
       
-      const displaySessions = allSessions.slice(0, 4)
-      displaySessions.forEach((session, i) => {
+      allSessions.forEach((session, i) => {
         const spots = session.spots_available || 0
         const level = this.capitalizeWords(session.level)
         const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
         
         message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
-      
-      if (allSessions.length > 4) {
-        message += `\n_...and ${allSessions.length - 4} more sessions_`
-      }
       
       message += `\n\n_Tip: Side = [L] left, [R] right._`
     }
