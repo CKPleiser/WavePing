@@ -34,6 +34,8 @@ const menus = {
   sessionMenu(timeframe, hasMatches, sessions = []) {
     const buttons = []
     
+    console.log(`🔧 sessionMenu: Creating menu for ${timeframe}, sessions=${sessions.length}`)
+    
     // Single booking button
     buttons.push([
       Markup.button.url('🏄‍♂️ Book at The Wave', 'https://ticketing.thewave.com/')
@@ -55,7 +57,11 @@ const menus = {
     
     buttons.push([Markup.button.callback('🏠 Main Menu', 'menu_main')])
     
-    return Markup.inlineKeyboard(buttons)
+    console.log(`🔧 sessionMenu: Created ${buttons.length} button rows`)
+    const menu = Markup.inlineKeyboard(buttons)
+    console.log(`🔧 sessionMenu: Menu structure:`, JSON.stringify(menu.reply_markup, null, 2))
+    
+    return menu
   },
 
   // Week view removed - only today/tomorrow supported

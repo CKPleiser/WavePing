@@ -247,8 +247,7 @@ class DigestService {
   getEveningCommands() {
     return `💡 *Plan Your Sessions:*\n` +
            `• /tomorrow - Full tomorrow schedule\n` +
-           `• /setup - Update preferences\n` +
-           `• /notify - Manage notifications\n\n` +
+           `• /setup - Update preferences\n\n` +
            `🌙 Rest well, wave rider! 🏄‍♂️`
   }
 }
