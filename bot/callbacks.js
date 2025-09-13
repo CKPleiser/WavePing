@@ -102,12 +102,14 @@ const callbacks = {
           const supportMessage = ui.supportMessage()
           return await ctx.editMessageText(supportMessage, {
             parse_mode: 'Markdown',
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.url('☕ Buy Me a Coffee', 'https://buymeacoffee.com/waveping')],
-              [Markup.button.callback('💬 Contact Developer', 'support_contact')],
-              [Markup.button.callback('📈 Feature Request', 'support_feature')],
-              [Markup.button.callback('🏠 Main Menu', 'menu_main')]
-            ])
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],
+                [{ text: '💬 Contact Developer', callback_data: 'support_contact' }],
+                [{ text: '📈 Feature Request', callback_data: 'support_feature' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
           })
           
         default:
