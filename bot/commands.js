@@ -237,7 +237,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menu
+          reply_markup: menu.reply_markup
         }
       )
       
@@ -292,7 +292,7 @@ const commands = {
           message,
           {
             parse_mode: 'Markdown',
-            reply_markup: menus.sessionMenu('tomorrow', allSessions.length > 0, allSessions)
+            reply_markup: menus.sessionMenu('tomorrow', allSessions.length > 0, allSessions).reply_markup
           }
         )
       }
@@ -328,7 +328,7 @@ const commands = {
         sessionMessage,
         {
           parse_mode: 'Markdown',
-          reply_markup: menu
+          reply_markup: menu.reply_markup
         }
       )
       
@@ -409,7 +409,7 @@ const commands = {
     
     await ctx.reply(notificationMessage, {
       parse_mode: 'Markdown',
-      reply_markup: menus.notificationMenu()
+      reply_markup: menus.notificationMenu().reply_markup
     })
   },
 
@@ -421,7 +421,7 @@ const commands = {
     
     await ctx.reply(helpMessage, {
       parse_mode: 'Markdown',
-      reply_markup: menus.helpMenu()
+      reply_markup: menus.helpMenu().reply_markup
     })
   },
 
@@ -433,7 +433,7 @@ const commands = {
     
     await ctx.reply(menuMessage, {
       parse_mode: 'Markdown',
-      reply_markup: menus.mainMenu()
+      reply_markup: menus.mainMenu().reply_markup
     })
   },
 
