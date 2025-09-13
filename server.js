@@ -99,7 +99,7 @@ app.post('/api/test/notification-system',
         user_levels (level),
         user_sides (side),
         user_time_windows (start_time, end_time),
-        user_notifications (timing)
+        user_digest_filters (timing)
       `)
       .eq('notification_enabled', true)
     
@@ -130,7 +130,7 @@ app.post('/api/test/notification-system',
 🌊 This is a test to make sure your WavePing notifications are working!
 
 *Your notification settings:*
-${user.user_notifications.map(n => `• ${n.timing} before sessions`).join('\\n')}
+${user.user_digest_filters.map(n => `• ${n.timing} before sessions`).join('\\n')}
 
 *Your level preferences:*
 ${user.user_levels.map(l => `• ${l.level}`).join('\\n')}
@@ -264,7 +264,7 @@ app.post('/api/cron/send-session-notifications',
         user_sides (side),
         user_days (day_of_week),
         user_time_windows (start_time, end_time),
-        user_notifications (timing)
+        user_digest_filters (timing)
       `)
       .eq('notification_enabled', true)
     
@@ -286,7 +286,7 @@ app.post('/api/cron/send-session-notifications',
         const userSides = user.user_sides?.map(us => us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any') || []
         const userDays = user.user_days?.map(ud => ud.day_of_week) || []
         const userTimeWindows = user.user_time_windows || []
-        const userNotificationTimings = user.user_notifications?.map(n => n.timing) || []
+        const userNotificationTimings = user.user_digest_filters?.map(n => n.timing) || []
 
         // Filter sessions for user
         const matchingSessions = scraper.filterSessionsForUser(
@@ -310,22 +310,28 @@ app.post('/api/cron/send-session-notifications',
           // Check if we should send a notification based on user's timing preferences
           let shouldNotify = false
           let notificationTiming = ''
+          let timingKey = ''
 
-          if (userNotificationTimings.includes('24h') && hoursUntilSession <= 24 && hoursUntilSession > 23) {
+          if (userNotificationTimings.includes('1w') && hoursUntilSession <= 168 && hoursUntilSession > 167) {
+            shouldNotify = true
+            notificationTiming = '1 week'
+            timingKey = '1w'
+          } else if (userNotificationTimings.includes('48h') && hoursUntilSession <= 48 && hoursUntilSession > 47) {
+            shouldNotify = true
+            notificationTiming = '48 hours'
+            timingKey = '48h'
+          } else if (userNotificationTimings.includes('24h') && hoursUntilSession <= 24 && hoursUntilSession > 23) {
             shouldNotify = true
             notificationTiming = '24 hours'
+            timingKey = '24h'
           } else if (userNotificationTimings.includes('12h') && hoursUntilSession <= 12 && hoursUntilSession > 11) {
             shouldNotify = true
             notificationTiming = '12 hours'
-          } else if (userNotificationTimings.includes('6h') && hoursUntilSession <= 6 && hoursUntilSession > 5) {
+            timingKey = '12h'
+          } else if (userNotificationTimings.includes('2h') && hoursUntilSession <= 2 && hoursUntilSession > 1) {
             shouldNotify = true
-            notificationTiming = '6 hours'
-          } else if (userNotificationTimings.includes('3h') && hoursUntilSession <= 3 && hoursUntilSession > 2) {
-            shouldNotify = true
-            notificationTiming = '3 hours'
-          } else if (userNotificationTimings.includes('1h') && hoursUntilSession <= 1 && hoursUntilSession > 0) {
-            shouldNotify = true
-            notificationTiming = '1 hour'
+            notificationTiming = '2 hours'
+            timingKey = '2h'
           }
 
           if (shouldNotify) {
@@ -335,7 +341,7 @@ app.post('/api/cron/send-session-notifications',
               .select('id')
               .eq('user_id', user.id)
               .eq('session_id', session.session_id)
-              .eq('notification_type', notificationTiming.replace(' ', '').toLowerCase())
+              .eq('timing', timingKey)
               .single()
 
             if (!existingNotification) {
@@ -359,7 +365,7 @@ app.post('/api/cron/send-session-notifications',
                 .insert({
                   user_id: user.id,
                   session_id: session.session_id,
-                  notification_type: notificationTiming.replace(' ', '').toLowerCase(),
+                  timing: timingKey,
                   sent_at: new Date().toISOString()
                 })
 
