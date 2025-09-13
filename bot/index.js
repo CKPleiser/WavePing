@@ -56,6 +56,9 @@ class BotHandler {
     // Notification management
     this.bot.action(/^notif_(.+)$/, callbacks.notifications.bind(null, this.supabase))
     
+    // Digest management
+    this.bot.action(/^digest_(.+)$/, callbacks.digests.bind(null, this.supabase))
+    
     // Support and contact management
     this.bot.action(/^support_(.+)$/, callbacks.support.bind(null, this.supabase))
     

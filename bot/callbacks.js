@@ -1614,6 +1614,51 @@ const callbacks = {
   },
 
   /**
+   * Digest callbacks
+   */
+  async digests(supabase, ctx) {
+    const action = ctx.match[1] // Extract action from regex match
+    const telegramId = ctx.from.id
+    
+    try {
+      const userProfile = await getUserProfile(supabase, telegramId)
+      
+      if (!userProfile) {
+        return ctx.answerCbQuery('❌ User profile not found!')
+      }
+      
+      switch (action) {
+        case 'toggle_morning':
+        case 'toggle_evening':
+          const digestType = action.split('_')[1]
+          return await this.toggleDigestPreference(supabase, ctx, userProfile, digestType)
+          
+        case 'save':
+          await ctx.answerCbQuery('💾 Digest preferences saved!')
+          const savedMessage = ui.createSavedPreferencesMessage('digest preferences')
+          
+          return ctx.editMessageText(savedMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
+                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
+          })
+          
+        default:
+          return ctx.answerCbQuery('❌ Unknown digest action')
+      }
+    } catch (error) {
+      console.error('Digest callback error:', error)
+      return ctx.answerCbQuery('❌ Error updating digest preferences')
+    }
+  },
+
+  /**
    * Test callbacks
    */
   async test(supabase, ctx) {
