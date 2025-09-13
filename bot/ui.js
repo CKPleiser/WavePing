@@ -151,8 +151,8 @@ Choose what you'd like to do:
         message += `${i + 1}) *${session.time}* • ${level} • \`${sideChip}\` • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
       })
       
-      if (filteredSessions.length > 4) {
-        message += `\n_...and ${filteredSessions.length - 4} more matches_`
+      if (filteredSessions.length > 10) {
+        message += `\n_...and ${filteredSessions.length - 10} more matches_`
       }
       
       message += `\n\n_Tip: Side = [L] left, [R] right._`
@@ -411,35 +411,30 @@ Choose your surfing level to get the right session recommendations:
    * Help message
    */
   helpMessage() {
-    return `❓ *WavePing Help Center* 🆘
+    return `❓ *WavePing Help*
 
-🏄‍♂️ *Commands:*
-/today - See today's sessions
-/tomorrow - Tomorrow's sessions  
-/week - Week overview
-/prefs - Manage preferences
-/setup - Configure alerts
+**Available Commands:**
+/start - Welcome message and main menu
+/today - Today's surf sessions  
+/tomorrow - Tomorrow's surf sessions
+/setup - Your preferences and settings
+/notifications - Manage alerts and digests
 /support - Support the developer
 /help - This help message
 
-🔔 *How Notifications Work:*
-• Set your preferences (level, times, days)
-• Choose notification timing via daily digests
-• Get alerts when matching sessions have spots!
+**How It Works:**
+1. Set your preferences (skill level, preferred times, wave side)
+2. Choose when to receive notifications 
+3. Get alerts when matching sessions become available
 
-📱 *Daily Digests:*
+**Daily Digests:**
 • Morning digest (8 AM) - Plan your day
-• Evening digest (6 PM) - Tomorrow's preview
-• Choose specific timing that works for you
+• Evening digest (6 PM) - Preview tomorrow
 
-☕ *Support WavePing:*
-If you love using WavePing, consider supporting development!
-Use /support to see how you can help.
+**Need Help?**
+Contact @driftwithcaz for support.
 
-🆘 *Need More Help?*
-Contact @driftwithcaz for assistance!
-
-*Happy surfing!* 🤙`
+*Happy surfing!*`
   },
 
   /**

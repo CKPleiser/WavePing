@@ -137,7 +137,7 @@ ${user.user_levels.map(l => `• ${l.level}`).join('\\n')}
 
 If you're seeing this, notifications are working perfectly! 🎉
 
-Use /prefs to manage your notification settings.`
+Use /setup to manage your notification settings.`
 
       try {
         await bot.telegram.sendMessage(user.telegram_id, testMessage, { parse_mode: 'Markdown' })
@@ -355,7 +355,7 @@ app.post('/api/cron/send-session-notifications',
                 `🕐 *${session.time}* - ${session.session_name}\\n` +
                 `📍 ${spots} spot${spots === 1 ? '' : 's'} available\\n\\n` +
                 `[Book Now](${bookingUrl})\\n\\n` +
-                `_Use /prefs to manage your notifications_`
+                `_Use /setup to manage your notifications_`
 
               await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
 

@@ -237,7 +237,7 @@ class DigestService {
     return `💡 *Quick Commands:*\n` +
            `• /today - See all today's sessions\n` +
            `• /tomorrow - Check tomorrow's lineup\n` +
-           `• /prefs - Update your preferences\n\n` +
+           `• /setup - Update your preferences\n\n` +
            `🌊 Ready to catch some waves? 🤙`
   }
 
@@ -247,7 +247,7 @@ class DigestService {
   getEveningCommands() {
     return `💡 *Plan Your Sessions:*\n` +
            `• /tomorrow - Full tomorrow schedule\n` +
-           `• /prefs - Update preferences\n` +
+           `• /setup - Update preferences\n` +
            `• /notify - Manage notifications\n\n` +
            `🌙 Rest well, wave rider! 🏄‍♂️`
   }

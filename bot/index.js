@@ -30,7 +30,7 @@ class BotHandler {
     // Week command removed - only today/tomorrow supported
     
     // Settings and preferences
-    this.bot.command('prefs', commands.preferences.bind(null, this.supabase))
+    this.bot.command('setup', commands.preferences.bind(null, this.supabase))
     this.bot.command('notifications', commands.notifications.bind(null, this.supabase))
     
     // Utility commands
@@ -110,7 +110,7 @@ class BotHandler {
         { command: 'start', description: '🌊 Welcome' },
         { command: 'today', description: '🏄‍♂️ Today\'s Sessions' },
         { command: 'tomorrow', description: '🌅 Tomorrow\'s Sessions' },
-        { command: 'prefs', description: '⚙️ Preferences' },
+        { command: 'setup', description: '⚙️ Preferences' },
         { command: 'notifications', description: '🔔 Notification Settings' },
         { command: 'support', description: '☕ Support WavePing' },
         { command: 'help', description: '❓ Help & Commands' }

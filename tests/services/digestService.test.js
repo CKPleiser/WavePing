@@ -304,7 +304,7 @@ describe('DigestService', () => {
       
       expect(commands).toContain('/today')
       expect(commands).toContain('/tomorrow')
-      expect(commands).toContain('/prefs')
+      expect(commands).toContain('/setup')
       expect(commands).toContain('Ready to catch some waves')
     })
   })
@@ -314,7 +314,7 @@ describe('DigestService', () => {
       const commands = digestService.getEveningCommands()
       
       expect(commands).toContain('/tomorrow')
-      expect(commands).toContain('/prefs')
+      expect(commands).toContain('/setup')
       expect(commands).toContain('/notify')
       expect(commands).toContain('Rest well')
     })
