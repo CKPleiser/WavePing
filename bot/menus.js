@@ -74,22 +74,14 @@ const menus = {
       [
         Markup.button.callback('👤 Show Current Profile', 'pref_profile_overview')
       ],
-      [
-        Markup.button.callback('🎯 Skill Levels', 'pref_levels'),
-        Markup.button.callback('🏄 Wave Sides', 'pref_sides')
-      ],
-      [
-        Markup.button.callback('📅 Surf Days', 'pref_days'),
-        Markup.button.callback('🕐 Time Windows', 'pref_times')
-      ],
-      [
-        Markup.button.callback('💺 Min Spots', 'pref_spots'),
-        Markup.button.callback('🔔 Notifications', 'menu_notifications')
-      ],
-      [
-        Markup.button.callback('📱 Digests', 'pref_digests'),
-        Markup.button.callback('🚀 Setup Wizard', 'setup_restart')
-      ],
+      [Markup.button.callback('🎯 Skill Levels', 'pref_levels')],
+      [Markup.button.callback('🏄 Wave Sides', 'pref_sides')],
+      [Markup.button.callback('📅 Surf Days', 'pref_days')],
+      [Markup.button.callback('🕐 Time Windows', 'pref_times')],
+      [Markup.button.callback('💺 Min Spots', 'pref_spots')],
+      [Markup.button.callback('🔔 Notifications', 'menu_notifications')],
+      [Markup.button.callback('📱 Digests', 'pref_digests')],
+      [Markup.button.callback('🚀 Setup Wizard', 'setup_restart')],
       [
         Markup.button.callback('🔄 Reset All', 'pref_reset')
       ],
