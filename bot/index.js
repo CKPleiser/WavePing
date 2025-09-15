@@ -46,7 +46,16 @@ class BotHandler {
   }
 
   setupCallbacks() {
-    // Menu navigation
+    // Basic navigation callbacks
+    this.bot.action('today', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('tomorrow', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('main', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('prefs', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('alerts', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('help', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('support', callbacks.menu.bind(null, this.supabase))
+    
+    // Menu navigation with prefix
     this.bot.action(/^menu_(.+)$/, callbacks.menu.bind(null, this.supabase))
     
     // Preferences management
@@ -65,6 +74,9 @@ class BotHandler {
     // Session filtering and display
     this.bot.action(/^filter_(.+)$/, callbacks.filters.bind(null, this.supabase))
     this.bot.action(/^session_(.+)$/, callbacks.sessions.bind(null, this.supabase))
+    
+    // Show more functionality
+    this.bot.action(/^show_more_(.+)$/, callbacks.menu.bind(null, this.supabase))
     
     // Pagination
     this.bot.action(/^page_(.+)_(\d+)$/, callbacks.pagination.bind(null, this.supabase))

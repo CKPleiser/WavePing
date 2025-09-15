@@ -66,13 +66,12 @@ class DigestService {
    */
   formatSession(session, includeDate = false) {
     const spots = session.spots_available || 0
-    const sideChip = session.side === 'Left' ? '[L]' : session.side === 'Right' ? '[R]' : '[Any]'
     
     let message = ''
     if (includeDate && session.dateLabel) {
       message += `<b>${session.dateLabel}</b> `
     }
-    message += `<b>${session.time}</b> ${session.session_name} ${sideChip}\n`
+    message += `<b>${session.time}</b> ${session.session_name}\n`
     message += `${spots} spot${spots === 1 ? '' : 's'} available\n\n`
     
     return message

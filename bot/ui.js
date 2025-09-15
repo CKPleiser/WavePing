@@ -80,9 +80,8 @@ Ready to find your session.`
       sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
         const sessionName = session.session_name || this.capitalizeWords(session.level)
-        const sideChip = this.chipSide(session.side)
         
-        message += `<b>${session.time}</b> • ${sessionName} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
+        message += `<b>${session.time}</b> • ${sessionName} • <b>${this.spotsLabel(spots)}</b>\n`
       })
       
       
@@ -101,9 +100,8 @@ Ready to find your session.`
         sessionsToShow.forEach((session) => {
           const spots = session.spots_available || 0
           const sessionName = session.session_name || this.capitalizeWords(session.level)
-          const sideChip = this.chipSide(session.side)
           
-          message += `<b>${session.time}</b> • ${sessionName} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
+          message += `<b>${session.time}</b> • ${sessionName} • <b>${this.spotsLabel(spots)}</b>\n`
         })
       }
       
@@ -122,9 +120,8 @@ Ready to find your session.`
       sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
         const sessionName = session.session_name || this.capitalizeWords(session.level)
-        const sideChip = this.chipSide(session.side)
         
-        message += `<b>${session.time}</b> • ${sessionName} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
+        message += `<b>${session.time}</b> • ${sessionName} • <b>${this.spotsLabel(spots)}</b>\n`
       })
       
     }
