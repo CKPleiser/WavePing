@@ -785,22 +785,16 @@ const callbacks = {
             reply_markup: menus.preferencesMenu().reply_markup
           })
           
-        // Min spots toggles (new toggle + save pattern)
-        case 'spots_toggle_1':
-        case 'spots_toggle_2':
-        case 'spots_toggle_3':
-        case 'spots_toggle_5':
-        case 'spots_toggle_10':
+        // Min spots toggles
         case 'pref_spots_toggle_1':
         case 'pref_spots_toggle_2':
         case 'pref_spots_toggle_3':
         case 'pref_spots_toggle_5':
         case 'pref_spots_toggle_10': {
-          const spotCount = parseInt(action.split('_')[action.includes('pref_') ? 3 : 2])
+          const spotCount = parseInt(action.split('_')[3])
           return await callbacks.toggleUserMinSpots(supabase, ctx, userProfile, spotCount)
         }
           
-        case 'spots_save':
         case 'pref_spots_save':
           // Save the min spots from session to database
           const spotCountToSave = ctx.session?.tempMinSpots || userProfile.min_spots || 1
