@@ -469,7 +469,7 @@ const callbacks = {
    * Preferences management callbacks
    */
   async preferences(supabase, ctx) {
-    const action = ctx.match[1]
+    const action = ctx.callbackQuery.data
     const telegramId = ctx.from.id
     console.log(`⚙️ Preferences callback triggered: ${action}`, { userId: telegramId })
     

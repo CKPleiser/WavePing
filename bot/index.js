@@ -66,7 +66,7 @@ class BotHandler {
     this.bot.action(/^menu_(.+)$/, callbacks.menu.bind(null, this.supabase))
     
     // Preferences management
-    this.bot.action(/^pref_(.+)$/, callbacks.preferences.bind(null, this.supabase))
+    this.bot.action(/^pref_.+$/, callbacks.preferences.bind(null, this.supabase))
     this.bot.action(/^setup_(.+)$/, callbacks.setup.bind(null, this.supabase))
     
     // Notification management
