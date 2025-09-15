@@ -509,7 +509,7 @@ const callbacks = {
             return [{ text, callback_data: `pref_level_toggle_${level}` }]
           })
           levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
-          levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          levelButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
           
           return ctx.editMessageText(
             '🎯 <b>Select Your Skill Levels</b>\n\nChoose all levels you\'re comfortable surfing:',
@@ -527,7 +527,7 @@ const callbacks = {
             [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
             [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
             [{ text: '💾 Save Changes', callback_data: 'pref_side_save' }],
-            [{ text: '🔙 Back', callback_data: 'menu_preferences' }]
+            [{ text: '🔙 Back', callback_data: 'prefs' }]
           ]
           
           return ctx.editMessageText(
@@ -548,7 +548,7 @@ const callbacks = {
             return [{ text, callback_data: `pref_day_toggle_${index}` }]
           })
           dayButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_day_save' }])
-          dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          dayButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
           
           return ctx.editMessageText(
             '📅 <b>Select Surf Days</b>\n\nWhich days can you surf?',
@@ -560,7 +560,7 @@ const callbacks = {
           
         case 'times':
           const currentTimesPrefs = userProfile.user_time_windows || []
-          const timeButtonsPrefs = generateTimeWindowButtons(currentTimesPrefs, 'pref_time_save', 'menu_preferences')
+          const timeButtonsPrefs = generateTimeWindowButtons(currentTimesPrefs, 'pref_time_save', 'prefs')
           
           return ctx.editMessageText(
             '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
@@ -585,7 +585,7 @@ const callbacks = {
             return [{ text, callback_data: `pref_spots_toggle_${option.value}` }]
           })
           spotButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_spots_save' }])
-          spotButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          spotButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
           
           return ctx.editMessageText(
             '💺 <b>Minimum Available Spots</b>\n\nHow many spots should be available?',
@@ -611,7 +611,7 @@ const callbacks = {
             return [{ text, callback_data: `pref_notification_toggle_${timing.key}` }]
           })
           notificationButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_notification_save' }])
-          notificationButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          notificationButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
           
           return ctx.editMessageText(
             '🔔 <b>Notification Timing</b>\n\nHow far in advance should sessions be included in your digests?',
@@ -635,7 +635,7 @@ const callbacks = {
             return [{ text, callback_data: `pref_digest_toggle_${digest.key}` }]
           })
           digestButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_digest_save' }])
-          digestButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          digestButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
           
           return ctx.editMessageText(
             '📱 <b>Daily Digest Timing</b>\n\nWhen would you like daily summaries?\n\n🌅 <b>Morning</b>: Plan your surf day with today\'s sessions\n🌇 <b>Evening</b>: Preview tomorrow\'s available sessions\n\nSelect morning, evening, both, or neither:',
@@ -750,7 +750,7 @@ const callbacks = {
             // Refresh the time selection screen to show the updated checkboxes
             const updatedTimeProfile = await getUserProfile(supabase, ctx.from.id)
             const currentTimesAny = updatedTimeProfile.user_time_windows || []
-            const timeButtonsAny = generateTimeWindowButtons(currentTimesAny, 'pref_time_save', 'menu_preferences')
+            const timeButtonsAny = generateTimeWindowButtons(currentTimesAny, 'pref_time_save', 'prefs')
             
             return ctx.editMessageText(
               '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
@@ -1294,7 +1294,7 @@ const callbacks = {
         return [{ text, callback_data: `pref_level_toggle_${level}` }]
       })
       levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
-      levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+      levelButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
       
       // Try to update the message markup, but ignore "message not modified" errors
       try {
@@ -1610,7 +1610,7 @@ const callbacks = {
         [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
         [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
         [{ text: '💾 Save Changes', callback_data: 'pref_side_save' }],
-        [{ text: '🔙 Back', callback_data: 'menu_preferences' }]
+        [{ text: '🔙 Back', callback_data: 'prefs' }]
       ]
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: sideButtons })
@@ -1665,7 +1665,7 @@ const callbacks = {
         return [{ text, callback_data: `pref_day_toggle_${index}` }]
       })
       dayButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_day_save' }])
-      dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+      dayButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: dayButtons })
     } catch (error) {
@@ -1713,7 +1713,7 @@ const callbacks = {
       const currentTimes = updatedProfile.user_time_windows || []
       console.log(`📊 Current time windows after toggle: ${currentTimes.map(t => `${t.start_time}-${t.end_time}`).join(', ')}`)
       
-      const timeButtons = generateTimeWindowButtons(currentTimes, 'pref_time_save', 'menu_preferences')
+      const timeButtons = generateTimeWindowButtons(currentTimes, 'pref_time_save', 'prefs')
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: timeButtons })
     } catch (error) {
@@ -1804,7 +1804,7 @@ const callbacks = {
           return [{ text, callback_data: `pref_notification_toggle_${timing.key}` }]
         })
         notificationButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_notification_save' }])
-        notificationButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+        notificationButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
         
         return ctx.editMessageReplyMarkup({ inline_keyboard: notificationButtons })
       } else {
@@ -1933,10 +1933,10 @@ const callbacks = {
       
       const options = [
         { value: 1, desc: "1+ (I'll take any spot!)" },
-        { value: 2, desc: '2+ (Small group)' },
-        { value: 3, desc: '3+ (Want options)' },
-        { value: 5, desc: '5+ (Plenty of space)' },
-        { value: 10, desc: '10+ (Lots of availability)' }
+        { value: 2, desc: '2+' },
+        { value: 3, desc: '3+' },
+        { value: 5, desc: '5+' },
+        { value: 10, desc: '10+' }
       ]
       
       const spotsButtons = options.map(option => {
@@ -1945,7 +1945,7 @@ const callbacks = {
         return [{ text, callback_data: `pref_spots_toggle_${option.value}` }]
       })
       spotsButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_spots_save' }])
-      spotsButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+      spotsButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: spotsButtons })
     } catch (error) {
