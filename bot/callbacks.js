@@ -403,7 +403,7 @@ const callbacks = {
                 inline_keyboard: [
                   [
                     { text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' },
-                    { text: '📤 Share Bot', url: 'https://t.me/share/url?url=https://t.me/WavePingBot&text=Check out WavePing - get instant notifications when surf sessions become available at The Wave Bristol! 🌊' }
+                    { text: '📤 Share Bot', url: 'https://t.me/share/url?url=https://t.me/WavePingBot&text=Check%20out%20WavePing%20-%20surf%20session%20alerts%20for%20The%20Wave%20Bristol!%20%F0%9F%8C%8A' }
                   ],
                   [{ text: '🏠 Main Menu', callback_data: 'main' }]
                 ]
