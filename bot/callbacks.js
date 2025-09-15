@@ -439,17 +439,10 @@ const callbacks = {
         // Save level changes
         case 'level_save':
           const savedLevelsMessage = ui.createSavedPreferencesMessage('skill levels')
+          const comeFromSessions = ctx.session?.comeFromSessions || false
           return await ctx.editMessageText(savedLevelsMessage, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
-                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
-                [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
-                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
+            reply_markup: menus.postSaveActionsMenu(comeFromSessions)
           })
           
         // Side toggles
@@ -461,17 +454,10 @@ const callbacks = {
           
         case 'side_save':
           const savedSidesMessage = ui.createSavedPreferencesMessage('wave side preferences')
+          const comeFromSessions2 = ctx.session?.comeFromSessions || false
           return await ctx.editMessageText(savedSidesMessage, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
-                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
-                [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
-                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
+            reply_markup: menus.postSaveActionsMenu(comeFromSessions2)
           })
           
         // Day toggles
@@ -594,11 +580,11 @@ const callbacks = {
           
           ctx.answerCbQuery(`💾 Minimum spots set to ${spotCountToSave}!`)
           
-          // Redirect to main menu with interactive buttons
-          const mainMessage = ui.mainMenuMessage()
-          return await ctx.editMessageText(mainMessage, {
+          const savedSpotsMessage = ui.createSavedPreferencesMessage('minimum spots')
+          const comeFromSessions3 = ctx.session?.comeFromSessions || false
+          return await ctx.editMessageText(savedSpotsMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.mainMenu()
+            reply_markup: menus.postSaveActionsMenu(comeFromSessions3)
           })
           
         // Notification timing toggles (from preferences menu)
@@ -925,6 +911,19 @@ const callbacks = {
               reply_markup: menus.mainMenu()
             }
           )
+
+        case 'post_save_tray':
+          return ctx.editMessageText(
+            ui.createEditTrayMessage(),
+            {
+              parse_mode: 'HTML',
+              reply_markup: menus.editTrayMenu()
+            }
+          )
+
+        case 'back_to_sessions':
+          // Go back to today's sessions (could be enhanced to remember context)
+          return this.today(supabase, ctx)
           
         default:
           return ctx.answerCbQuery('Unknown setup option')

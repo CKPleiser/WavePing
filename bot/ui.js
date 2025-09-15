@@ -406,16 +406,28 @@ Tell me the problem, what you want the bot to do, and why it helps.`
   /**
    * Post-save confirmation message with clear next actions
    */
-  createSavedPreferencesMessage() {
-    return `✅ <b>Saved.</b> We'll only ping you for matches.
+  createSavedPreferencesMessage(settingType = null) {
+    let message = `✅ <b>Saved!</b> Your ${settingType || 'preferences'} have been updated.\n\n`
+    
+    message += `<b>Want to adjust more settings or see your sessions?</b>`
+    
+    return message
+  },
 
-<b>What's next?</b>
-• <b>/today</b> — See matches you can book now at The Wave
-• <b>/tomorrow</b> — Preview tomorrow's sessions
+  /**
+   * Post-save edit tray message showing commonly adjusted settings
+   */
+  createEditTrayMessage() {
+    return `⚙️ <b>Quick Settings</b>
 
-<b>Need tweaks?</b>
-• <b>Alerts & Digests</b> — instant pings + daily summaries
-• <b>Your Setup</b> — levels, sides, days, times, spots`
+Most surfers also adjust these settings:
+
+<b>🎯 Skill Levels</b> — Add beginner, advanced, etc.
+<b>🕐 Time Windows</b> — Narrow down preferred hours  
+<b>💺 Min Spots</b> — How many spots you need available
+<b>🔔 Notifications</b> — When to get alerts
+
+<i>Choose what to adjust next:</i>`
   },
 
   /**
