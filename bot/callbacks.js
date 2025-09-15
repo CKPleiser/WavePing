@@ -443,10 +443,10 @@ const callbacks = {
           await ctx.answerCbQuery('✅ Skill levels saved!')
           
           // Refresh the user profile to get updated data
-          const updatedProfile = await getUserProfile(supabase, telegramId)
+          const updatedLevelsProfile = await getUserProfile(supabase, telegramId)
           
           // Show the preferences screen with updated data
-          const prefsMessage = ui.createPreferencesMessage(updatedProfile)
+          const prefsMessage = ui.createPreferencesMessage(updatedLevelsProfile)
           return await ctx.editMessageText(prefsMessage, {
             parse_mode: 'HTML',
             reply_markup: menus.preferencesMenu()
@@ -464,8 +464,8 @@ const callbacks = {
           await ctx.answerCbQuery('✅ Wave side preferences saved!')
           
           // Refresh and show preferences
-          const updatedProfile2 = await getUserProfile(supabase, telegramId)
-          const prefsMessage2 = ui.createPreferencesMessage(updatedProfile2)
+          const updatedSidesProfile = await getUserProfile(supabase, telegramId)
+          const prefsMessage2 = ui.createPreferencesMessage(updatedSidesProfile)
           return await ctx.editMessageText(prefsMessage2, {
             parse_mode: 'HTML',
             reply_markup: menus.preferencesMenu()
@@ -499,8 +499,8 @@ const callbacks = {
           ctx.answerCbQuery('✅ Set to Any Time!')
           
           // Refresh the time selection screen to show the updated checkboxes
-          const updatedProfile = await getUserProfile(supabase, ctx.from.id)
-          const currentTimesAny = updatedProfile.user_time_windows || []
+          const updatedTimeProfile = await getUserProfile(supabase, ctx.from.id)
+          const currentTimesAny = updatedTimeProfile.user_time_windows || []
           const hasAnyTimeNow = currentTimesAny.length === 0
           
           // Start with "Any time" option
@@ -593,8 +593,8 @@ const callbacks = {
           await ctx.answerCbQuery(`✅ Minimum spots set to ${spotCountToSave}!`)
           
           // Refresh and show preferences
-          const updatedProfile3 = await getUserProfile(supabase, telegramId)
-          const prefsMessage3 = ui.createPreferencesMessage(updatedProfile3)
+          const updatedSpotsProfile = await getUserProfile(supabase, telegramId)
+          const prefsMessage3 = ui.createPreferencesMessage(updatedSpotsProfile)
           return await ctx.editMessageText(prefsMessage3, {
             parse_mode: 'HTML',
             reply_markup: menus.preferencesMenu()
