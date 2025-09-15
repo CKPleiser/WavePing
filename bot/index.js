@@ -132,7 +132,7 @@ class BotHandler {
         { command: 'setup', description: '⚙️ Preferences' },
         { command: 'notifications', description: '🔔 Notification Settings' },
         { command: 'support', description: '☕ Support WavePing' },
-        { command: 'help', description: '❓ Help & Commands' }
+        { command: 'help', description: '❓ Help & Feedback' }
       ]
       
       await this.bot.telegram.setMyCommands(commands)

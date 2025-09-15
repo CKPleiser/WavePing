@@ -107,7 +107,10 @@ const callbacks = {
             parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
-                [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],
+                [
+                  { text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' },
+                  { text: '📤 Share Bot', url: 'https://t.me/share/url?url=https://t.me/WavePingBot&text=Check out WavePing - get instant notifications when surf sessions become available at The Wave Bristol! 🌊' }
+                ],
                 [{ text: '🏠 Main Menu', callback_data: 'main' }]
               ]
             }

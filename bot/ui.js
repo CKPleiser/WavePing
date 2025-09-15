@@ -41,15 +41,14 @@ Set up your preferences to get personalized surf alerts.`
   /**
    * Main menu message
    */
-  mainMenuMessage() {
-    return `🏄‍♂️ <b>WavePing Main Menu</b>
+  mainMenuMessage(todayCount = null, tomorrowCount = null) {
+    const todayText = todayCount !== null ? ` (${todayCount})` : ''
+    const tomorrowText = tomorrowCount !== null ? ` (${tomorrowCount})` : ''
+    
+    return `🌊 <b>WavePing</b>
 
-Quick commands:
-/today - Check today's sessions
-/tomorrow - Check tomorrow's sessions
-/setup - Change your preferences
-
-Ready to find your session.`
+Today${todayText} and Tomorrow${tomorrowText} sessions available.
+Your Setup and Alerts & Digests below.`
   },
 
   /**
