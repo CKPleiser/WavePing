@@ -632,7 +632,7 @@ const callbacks = {
             }
           )
           
-        case 'profile_overview':
+        case 'pref_profile_overview':
           const profileMessage = ui.createProfileOverviewMessage(userProfile)
           return ctx.editMessageText(profileMessage, {
             parse_mode: 'HTML',
@@ -678,7 +678,6 @@ const callbacks = {
         }
           
         // Save level changes
-        case 'level_save':
         case 'pref_level_save':
           // Just show a quick confirmation then go back to preferences
           await ctx.answerCbQuery('✅ Skill levels saved!')
