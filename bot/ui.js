@@ -55,7 +55,7 @@ Ready to find your session.`
   /**
    * Sessions display message
    */
-  createSessionsMessage(timeframe, filteredSessions, allSessions, userProfile) {
+  createSessionsMessage(timeframe, filteredSessions, allSessions, userProfile, showAll = false) {
     const emoji = {
       'Today': '🌊',
       'Tomorrow': '🌅',
@@ -73,16 +73,16 @@ Ready to find your session.`
     if (userProfile && filteredSessions.length > 0) {
       message += `<b>Your matches (${filteredSessions.length})</b>\n\n`
       
-      // Show top 4 sessions
-      const maxDisplay = 4
+      // Show top 4 sessions or all if showAll is true
+      const maxDisplay = showAll ? filteredSessions.length : 4
       const sessionsToShow = filteredSessions.slice(0, maxDisplay)
       
       sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
-        const level = this.capitalizeWords(session.level)
+        const sessionName = session.session_name || this.capitalizeWords(session.level)
         const sideChip = this.chipSide(session.side)
         
-        message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
+        message += `<b>${session.time}</b> • ${sessionName} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
       })
       
       
@@ -95,20 +95,16 @@ Ready to find your session.`
       if (allSessions.length > 0) {
         message += `<b>Other available sessions (${allSessions.length})</b>\n\n`
         
-        const maxDisplay = 4
+        const maxDisplay = showAll ? allSessions.length : 4
         const sessionsToShow = allSessions.slice(0, maxDisplay)
         
         sessionsToShow.forEach((session) => {
           const spots = session.spots_available || 0
-          const level = this.capitalizeWords(session.level)
+          const sessionName = session.session_name || this.capitalizeWords(session.level)
           const sideChip = this.chipSide(session.side)
           
-          message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
+          message += `<b>${session.time}</b> • ${sessionName} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
         })
-        
-        if (remainingSessions > 0) {
-          message += `\n<i>Show more (${remainingSessions})</i>\n`
-        }
       }
       
     } else {
@@ -120,15 +116,15 @@ Ready to find your session.`
         return message
       }
       
-      const maxDisplay = 4
+      const maxDisplay = showAll ? allSessions.length : 4
       const sessionsToShow = allSessions.slice(0, maxDisplay)
       
       sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
-        const level = this.capitalizeWords(session.level)
+        const sessionName = session.session_name || this.capitalizeWords(session.level)
         const sideChip = this.chipSide(session.side)
         
-        message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
+        message += `<b>${session.time}</b> • ${sessionName} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
       })
       
     }

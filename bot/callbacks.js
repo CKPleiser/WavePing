@@ -71,7 +71,7 @@ const callbacks = {
         case 'main':
           const mainMessage = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.mainMenu()
           })
           
@@ -80,6 +80,12 @@ const callbacks = {
           
         case 'tomorrow':
           return commands.tomorrow(supabase, ctx)
+          
+        case 'show_more_today':
+          return commands.today(supabase, ctx, true) // show all sessions
+          
+        case 'show_more_tomorrow':  
+          return commands.tomorrow(supabase, ctx, true) // show all sessions
           
         // Week view removed - only today/tomorrow supported
           
@@ -93,7 +99,7 @@ const callbacks = {
         case 'help':
           const helpMessage = ui.helpMessage()
           return await ctx.editMessageText(helpMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.helpMenu()
           })
           
@@ -101,12 +107,36 @@ const callbacks = {
         case 'menu_support':
           const supportMessage = ui.supportMessage()
           return await ctx.editMessageText(supportMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],
                 [{ text: '💬 Contact Developer', callback_data: 'support_contact' }],
                 [{ text: '📈 Feature Request', callback_data: 'support_feature' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
+          })
+          
+        case 'support_contact':
+          const contactMessage = ui.contactMessage()
+          return await ctx.editMessageText(contactMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔙 Back to Support', callback_data: 'menu_support' }],
+                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
+              ]
+            }
+          })
+          
+        case 'support_feature':
+          const featureMessage = ui.featureRequestMessage()
+          return await ctx.editMessageText(featureMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔙 Back to Support', callback_data: 'menu_support' }],
                 [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
               ]
             }
@@ -154,9 +184,9 @@ const callbacks = {
           levelButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '🎯 *Select Your Skill Levels*\n\nChoose all levels you\'re comfortable surfing:',
+            '🎯 <b>Select Your Skill Levels</b>\n\nChoose all levels you\'re comfortable surfing:',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: levelButtons }
             }
           )
@@ -172,9 +202,9 @@ const callbacks = {
           ]
           
           return ctx.editMessageText(
-            '🏄 *Select Wave Sides*\n\nWhich side(s) do you prefer?',
+            '🏄 <b>Select Wave Sides</b>\n\nWhich side(s) do you prefer?',
             {
-              parse_mode: 'Markdown', 
+              parse_mode: 'HTML', 
               reply_markup: { inline_keyboard: sideButtons }
             }
           )
@@ -191,9 +221,9 @@ const callbacks = {
           dayButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '📅 *Select Surf Days*\n\nWhich days can you surf?',
+            '📅 <b>Select Surf Days</b>\n\nWhich days can you surf?',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: dayButtons }
             }
           )
@@ -228,9 +258,9 @@ const callbacks = {
           timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?\n\n🌊 *Any Time*: Match all session times\n🕐 *Specific Times*: Only match selected time windows',
+            '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: timeButtons }
             }
           )
@@ -255,7 +285,7 @@ const callbacks = {
           return ctx.editMessageText(
             '💺 *Minimum Available Spots*\n\nHow many spots should be available?',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: spotButtons }
             }
           )
@@ -281,7 +311,7 @@ const callbacks = {
           return ctx.editMessageText(
             '🔔 *Notification Timing*\n\nHow far in advance should sessions be included in your digests?',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: notificationButtons }
             }
           )
@@ -304,7 +334,7 @@ const callbacks = {
           return ctx.editMessageText(
             '📱 *Daily Digest Timing*\n\nWhen would you like daily summaries?\n\n🌅 *Morning*: Plan your surf day with today\'s sessions\n🌇 *Evening*: Preview tomorrow\'s available sessions\n\nSelect morning, evening, both, or neither:',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: digestButtons }
             }
           )
@@ -312,7 +342,7 @@ const callbacks = {
         case 'profile_overview':
           const profileMessage = ui.createProfileOverviewMessage(userProfile)
           return ctx.editMessageText(profileMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: { 
               inline_keyboard: [
                 [{ text: '⚙️ Edit Preferences', callback_data: 'menu_preferences' }],
@@ -326,7 +356,7 @@ const callbacks = {
           return ctx.editMessageText(
             '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.notificationTimingMenu(currentNotificationTimings)
             }
           )
@@ -335,7 +365,7 @@ const callbacks = {
           return ctx.editMessageText(
             '⚠️ *Reset All Preferences*\n\nThis will delete ALL your preferences and start fresh.\n\nAre you sure?',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: Markup.inlineKeyboard([
                 [Markup.button.callback('✅ Yes, Reset Everything', 'confirm_reset_all')],
                 [Markup.button.callback('❌ Cancel', 'menu_preferences')]
@@ -356,7 +386,7 @@ const callbacks = {
         case 'level_save':
           const savedLevelsMessage = ui.createSavedPreferencesMessage('skill levels')
           return await ctx.editMessageText(savedLevelsMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
@@ -378,7 +408,7 @@ const callbacks = {
         case 'side_save':
           const savedSidesMessage = ui.createSavedPreferencesMessage('wave side preferences')
           return await ctx.editMessageText(savedSidesMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
@@ -407,7 +437,7 @@ const callbacks = {
           // Redirect to main menu with interactive buttons
           const mainMessageDays = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessageDays, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.mainMenu()
           })
           
@@ -450,7 +480,7 @@ const callbacks = {
           return ctx.editMessageText(
             '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?\n\n🌊 *Any Time*: Match all session times\n🕐 *Specific Times*: Only match selected time windows',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: { inline_keyboard: timeButtonsAny }
             }
           )
@@ -475,7 +505,7 @@ const callbacks = {
         case 'time_save':
           const savedTimesMessage = ui.createSavedPreferencesMessage('time windows')
           return await ctx.editMessageText(savedTimesMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
@@ -513,7 +543,7 @@ const callbacks = {
           // Redirect to main menu with interactive buttons
           const mainMessage = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.mainMenu()
           })
           
@@ -597,7 +627,7 @@ const callbacks = {
         case 'test':
           const testMessage = `🧪 *Test Notification* 🔔\n\nThis is a test to make sure your WavePing notifications are working!\n\nIf you can see this message, everything is working perfectly! 🎉`
           
-          await ctx.reply(testMessage, { parse_mode: 'Markdown' })
+          await ctx.reply(testMessage, { parse_mode: 'HTML' })
           return ctx.answerCbQuery('📤 Test notification sent!')
           
         case 'digest_toggle_morning':
@@ -620,7 +650,7 @@ const callbacks = {
           // Redirect to main menu with interactive buttons
           const mainMessageTiming = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessageTiming, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.mainMenu()
           })
           
@@ -630,7 +660,7 @@ const callbacks = {
           // Redirect to main menu with interactive buttons
           const mainMessageDigest = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessageDigest, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.mainMenu()
           })
           
@@ -679,7 +709,7 @@ const callbacks = {
           return ctx.editMessageText(
             '🚀 *Setup Wizard Started!* ⚡\n\n*Step 1 of 6: Skill Levels*\n\nChoose all levels you\'re comfortable surfing with:',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.setupLevelSelectionMenu([])
             }
           )
@@ -688,7 +718,7 @@ const callbacks = {
           return ctx.editMessageText(
             '⚙️ *Detailed Setup*\n\nLet\'s configure everything step by step.\n\nStarting with your skill level:',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.levelSelectionMenu()
             }
           )
@@ -710,7 +740,7 @@ const callbacks = {
           return ctx.editMessageText(
             `✅ *Levels Selected*\n\n*Step 2 of 6: Wave Sides*\n\nWhich side do you prefer to surf?`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.setupSideSelectionMenu([])
             }
           )
@@ -730,7 +760,7 @@ const callbacks = {
           return ctx.editMessageText(
             `✅ *Wave Sides Selected*\n\n*Step 3 of 6: Minimum Spots*\n\nHow many available spots do you need?`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.setupMinSpotsMenu(1)
             }
           )
@@ -746,7 +776,7 @@ const callbacks = {
           return ctx.editMessageText(
             `✅ *Minimum Spots: ${spotCount}*\n\n*Step 4 of 6: Surf Days*\n\nWhich days can you surf?`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.setupDaySelectionMenu([])
             }
           )
@@ -770,7 +800,7 @@ const callbacks = {
           return ctx.editMessageText(
             `✅ *Surf Days Selected*\n\n*Step 5 of 6: Time Windows*\n\nWhen do you prefer to surf?`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.setupTimeSelectionMenu([])
             }
           )
@@ -797,7 +827,7 @@ const callbacks = {
           return ctx.editMessageText(
             `✅ *Time Windows Selected*\n\n*Step 6 of 6: Notifications*\n\nHow would you like to be notified?`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.setupNotificationMenu()
             }
           )
@@ -817,7 +847,7 @@ const callbacks = {
           return ctx.editMessageText(
             `🎉 *Setup Complete!* 🎉\n\n✅ Skill levels configured\n✅ Wave preferences set\n✅ Timing preferences saved\n✅ Notifications enabled\n\n*You're all set to get personalized surf alerts!*\n\nTry /today to see your matches! 🌊`,
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: menus.mainMenu()
             }
           )
@@ -883,7 +913,7 @@ const callbacks = {
     return ctx.editMessageText(
       ui.mainMenuMessage(),
       {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: menus.mainMenu()
       }
     )
@@ -1229,7 +1259,7 @@ const callbacks = {
       )
       
       return ctx.editMessageText(sessionMessage, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: menus.sessionMenu(timeframe, false)
       })
     } catch (error) {
@@ -1523,7 +1553,7 @@ const callbacks = {
         case 'contact':
           const contactMessage = ui.contactMessage()
           return ctx.editMessageText(contactMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.url('📧 Email Support', 'mailto:support@waveping.app')],
               [Markup.button.url('💬 Telegram Support', 'https://t.me/WavePingSupport')],
@@ -1534,7 +1564,7 @@ const callbacks = {
         case 'feature':
           const featureMessage = ui.featureRequestMessage()
           return ctx.editMessageText(featureMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.url('📈 Submit Feature Request', 'https://t.me/WavePingSupport')],
               [Markup.button.callback('🔙 Back to Support', 'menu_support')]
@@ -1588,7 +1618,7 @@ const callbacks = {
           return ctx.editMessageText(
             '✅ *Preferences Reset Complete!*\n\n🌊 Your preferences have been cleared.\n\nReady to set up fresh preferences?',
             {
-              parse_mode: 'Markdown',
+              parse_mode: 'HTML',
               reply_markup: Markup.inlineKeyboard([
                 [Markup.button.callback('⚙️ Setup Preferences', 'menu_preferences')],
                 [Markup.button.callback('🏠 Main Menu', 'menu_main')]
@@ -1696,7 +1726,7 @@ const callbacks = {
           const savedMessage = ui.createSavedPreferencesMessage('digest preferences')
           
           return ctx.editMessageText(savedMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],

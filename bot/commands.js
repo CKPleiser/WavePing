@@ -174,7 +174,7 @@ const commands = {
   /**
    * Today's sessions - Interactive session browser
    */
-  async today(supabase, ctx) {
+  async today(supabase, ctx, showAll = false) {
     const telegramId = ctx.from.id
     
     // Rate limiting with friendly message
@@ -232,11 +232,13 @@ const commands = {
         'Today', 
         filteredSessions, 
         allAvailableSessions,
-        userProfile
+        userProfile,
+        showAll
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
-      const menu = menus.sessionMenu('today', sessionsToPass, 4)
+      const displayCount = showAll ? null : 4
+      const menu = menus.sessionMenu('today', sessionsToPass, displayCount)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,
@@ -269,7 +271,7 @@ const commands = {
   /**
    * Tomorrow's sessions
    */
-  async tomorrow(supabase, ctx) {
+  async tomorrow(supabase, ctx, showAll = false) {
     const telegramId = ctx.from.id
     
     if (!checkRateLimit(`tomorrow:${telegramId}`, 5000)) {
@@ -288,7 +290,7 @@ const commands = {
       
       if (!userProfile) {
         const allSessions = sessions.filter(s => (s.spots_available || 0) > 0)
-        const message = ui.createSessionsMessage('Tomorrow', allSessions, allSessions, null)
+        const message = ui.createSessionsMessage('Tomorrow', allSessions, allSessions, null, showAll)
         
         return ctx.telegram.editMessageText(
           ctx.chat.id,
@@ -297,7 +299,7 @@ const commands = {
           message,
           {
             parse_mode: 'HTML',
-            reply_markup: menus.sessionMenu('tomorrow', allSessions, 4).reply_markup
+            reply_markup: menus.sessionMenu('tomorrow', allSessions, showAll ? null : 4).reply_markup
           }
         )
       }
@@ -320,11 +322,13 @@ const commands = {
         'Tomorrow', 
         filteredSessions, 
         allAvailableSessions, 
-        userProfile
+        userProfile,
+        showAll
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
-      const menu = menus.sessionMenu('tomorrow', sessionsToPass, 4)
+      const displayCount = showAll ? null : 4
+      const menu = menus.sessionMenu('tomorrow', sessionsToPass, displayCount)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,
