@@ -632,6 +632,28 @@ const callbacks = {
             reply_markup: menus.preferencesMenu().reply_markup
           })
           
+        case 'pref_day_save':
+          await ctx.answerCbQuery('✅ Surf days saved!')
+          
+          // Refresh and show preferences
+          const updatedDaysProfile = await getUserProfile(supabase, telegramId)
+          const prefsMessage4 = ui.createPreferencesMessage(updatedDaysProfile)
+          return await ctx.editMessageText(prefsMessage4, {
+            parse_mode: 'HTML',
+            reply_markup: menus.preferencesMenu().reply_markup
+          })
+          
+        case 'pref_time_save':
+          await ctx.answerCbQuery('✅ Time windows saved!')
+          
+          // Refresh and show preferences
+          const updatedTimeWindowProfile = await getUserProfile(supabase, telegramId)
+          const prefsMessage5 = ui.createPreferencesMessage(updatedTimeWindowProfile)
+          return await ctx.editMessageText(prefsMessage5, {
+            parse_mode: 'HTML',
+            reply_markup: menus.preferencesMenu().reply_markup
+          })
+          
         // Notification timing toggles (from preferences menu)
         case 'notification_toggle_1w':
         case 'notification_toggle_48h':
