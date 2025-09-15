@@ -781,7 +781,7 @@ const callbacks = {
         case 'timing_toggle_12h':
         case 'timing_toggle_2h':
           const timingKey = action.split('_')[2]
-          return await this.toggleNotificationTiming(supabase, ctx, userProfile, timingKey)
+          return await callbacks.toggleNotificationTiming(supabase, ctx, userProfile, timingKey)
           
         case 'timing_save':
         case 'notif_timing_save':
