@@ -411,13 +411,13 @@ const commands = {
       // Edit existing message for callbacks
       await ctx.editMessageText(preferencesMessage, {
         parse_mode: 'HTML',
-        reply_markup: menuMarkup
+        reply_markup: menuMarkup.reply_markup
       })
     } else {
       // Send new message for direct commands
       await ctx.reply(preferencesMessage, {
         parse_mode: 'HTML',
-        reply_markup: menuMarkup
+        reply_markup: menuMarkup.reply_markup
       })
     }
   },

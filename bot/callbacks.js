@@ -449,7 +449,7 @@ const callbacks = {
           const prefsMessage = ui.createPreferencesMessage(updatedLevelsProfile)
           return await ctx.editMessageText(prefsMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.preferencesMenu()
+            reply_markup: menus.preferencesMenu().reply_markup
           })
           
         // Side toggles
@@ -468,7 +468,7 @@ const callbacks = {
           const prefsMessage2 = ui.createPreferencesMessage(updatedSidesProfile)
           return await ctx.editMessageText(prefsMessage2, {
             parse_mode: 'HTML',
-            reply_markup: menus.preferencesMenu()
+            reply_markup: menus.preferencesMenu().reply_markup
           })
           
         // Day toggles
@@ -597,7 +597,7 @@ const callbacks = {
           const prefsMessage3 = ui.createPreferencesMessage(updatedSpotsProfile)
           return await ctx.editMessageText(prefsMessage3, {
             parse_mode: 'HTML',
-            reply_markup: menus.preferencesMenu()
+            reply_markup: menus.preferencesMenu().reply_markup
           })
           
         // Notification timing toggles (from preferences menu)
@@ -1834,7 +1834,7 @@ const callbacks = {
     switch (action) {
       case 'prefs_menu':
         return ctx.editMessageText('🧪 Testing preferences menu directly:', {
-          reply_markup: menus.preferencesMenu()
+          reply_markup: menus.preferencesMenu().reply_markup
         })
       
       default:
