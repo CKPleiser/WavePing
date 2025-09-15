@@ -170,15 +170,24 @@ const callbacks = {
               tomorrowCount = tomorrowSessions.filter(s => (s.spots_available || 0) > 0).length
             }
           } catch (error) {
-            console.log('Could not fetch sessions for main menu:', error.message)
-            // Continue with null counts
+            console.error('Error fetching sessions for main menu:', error.message, error.stack)
+            // Continue with null counts - the main menu will still work
           }
           
-          const mainMessage = ui.mainMenuMessage(todayCount, tomorrowCount)
-          return await ctx.editMessageText(mainMessage, {
-            parse_mode: 'HTML',
-            reply_markup: menus.mainMenu(todayCount, tomorrowCount).reply_markup
-          })
+          try {
+            const mainMessage = ui.mainMenuMessage(todayCount, tomorrowCount)
+            return await safeEditText(ctx, mainMessage, {
+              parse_mode: 'HTML',
+              reply_markup: menus.mainMenu(todayCount, tomorrowCount).reply_markup
+            })
+          } catch (error) {
+            console.error('Error updating main menu message:', error.message, error.stack)
+            // Fallback to simple message update
+            return await ctx.editMessageText('🌊 WavePing\n\nMain menu loading...', {
+              parse_mode: 'HTML',
+              reply_markup: menus.mainMenu().reply_markup
+            })
+          }
         }
           
         case 'today':
