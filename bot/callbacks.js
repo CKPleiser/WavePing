@@ -324,6 +324,19 @@ const callbacks = {
             }
           )
         }
+
+        case 'pref_profile_overview': {
+          const profileMessage = ui.createProfileOverviewMessage(userProfile)
+          return ctx.editMessageText(profileMessage, {
+            parse_mode: 'HTML',
+            reply_markup: { 
+              inline_keyboard: [
+                [{ text: '⚙️ Edit Preferences', callback_data: 'prefs' }],
+                [{ text: '🏠 Main Menu', callback_data: 'main' }]
+              ]
+            }
+          })
+        }
           
         case 'alerts': {
           // Go directly to notification timing settings instead of overview
@@ -632,18 +645,6 @@ const callbacks = {
             }
           )
           
-        case 'pref_profile_overview':
-          const profileMessage = ui.createProfileOverviewMessage(userProfile)
-          return ctx.editMessageText(profileMessage, {
-            parse_mode: 'HTML',
-            reply_markup: { 
-              inline_keyboard: [
-                [{ text: '⚙️ Edit Preferences', callback_data: 'menu_preferences' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
-          })
-          
         case 'notif_timing_prefs': {
           const currentNotificationTimings = userProfile.user_digest_filters?.map(un => un.timing) || []
           return ctx.editMessageText(
@@ -700,7 +701,6 @@ const callbacks = {
           return await callbacks.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
         }
           
-        case 'side_save':
         case 'pref_side_save':
           await ctx.answerCbQuery('✅ Wave side preferences saved!')
           
@@ -847,7 +847,6 @@ const callbacks = {
           const timingToToggle = action.split('_').pop() // Get the last part (timing key)
           return await callbacks.toggleNotificationTiming(supabase, ctx, userProfile, timingToToggle)
           
-        case 'notification_save':
         case 'pref_notification_save':
           ctx.answerCbQuery('💾 Notification timings saved!')
           
@@ -861,8 +860,7 @@ const callbacks = {
           return await callbacks.toggleDigestPreference(supabase, ctx, userProfile, digestToToggle)
           
         case 'digest_save':
-          ctx.answerCbQuery('💾 Digest preferences saved!')
-          
+    
           // Redirect to preferences menu
           return commands.preferences(supabase, ctx)
           
