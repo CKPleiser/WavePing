@@ -80,7 +80,7 @@ const commands = {
       console.log('💬 Sending welcome message with keyboard')
       
       await ctx.reply(welcomeMessage, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
@@ -131,14 +131,14 @@ const commands = {
           tomorrowFiltered.length === 1 ? '1 session available' :
           `${tomorrowFiltered.length} sessions available`
           
-        sessionSummary = `\n\n**Today:** ${todayText}\n**Tomorrow:** ${tomorrowText}`
+        sessionSummary = `\n\n<b>Today:</b> ${todayText}\n<b>Tomorrow:</b> ${tomorrowText}`
       } catch (error) {
         // Silently ignore if we can't get sessions
         console.log('Could not fetch sessions for summary:', error.message)
-        sessionSummary = '\n\n**Today:** Check for available sessions\n**Tomorrow:** Check for available sessions'
+        sessionSummary = '\n\n<b>Today:</b> Check for available sessions\n<b>Tomorrow:</b> Check for available sessions'
       }
       
-      // Welcome back existing user
+      // Welcome back existing user - streamlined flow
       const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile) + sessionSummary
       
       console.log('🔧 DEBUG: About to call ctx.reply():', {
@@ -149,11 +149,11 @@ const commands = {
       })
       
       const replyResult = await ctx.reply(welcomeBackMessage, {
-        parse_mode: 'Markdown',  
+        parse_mode: 'HTML',  
         reply_markup: {
           inline_keyboard: [
-            [{ text: 'Today at The Wave', callback_data: 'menu_today' }],
-            [{ text: 'Tomorrow at The Wave', callback_data: 'menu_tomorrow' }]
+            [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
+            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }]
           ]
         }
       })
@@ -180,15 +180,13 @@ const commands = {
     // Rate limiting with friendly message
     if (!checkRateLimit(`today:${telegramId}`, 5000)) {
       return ctx.reply(
-        '⏳ *Hold your horses, surfer!*\n\n' +
-        'Please wait a moment before checking again.\n' +
-        'The waves aren\'t going anywhere! 🌊',
-        { parse_mode: 'Markdown' }
+        '⏳ <b>Please wait before checking again</b>\n\nToo many requests. Try again in a moment.',
+        { parse_mode: 'HTML' }
       )
     }
     
     // Show loading with wave animation
-    const loadingMsg = await ctx.reply('🌊 *Checking today\'s waves...*\n\n🏄‍♂️ Scanning sessions...')
+    const loadingMsg = await ctx.reply('🌊 <b>Checking today\'s sessions...</b>')
     
     try {
       const userProfile = await getUserProfile(supabase, telegramId)
@@ -202,7 +200,7 @@ const commands = {
           'Set up your preferences first to get personalized session recommendations.\n\n' +
           'Or browse all sessions without filtering! 🌊',
           {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.callback('⚙️ Setup Preferences', 'menu_preferences')],
               [Markup.button.callback('🌊 Show All Sessions', 'filter_all_today')]
@@ -246,7 +244,7 @@ const commands = {
         undefined,
         sessionMessage,
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: menu.reply_markup
         }
       )
@@ -256,11 +254,9 @@ const commands = {
         ctx.chat.id,
         loadingMsg.message_id,
         undefined,
-        '🚨 *Oops! Waves are a bit choppy*\n\n' +
-        'Couldn\'t fetch today\'s sessions right now.\n' +
-        'Please try again in a moment! 🌊',
+        '🚨 <b>Error loading sessions</b>\n\nCouldn\'t fetch today\'s sessions. Please try again.',
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: Markup.inlineKeyboard([
             [Markup.button.callback('🔄 Try Again', 'menu_today')],
             [Markup.button.callback('🏠 Main Menu', 'menu_main')]
@@ -278,13 +274,12 @@ const commands = {
     
     if (!checkRateLimit(`tomorrow:${telegramId}`, 5000)) {
       return ctx.reply(
-        '⏳ *Patience, grasshopper!*\n\n' +
-        'Tomorrow\'s waves will still be there in a moment! 🏄‍♂️',
-        { parse_mode: 'Markdown' }
+        '⏳ <b>Please wait before checking again</b>\n\nToo many requests. Try again in a moment.',
+        { parse_mode: 'HTML' }
       )
     }
     
-    const loadingMsg = await ctx.reply('🌅 *Checking tomorrow\'s forecast...*\n\n🔮 Reading the waves...')
+    const loadingMsg = await ctx.reply('🌅 <b>Checking tomorrow\'s sessions...</b>')
     
     try {
       const userProfile = await getUserProfile(supabase, telegramId)
@@ -301,7 +296,7 @@ const commands = {
           undefined,
           message,
           {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: menus.sessionMenu('tomorrow', allSessions.length > 0, allSessions).reply_markup
           }
         )
@@ -337,7 +332,7 @@ const commands = {
         undefined,
         sessionMessage,
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: menu.reply_markup
         }
       )
@@ -347,11 +342,9 @@ const commands = {
         ctx.chat.id,
         loadingMsg.message_id,
         undefined,
-        '🌅 *Tomorrow is looking a bit hazy...*\n\n' +
-        'Couldn\'t fetch tomorrow\'s forecast.\n' +
-        'The surf gods are taking a coffee break! ☕',
+        '🌅 <b>Error loading sessions</b>\n\nCouldn\'t fetch tomorrow\'s sessions. Please try again.',
         {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: Markup.inlineKeyboard([
             [Markup.button.callback('🔄 Try Again', 'menu_tomorrow')],
             [Markup.button.callback('🌊 Check Today Instead', 'menu_today')]
@@ -376,7 +369,7 @@ const commands = {
       userProfile = await createUserProfile(supabase, telegramId, ctx.from.username)
       
       return ctx.reply('🚀 *Welcome to WavePing!*\n\nLet\'s set up your preferences!', {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: '🎯 Start Setup', callback_data: 'setup_start' }],
@@ -389,7 +382,7 @@ const commands = {
     // Complete preferences menu with all options
     const preferencesMessage = ui.createPreferencesMessage(userProfile)
     await ctx.reply(preferencesMessage, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           [{ text: 'Skill Levels', callback_data: 'pref_levels' }],
@@ -418,7 +411,7 @@ const commands = {
     const notificationMessage = ui.createNotificationMessage(userProfile)
     
     await ctx.reply(notificationMessage, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: menus.notificationMenu().reply_markup
     })
   },
@@ -430,7 +423,7 @@ const commands = {
     const helpMessage = ui.helpMessage()
     
     await ctx.reply(helpMessage, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: menus.helpMenu().reply_markup
     })
   },
@@ -442,7 +435,7 @@ const commands = {
     const menuMessage = ui.mainMenuMessage()
     
     await ctx.reply(menuMessage, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: menus.mainMenu().reply_markup
     })
   },
@@ -493,7 +486,7 @@ const commands = {
     const testMessage = ui.createTestMessage(userProfile)
     
     await ctx.reply(testMessage, {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('📱 Send Test Notification', 'test_notification')],
         [Markup.button.callback('🔄 Refresh Profile', 'test_profile')],
@@ -513,7 +506,7 @@ const commands = {
       console.log('💬 Sending support message with keyboard')
       
       await ctx.reply(supportMessage, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
             [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],

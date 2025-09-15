@@ -70,9 +70,9 @@ class DigestService {
     
     let message = ''
     if (includeDate && session.dateLabel) {
-      message += `**${session.dateLabel}** `
+      message += `<b>${session.dateLabel}</b> `
     }
-    message += `**${session.time}** ${session.session_name} ${sideChip}\n`
+    message += `<b>${session.time}</b> ${session.session_name} ${sideChip}\n`
     message += `${spots} spot${spots === 1 ? '' : 's'} available\n\n`
     
     return message
@@ -135,15 +135,15 @@ class DigestService {
       // Add date header for multi-day views
       if (timeframeLabel !== 'Today' && timeframeLabel !== 'Tomorrow' && session.dateLabel && session.dateLabel !== currentDate) {
         if (index > 0) message += '\n'
-        message += `**${session.dateLabel}**\n`
+        message += `<b>${session.dateLabel}</b>\n`
         currentDate = session.dateLabel
       }
       message += this.formatSession(session, false)
     })
     
     // Links
-    message += `[🏄‍♂️ **Book at The Wave**](https://ticketing.thewave.com/)\n\n`
-    message += `[☕ **Support WavePing**](https://buymeacoffee.com/driftwithcaz)\n\n`
+    message += `[🏄‍♂️ <b>Book at The Wave</b>](https://ticketing.thewave.com/)\n\n`
+    message += `[☕ <b>Support WavePing</b>](https://buymeacoffee.com/driftwithcaz)\n\n`
     
     // Commands
     if (digestType === 'morning') {

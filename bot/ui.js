@@ -8,19 +8,19 @@ const ui = {
    * Welcome message for new users
    */
   welcomeMessage(firstName) {
-    return `🌊 *Welcome to WavePing, ${firstName}!* 🏄‍♂️
+    return `🌊 <b>Welcome to WavePing, ${firstName}!</b>
 
-🎯 *Your Personal Surf Assistant*
+<b>Your Personal Surf Assistant</b>
 
 Get instant notifications when surf sessions matching your preferences become available at The Wave Bristol!
 
-✨ *What WavePing does for you:*
-🔔 Smart notifications for your preferred sessions
-📱 Daily surf digests delivered when you want them
-🌊 Real-time session availability tracking
-🎯 Personalized recommendations based on your skill level
+<b>What WavePing does for you:</b>
+Smart notifications for your preferred sessions
+Daily surf digests delivered when you want them
+Daily session digest updates
+Personalized recommendations based on your skill level
 
-*Ready to catch your perfect wave?* 🤙`
+<b>Ready to catch your perfect wave?</b>`
   },
 
   /**
@@ -30,9 +30,9 @@ Get instant notifications when surf sessions matching your preferences become av
     const hasPreferences = userProfile.user_levels?.length > 0
     
     if (hasPreferences) {
-      return `*Welcome back, ${firstName}*`
+      return `<b>Welcome back, ${firstName}</b>`
     } else {
-      return `*Welcome back, ${firstName}*
+      return `<b>Welcome back, ${firstName}</b>
 
 Set up your preferences to get personalized surf alerts.`
     }
@@ -42,14 +42,14 @@ Set up your preferences to get personalized surf alerts.`
    * Main menu message
    */
   mainMenuMessage() {
-    return `🏄‍♂️ *WavePing Main Menu* 🌊
+    return `🏄‍♂️ <b>WavePing Main Menu</b>
 
 Quick commands:
-/today - 🌊 Check today's sessions
-/tomorrow - 🌅 Check tomorrow's sessions
-/setup - 🛠️ Change your preferences
+/today - Check today's sessions
+/tomorrow - Check tomorrow's sessions
+/setup - Change your preferences
 
-*Let's find you the perfect wave!* 🤙`
+Ready to find your session.`
   },
 
   /**
@@ -62,59 +62,84 @@ Quick commands:
       'Week': '📅'
     }[timeframe] || '🌊'
     
-    let message = `*${emoji} ${timeframe} at The Wave*\n`
+    let message = `${emoji} <b>${timeframe} at The Wave</b>\n`
     
     if (filteredSessions.length === 0 && allSessions.length === 0) {
-      message += `\n*No sessions available*\n\n`
-      message += `The waves are taking a rest day.\n`
-      message += `Try checking tomorrow!`
+      message += `\n<b>No sessions available</b>\n\n`
+      message += `No sessions scheduled.\nTry checking tomorrow.`
       return message
     }
     
     if (userProfile && filteredSessions.length > 0) {
-      message += `*Your matches (${filteredSessions.length})*\n\n`
+      message += `<b>Your matches (${filteredSessions.length})</b>\n\n`
       
-      filteredSessions.forEach((session, i) => {
+      // Show top 4 sessions, then "Show more (N)" if needed
+      const maxDisplay = 4
+      const sessionsToShow = filteredSessions.slice(0, maxDisplay)
+      const remainingSessions = filteredSessions.length - maxDisplay
+      
+      sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
         const level = this.capitalizeWords(session.level)
-        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
+        const sideChip = this.chipSide(session.side)
         
-        message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+        message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
       })
+      
+      if (remainingSessions > 0) {
+        message += `\n<i>Show more (${remainingSessions})</i>\n`
+      }
       
     } else if (userProfile && filteredSessions.length === 0) {
       // User has preferences but no matches
-      message += `*No matches right now*\n\n`
+      message += `<b>No matches right now</b>\n\n`
       message += `Try widening time windows or set Min spots to 1+.\n\n`
       
       // Show all available sessions
       if (allSessions.length > 0) {
-        message += `*Other available sessions (${allSessions.length})*\n\n`
-        allSessions.forEach((session, i) => {
+        message += `<b>Other available sessions (${allSessions.length})</b>\n\n`
+        
+        const maxDisplay = 4
+        const sessionsToShow = allSessions.slice(0, maxDisplay)
+        const remainingSessions = allSessions.length - maxDisplay
+        
+        sessionsToShow.forEach((session) => {
           const spots = session.spots_available || 0
           const level = this.capitalizeWords(session.level)
-          const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
+          const sideChip = this.chipSide(session.side)
           
-          message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+          message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
         })
+        
+        if (remainingSessions > 0) {
+          message += `\n<i>Show more (${remainingSessions})</i>\n`
+        }
       }
       
     } else {
       // No user profile  
-      message += `*All available sessions (${allSessions.length})*\n\n`
+      message += `<b>All available sessions (${allSessions.length})</b>\n\n`
       
       if (allSessions.length === 0) {
         message += `No sessions available right now.`
         return message
       }
       
-      allSessions.forEach((session, i) => {
+      const maxDisplay = 4
+      const sessionsToShow = allSessions.slice(0, maxDisplay)
+      const remainingSessions = allSessions.length - maxDisplay
+      
+      sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
         const level = this.capitalizeWords(session.level)
-        const sideChip = session.side === 'L' ? '[L]' : session.side === 'R' ? '[R]' : session.side === 'A' ? '[Any]' : `[${session.side}]`
+        const sideChip = this.chipSide(session.side)
         
-        message += `${i + 1}) *${session.time}* • ${level} • ${sideChip} • *${spots} spot${spots !== 1 ? 's' : ''}*\n`
+        message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
       })
+      
+      if (remainingSessions > 0) {
+        message += `\n<i>Show more (${remainingSessions})</i>\n`
+      }
     }
     
     return message
@@ -126,7 +151,7 @@ Quick commands:
    * Preferences display
    */
   createPreferencesMessage(userProfile) {
-    let message = `🛠 *Your Setup*\n\n`
+    let message = `🛠 <b>Your Setup</b>\n\n`
     
     // Levels - clean, no emojis
     const levels = userProfile.user_levels?.map(ul => this.capitalizeWords(ul.level)) || []
@@ -156,11 +181,9 @@ Quick commands:
     message += `**Days:** ${daysText}\n`
     
     // Time windows - chip format
-    const times = userProfile.user_time_windows?.map(tw => {
-      const start = parseInt(tw.start_time.split(':')[0])
-      const end = parseInt(tw.end_time.split(':')[0])
-      return `${start}–${end}`
-    }) || []
+    const times = userProfile.user_time_windows?.map(tw => 
+      this.chipTimeWindow(tw.start_time, tw.end_time)
+    ) || []
     const timesText = times.length > 0 ? times.join(', ') : 'Any'
     message += `**Time windows:** ${timesText}\n`
     
@@ -377,7 +400,7 @@ Contact @driftwithcaz for support.
   /**
    * Post-save confirmation message with clear next actions
    */
-  createSavedPreferencesMessage(settingType = 'session filters') {
+  createSavedPreferencesMessage() {
     return `✅ *Saved.* We'll only ping you for matches.
 
 *What's next?*
@@ -401,7 +424,7 @@ Contact @driftwithcaz for support.
 • 🔔 Smart session alerts for your skill level
 • 📱 Daily surf digests delivered when you want
 • 🎯 Personalized recommendations
-• 🔄 Real-time availability tracking
+• 🔄 Daily availability updates
 
 *Support the Development:*
 WavePing is built with ❤️ by an independent developer. Your support helps:
@@ -473,6 +496,23 @@ Your input shapes the future of WavePing! 🚀`
       'expert': '🔴'
     }
     return emojis[level.toLowerCase()] || '⚪'
+  },
+
+  // Chip formatting helpers for consistency
+  chipSide(side) {
+    if (side === 'L' || side === 'Left') return '[L]'
+    if (side === 'R' || side === 'Right') return '[R]'
+    return '[Any]'
+  },
+
+  chipTimeWindow(startTime, endTime) {
+    const start = parseInt(startTime.split(':')[0])
+    const end = parseInt(endTime.split(':')[0])
+    return `${start}–${end}`
+  },
+
+  spotsLabel(spots) {
+    return `${spots} spot${spots !== 1 ? 's' : ''}`
   },
 
   capitalizeWords(str) {

@@ -7,23 +7,27 @@ const { Markup } = require('telegraf')
 
 const menus = {
   /**
-   * Main menu - Central navigation hub
+   * Main menu - Central navigation hub with session counts
    */
-  mainMenu() {
+  mainMenu(todayCount = null, tomorrowCount = null) {
+    // State-aware button text with counts
+    const todayText = todayCount !== null ? `🌊 Today (${todayCount})` : '🌊 Today'
+    const tomorrowText = tomorrowCount !== null ? `🌅 Tomorrow (${tomorrowCount})` : '🌅 Tomorrow'
+    
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback('🌊 Today', 'menu_today'),
-        Markup.button.callback('🌅 Tomorrow', 'menu_tomorrow')
+        Markup.button.callback(todayText, 'today'),
+        Markup.button.callback(tomorrowText, 'tomorrow')
       ],
       [
-        Markup.button.callback('⚙️ Preferences', 'menu_preferences')
+        Markup.button.callback('⚙️ Your Setup', 'prefs')
       ],
       [
-        Markup.button.callback('🔔 Notifications', 'menu_notifications'),
-        Markup.button.callback('❓ Help', 'menu_help')
+        Markup.button.callback('🔔 Alerts & Digests', 'alerts'),
+        Markup.button.callback('❓ Help', 'help')
       ],
       [
-        Markup.button.callback('☕ Support WavePing', 'menu_support')
+        Markup.button.callback('☕ Support', 'support')
       ]
     ])
   },
@@ -31,31 +35,31 @@ const menus = {
   /**
    * Session viewing menu with individual session booking buttons
    */
-  sessionMenu(timeframe, hasMatches, sessions = []) {
+  sessionMenu(timeframe, sessions = []) {
     const buttons = []
     
     console.log(`🔧 sessionMenu: Creating menu for ${timeframe}, sessions=${sessions.length}`)
     
-    // Single booking button
+    // Bottom row: Book • Refresh • Edit time windows • Min spots  
     buttons.push([
-      Markup.button.url('🏄‍♂️ Book at The Wave', 'https://ticketing.thewave.com/')
+      Markup.button.url('🏄‍♂️ Book', 'https://ticketing.thewave.com/'),
+      Markup.button.callback('🔄 Refresh', `menu_${timeframe}`)
     ])
     
-    // Secondary actions
     buttons.push([
-      Markup.button.callback('🔄 Refresh', `menu_${timeframe}`),
-      Markup.button.callback('🛠 Edit setup', 'menu_preferences')
+      Markup.button.callback('⏰ Time Windows', 'quick_edit_times'),
+      Markup.button.callback('🔢 Min Spots', 'quick_edit_spots')
     ])
     
     // Navigation
     if (timeframe !== 'today') {
-      buttons.push([Markup.button.callback('🌊 Today', 'menu_today')])
+      buttons.push([Markup.button.callback('🌊 Today', 'today')])
     }
     if (timeframe !== 'tomorrow') {
-      buttons.push([Markup.button.callback('🌅 Tomorrow', 'menu_tomorrow')])
+      buttons.push([Markup.button.callback('🌅 Tomorrow', 'tomorrow')])
     }
     
-    buttons.push([Markup.button.callback('🏠 Main Menu', 'menu_main')])
+    buttons.push([Markup.button.callback('Main Menu', 'main')])
     
     console.log(`🔧 sessionMenu: Created ${buttons.length} button rows`)
     const menu = Markup.inlineKeyboard(buttons)
@@ -79,14 +83,14 @@ const menus = {
       [Markup.button.callback('📅 Surf Days', 'pref_days')],
       [Markup.button.callback('🕐 Time Windows', 'pref_times')],
       [Markup.button.callback('💺 Min Spots', 'pref_spots')],
-      [Markup.button.callback('🔔 Notifications', 'menu_notifications')],
+      [Markup.button.callback('🔔 Notifications', 'alerts')],
       [Markup.button.callback('📱 Digests', 'pref_digests')],
       [Markup.button.callback('🚀 Setup Wizard', 'setup_restart')],
       [
         Markup.button.callback('🔄 Reset All', 'pref_reset')
       ],
       [
-        Markup.button.callback('🏠 Main Menu', 'menu_main')
+        Markup.button.callback('🏠 Main Menu', 'main')
       ]
     ])
   },
@@ -106,10 +110,10 @@ const menus = {
       ],
       [
         Markup.button.callback('🧪 Send Test', 'notif_test'),
-        Markup.button.callback('⚙️ Back to Prefs', 'menu_preferences')
+        Markup.button.callback('⚙️ Back to Prefs', 'prefs')
       ],
       [
-        Markup.button.callback('🏠 Main Menu', 'menu_main')
+        Markup.button.callback('🏠 Main Menu', 'main')
       ]
     ])
   },
@@ -128,7 +132,7 @@ const menus = {
         Markup.button.callback('📞 Contact', 'help_contact')
       ],
       [
-        Markup.button.callback('🏠 Main Menu', 'menu_main')
+        Markup.button.callback('🏠 Main Menu', 'main')
       ]
     ])
   },
@@ -143,7 +147,7 @@ const menus = {
       [Markup.button.callback('🟡 Intermediate', 'setup_quick_level_intermediate')],
       [Markup.button.callback('🟠 Advanced', 'setup_quick_level_advanced')],
       [Markup.button.callback('🔴 Expert', 'setup_quick_level_expert')],
-      [Markup.button.callback('🔙 Back', 'menu_main')]
+      [Markup.button.callback('🔙 Back', 'main')]
     ])
   },
 
@@ -167,7 +171,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'pref_level_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
+      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -191,7 +195,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'pref_side_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
+      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -221,7 +225,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'pref_day_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
+      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -250,7 +254,7 @@ const menus = {
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'pref_time_save')],
       [Markup.button.callback('➕ Custom Time', 'pref_time_custom')],
-      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
+      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -276,7 +280,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'pref_spots_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
+      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -302,7 +306,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'notif_timing_save')],
-      [Markup.button.callback('🔙 Back to Notifications', 'menu_notifications')]
+      [Markup.button.callback('🔙 Back to Notifications', 'alerts')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -325,7 +329,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('💾 Save Changes', 'digest_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'menu_preferences')]
+      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -334,7 +338,7 @@ const menus = {
   /**
    * Confirmation menu for destructive actions
    */
-  confirmationMenu(action, returnMenu = 'menu_main') {
+  confirmationMenu(action, returnMenu = 'main') {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback('✅ Yes, Confirm', `confirm_${action}`),
@@ -387,7 +391,7 @@ const menus = {
     
     buttons.push(
       [Markup.button.callback('➡️ Continue to Step 2', 'setup_level_continue')],
-      [Markup.button.callback('🔙 Back to Menu', 'menu_main')]
+      [Markup.button.callback('🔙 Back to Menu', 'main')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -487,7 +491,7 @@ const menus = {
   /**
    * Back button utility
    */
-  backButton(target = 'menu_main') {
+  backButton(target = 'main') {
     return Markup.inlineKeyboard([
       [Markup.button.callback('🔙 Back', target)]
     ])
