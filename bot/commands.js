@@ -236,7 +236,7 @@ const commands = {
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
-      const menu = menus.sessionMenu('today', filteredSessions.length > 0, sessionsToPass)
+      const menu = menus.sessionMenu('today', sessionsToPass, 4)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,
@@ -297,7 +297,7 @@ const commands = {
           message,
           {
             parse_mode: 'HTML',
-            reply_markup: menus.sessionMenu('tomorrow', allSessions.length > 0, allSessions).reply_markup
+            reply_markup: menus.sessionMenu('tomorrow', allSessions, 4).reply_markup
           }
         )
       }
@@ -324,7 +324,7 @@ const commands = {
       )
       
       const sessionsToPass = filteredSessions.length > 0 ? filteredSessions : allAvailableSessions
-      const menu = menus.sessionMenu('tomorrow', filteredSessions.length > 0, sessionsToPass)
+      const menu = menus.sessionMenu('tomorrow', sessionsToPass, 4)
       
       await ctx.telegram.editMessageText(
         ctx.chat.id,

@@ -35,21 +35,24 @@ const menus = {
   /**
    * Session viewing menu with individual session booking buttons
    */
-  sessionMenu(timeframe, sessions = []) {
+  sessionMenu(timeframe, sessions = [], showingCount = null) {
     const buttons = []
     
     console.log(`🔧 sessionMenu: Creating menu for ${timeframe}, sessions=${sessions.length}`)
     
-    // Bottom row: Book • Refresh • Edit time windows • Min spots  
+    // Bottom row: Book • Refresh only  
     buttons.push([
       Markup.button.url('🏄‍♂️ Book', 'https://ticketing.thewave.com/'),
-      Markup.button.callback('🔄 Refresh', `menu_${timeframe}`)
+      Markup.button.callback('🔄 Refresh', `${timeframe}`)
     ])
     
-    buttons.push([
-      Markup.button.callback('⏰ Time Windows', 'quick_edit_times'),
-      Markup.button.callback('🔢 Min Spots', 'quick_edit_spots')
-    ])
+    // Show more button if there are additional sessions
+    if (showingCount && sessions.length > showingCount) {
+      const remainingCount = sessions.length - showingCount
+      buttons.push([
+        Markup.button.callback(`Show more (${remainingCount})`, `show_more_${timeframe}`)
+      ])
+    }
     
     // Navigation
     if (timeframe !== 'today') {

@@ -73,10 +73,9 @@ Ready to find your session.`
     if (userProfile && filteredSessions.length > 0) {
       message += `<b>Your matches (${filteredSessions.length})</b>\n\n`
       
-      // Show top 4 sessions, then "Show more (N)" if needed
+      // Show top 4 sessions
       const maxDisplay = 4
       const sessionsToShow = filteredSessions.slice(0, maxDisplay)
-      const remainingSessions = filteredSessions.length - maxDisplay
       
       sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
@@ -86,9 +85,6 @@ Ready to find your session.`
         message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
       })
       
-      if (remainingSessions > 0) {
-        message += `\n<i>Show more (${remainingSessions})</i>\n`
-      }
       
     } else if (userProfile && filteredSessions.length === 0) {
       // User has preferences but no matches
@@ -101,7 +97,6 @@ Ready to find your session.`
         
         const maxDisplay = 4
         const sessionsToShow = allSessions.slice(0, maxDisplay)
-        const remainingSessions = allSessions.length - maxDisplay
         
         sessionsToShow.forEach((session) => {
           const spots = session.spots_available || 0
@@ -127,7 +122,6 @@ Ready to find your session.`
       
       const maxDisplay = 4
       const sessionsToShow = allSessions.slice(0, maxDisplay)
-      const remainingSessions = allSessions.length - maxDisplay
       
       sessionsToShow.forEach((session) => {
         const spots = session.spots_available || 0
@@ -137,9 +131,6 @@ Ready to find your session.`
         message += `<b>${session.time}</b> • ${level} • ${sideChip} • <b>${this.spotsLabel(spots)}</b>\n`
       })
       
-      if (remainingSessions > 0) {
-        message += `\n<i>Show more (${remainingSessions})</i>\n`
-      }
     }
     
     return message
@@ -225,8 +216,8 @@ Ready to find your session.`
     // Skill Levels
     const levels = userProfile.user_levels?.map(ul => ul.level) || []
     if (levels.length > 0) {
-      const levelEmojis = levels.map(l => `${this.getLevelEmoji(l)} ${this.capitalizeWords(l)}`).join(', ')
-      message += `🎯 *Skill Levels:* ${levelEmojis}\n`
+      const levelText = levels.map(l => this.capitalizeWords(l)).join(', ')
+      message += `🎯 *Skill Levels:* ${levelText}\n`
     } else {
       message += `🎯 *Skill Levels:* Not set\n`
     }
@@ -416,87 +407,56 @@ Contact @driftwithcaz for support.
    * Support message - Buy Me a Coffee integration
    */
   supportMessage() {
-    return `☕ *Support WavePing* 💙
+    return `<b>☕ Support WavePing</b>
 
-🌊 Thank you for using WavePing! This bot helps surfers at The Wave Bristol get the perfect session notifications.
+Free, open-source digests for The Wave Bristol.
 
-*How WavePing helps you:*
-• 🔔 Smart session alerts for your skill level
-• 📱 Daily surf digests delivered when you want
-• 🎯 Personalized recommendations
-• 🔄 Daily availability updates
+<b>What you get</b>
+• AM/PM session picks with spot counts
+• No ads, no tracking, no signup
 
-*Support the Development:*
-WavePing is built with ❤️ by an independent developer. Your support helps:
+<b>What support funds</b>
+• Servers
+• New features
+• Bug fixes
 
-• 🔧 Keep the bot running 24/7
-• ✨ Add new features you request  
-• 🛡️ Maintain reliable notifications
-• 🌊 Improve the surf experience for everyone
-
-*Ways to Support:*`
+Thanks for keeping this free for everyone.`
   },
 
-  /**
-   * Contact support message
-   */
   contactMessage() {
-    return `💬 *Contact Developer* 🙋‍♂️
-
-Have questions, feedback, or found a bug?
-
-*Get in Touch:*
-• 📧 Email: ckpleiser@gmail.com
-• 💬 Telegram: @driftwithcaz
-
-*Response Time:*
-Usually within 24 hours! 🚀
-
-*What to Include:*
-• Describe the issue clearly
-• Include your Telegram username
-• Screenshots if helpful
-
-Thanks for helping make WavePing better! 🌊`
+    return (
+      `💬 <b>Contact the developer</b>\n\n` +
+      `Questions, feedback, or found a bug? Ping me.\n\n` +
+      `<b>Get in touch</b>\n` +
+      `• 📧 Email: <a href="mailto:ckpleiser@gmail.com">ckpleiser@gmail.com</a>\n` +
+      `• 💬 Telegram: <a href="https://t.me/driftwithcaz">@driftwithcaz</a>\n\n` +
+      `<b>Response time</b>\n` +
+      `Usually within 24 hours.\n\n` +
+      `<b>Please include</b>\n` +
+      `• What you tried and the screen you were on\n` +
+      `• Your Telegram username\n` +
+      `• Screenshots if helpful\n\n` +
+      `Thanks for helping make WavePing better. 🌊`
+    )
   },
 
-  /**
-   * Feature request message
-   */
   featureRequestMessage() {
-    return `📈 *Feature Requests* ✨
-
-Got an idea to make WavePing even better?
-
-*Popular Requests:*
-• 🌡️ Water temperature alerts
-• 🌌 Wind condition notifications  
-• 📅 Session booking reminders
-• 🏆 Surf streak tracking
-• 📊 Session analytics
-
-*How to Submit:*
-1️⃣ Contact @Driftwithcaz with your idea
-2️⃣ Describe how it would help you
-3️⃣ We'll consider it for the roadmap!
-
-*Development Priority:*
-Features that help the most surfers get added first! 🌊
-
-Your input shapes the future of WavePing! 🚀`
+    return (
+      `📈 <b>Feature requests</b>\n\n` +
+      `Got an idea that would make WavePing more useful?\n\n` +
+      `<b>How to send it</b>\n` +
+      `• Telegram: <a href="https://t.me/driftwithcaz">@driftwithcaz</a>\n` +
+      `• Email: <a href="mailto:ckpleiser@gmail.com">ckpleiser@gmail.com</a>\n\n` +
+      `<b>Tell me</b>\n` +
+      `• The problem you want to solve\n` +
+      `• What you'd like the bot to do\n` +
+      `• Why it helps (and how often you'd use it)\n\n` +
+      `<b>How I prioritise</b>\n` +
+      `Stuff that helps the most surfers ships first.`
+    )
   },
 
   // Utility methods
-  getLevelEmoji(level) {
-    const emojis = {
-      'beginner': '🟢',
-      'improver': '🔵', 
-      'intermediate': '🟡',
-      'advanced': '🟠',
-      'expert': '🔴'
-    }
-    return emojis[level.toLowerCase()] || '⚪'
-  },
 
   // Chip formatting helpers for consistency
   chipSide(side) {
