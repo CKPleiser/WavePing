@@ -23,11 +23,13 @@ const menus = {
         Markup.button.callback('⚙️ Your Setup', 'prefs')
       ],
       [
-        Markup.button.callback('🔔 Alerts & Digests', 'alerts'),
-        Markup.button.callback('❓ Help', 'help')
+        Markup.button.callback('🔔 Alerts & Digests', 'alerts')
       ],
       [
-        Markup.button.callback('☕ Support', 'support')
+        Markup.button.callback('❓ Help & Feedback', 'help')
+      ],
+      [
+        Markup.button.callback('☕ Donate', 'donate')
       ]
     ])
   },
@@ -127,12 +129,10 @@ const menus = {
   helpMenu() {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback('🏄‍♂️ Commands', 'help_commands'),
-        Markup.button.callback('🔔 Notifications', 'help_notifications')
+        Markup.button.callback('💬 Contact Developer', 'help_contact')
       ],
       [
-        Markup.button.callback('❓ FAQ', 'help_faq'),
-        Markup.button.callback('📞 Contact', 'help_contact')
+        Markup.button.callback('📈 Request a Feature', 'help_feature')
       ],
       [
         Markup.button.callback('🏠 Main Menu', 'main')

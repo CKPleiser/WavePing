@@ -57,11 +57,11 @@ async function createUserProfile(supabase, telegramId, username = null) {
 
 const callbacks = {
   /**
-   * Menu navigation callbacks
+   * Basic navigation callbacks (direct string matches)
    */
-  async menu(supabase, ctx) {
-    const action = ctx.match[1] // Extract menu type from regex match
-    console.log(`🔧 Menu callback triggered: ${action}`, { userId: ctx.from.id })
+  async navigation(supabase, ctx) {
+    const action = ctx.callbackQuery.data // Direct callback data
+    console.log(`🔧 Navigation callback triggered: ${action}`, { userId: ctx.from.id })
     
     // CRITICAL: Answer callback query first to remove loading state
     await ctx.answerCbQuery()
@@ -87,8 +87,77 @@ const callbacks = {
         case 'show_more_tomorrow':  
           return commands.tomorrow(supabase, ctx, true) // show all sessions
           
-        // Week view removed - only today/tomorrow supported
+        case 'prefs':
+          return commands.preferences(supabase, ctx)
           
+        case 'alerts':
+          return commands.notifications(supabase, ctx)
+          
+        case 'help':
+          const helpMessage = ui.helpMessage()
+          return await ctx.editMessageText(helpMessage, {
+            parse_mode: 'HTML',
+            reply_markup: menus.helpMenu()
+          })
+          
+        case 'support':
+        case 'donate':
+          const supportMessage = ui.supportMessage()
+          return await ctx.editMessageText(supportMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],
+                [{ text: '🏠 Main Menu', callback_data: 'main' }]
+              ]
+            }
+          })
+          
+        case 'help_contact':
+          const contactMessage = ui.contactMessage()
+          return await ctx.editMessageText(contactMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔙 Back to Help', callback_data: 'help' }],
+                [{ text: '🏠 Main Menu', callback_data: 'main' }]
+              ]
+            }
+          })
+          
+        case 'help_feature':
+          const featureMessage = ui.featureRequestMessage()
+          return await ctx.editMessageText(featureMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔙 Back to Help', callback_data: 'help' }],
+                [{ text: '🏠 Main Menu', callback_data: 'main' }]
+              ]
+            }
+          })
+          
+        default:
+          return ctx.answerCbQuery('Unknown navigation option')
+      }
+    } catch (error) {
+      console.error('Navigation callback error:', error)
+      return ctx.answerCbQuery('Error with navigation')
+    }
+  },
+
+  /**
+   * Menu navigation callbacks (regex matches like menu_*)
+   */
+  async menu(supabase, ctx) {
+    const action = ctx.match[1] // Extract menu type from regex match
+    console.log(`🔧 Menu callback triggered: ${action}`, { userId: ctx.from.id })
+    
+    // CRITICAL: Answer callback query first to remove loading state
+    await ctx.answerCbQuery()
+    
+    try {
+      switch (action) {
         case 'preferences':
         case 'menu_preferences':
           return commands.preferences(supabase, ctx)
@@ -118,29 +187,6 @@ const callbacks = {
             }
           })
           
-        case 'support_contact':
-          const contactMessage = ui.contactMessage()
-          return await ctx.editMessageText(contactMessage, {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🔙 Back to Support', callback_data: 'menu_support' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
-          })
-          
-        case 'support_feature':
-          const featureMessage = ui.featureRequestMessage()
-          return await ctx.editMessageText(featureMessage, {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🔙 Back to Support', callback_data: 'menu_support' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
-          })
           
         default:
           return ctx.answerCbQuery('Unknown menu option')

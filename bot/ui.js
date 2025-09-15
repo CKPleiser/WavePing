@@ -328,33 +328,24 @@ Choose your surfing level to get the right session recommendations:
   },
 
   /**
-   * Help message
+   * Help message - User support and feedback
    */
   helpMessage() {
-    return `❓ *WavePing Help*
+    return `<b>🛟 Help & Feedback</b>
 
-**Available Commands:**
-/start - Welcome message and main menu
-/today - Today's surf sessions  
-/tomorrow - Tomorrow's surf sessions
-/setup - Your preferences and settings
-/notifications - Manage alerts and digests
-/support - Support the developer
-/help - This help message
+Questions, bug, or an idea? Ping me.
 
-**How It Works:**
-1. Set your preferences (skill level, preferred times, wave side)
-2. Choose when to receive notifications 
-3. Get alerts when matching sessions become available
+<b>Contact</b>
+• Telegram: <a href="https://t.me/driftwithcaz">@driftwithcaz</a>
+• Email: <a href="mailto:ckpleiser@gmail.com">ckpleiser@gmail.com</a>
 
-**Daily Digests:**
-• Morning digest (8 AM) - Plan your day
-• Evening digest (6 PM) - Preview tomorrow
+<b>When you write</b>
+• What you tried / where it broke
+• Your Telegram username
+• Screenshots if useful
 
-**Need Help?**
-Contact @driftwithcaz for support.
-
-*Happy surfing!*`
+<b>Feature requests</b>
+Tell me the problem, what you want the bot to do, and why it helps.`
   },
 
   /**
@@ -397,23 +388,19 @@ Contact @driftwithcaz for support.
   },
 
   /**
-   * Support message - Buy Me a Coffee integration
+   * Support message - Donations only
    */
   supportMessage() {
-    return `<b>☕ Support WavePing</b>
+    return `<b>☕ Donate to WavePing</b>
 
 Free, open-source digests for The Wave Bristol.
+Your donation keeps this running.
 
-<b>What you get</b>
-• AM/PM session picks with spot counts
-• No ads, no tracking, no signup
+<b>Your support funds</b>
+• Servers & scraping
+• Fixes and new features
 
-<b>What support funds</b>
-• Servers
-• New features
-• Bug fixes
-
-Thanks for keeping this free for everyone.`
+Thanks for keeping it free for everyone.`
   },
 
   contactMessage() {

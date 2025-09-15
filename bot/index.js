@@ -47,13 +47,20 @@ class BotHandler {
 
   setupCallbacks() {
     // Basic navigation callbacks
-    this.bot.action('today', callbacks.menu.bind(null, this.supabase))
-    this.bot.action('tomorrow', callbacks.menu.bind(null, this.supabase))
-    this.bot.action('main', callbacks.menu.bind(null, this.supabase))
-    this.bot.action('prefs', callbacks.menu.bind(null, this.supabase))
-    this.bot.action('alerts', callbacks.menu.bind(null, this.supabase))
-    this.bot.action('help', callbacks.menu.bind(null, this.supabase))
-    this.bot.action('support', callbacks.menu.bind(null, this.supabase))
+    this.bot.action('today', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('tomorrow', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('main', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('prefs', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('alerts', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('help', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('support', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('donate', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('help_contact', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('help_feature', callbacks.navigation.bind(null, this.supabase))
+    
+    // Show more functionality
+    this.bot.action('show_more_today', callbacks.navigation.bind(null, this.supabase))
+    this.bot.action('show_more_tomorrow', callbacks.navigation.bind(null, this.supabase))
     
     // Menu navigation with prefix
     this.bot.action(/^menu_(.+)$/, callbacks.menu.bind(null, this.supabase))
@@ -74,9 +81,6 @@ class BotHandler {
     // Session filtering and display
     this.bot.action(/^filter_(.+)$/, callbacks.filters.bind(null, this.supabase))
     this.bot.action(/^session_(.+)$/, callbacks.sessions.bind(null, this.supabase))
-    
-    // Show more functionality
-    this.bot.action(/^show_more_(.+)$/, callbacks.menu.bind(null, this.supabase))
     
     // Pagination
     this.bot.action(/^page_(.+)_(\d+)$/, callbacks.pagination.bind(null, this.supabase))
