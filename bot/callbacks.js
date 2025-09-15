@@ -517,16 +517,22 @@ const callbacks = {
             reply_markup: menus.mainMenu()
           })
           
-        // Notification timing toggles
+        // Notification timing toggles (from preferences menu)
         case 'notification_toggle_1w':
         case 'notification_toggle_48h':
         case 'notification_toggle_24h':
         case 'notification_toggle_12h':
         case 'notification_toggle_2h':
-          const timingToToggle = action.split('_')[2]
+        case 'pref_notification_toggle_1w':
+        case 'pref_notification_toggle_48h':
+        case 'pref_notification_toggle_24h':
+        case 'pref_notification_toggle_12h':
+        case 'pref_notification_toggle_2h':
+          const timingToToggle = action.split('_').pop() // Get the last part (timing key)
           return await callbacks.toggleNotificationTiming(supabase, ctx, userProfile, timingToToggle)
           
         case 'notification_save':
+        case 'pref_notification_save':
           ctx.answerCbQuery('💾 Notification timings saved!')
           
           // Redirect to preferences menu
