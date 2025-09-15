@@ -203,11 +203,11 @@ Set up your preferences to get personalized surf alerts.`
     let notificationText = 'Not set'
     if (notificationFilters.length > 0) {
       const timingMap = {
-        '1w': '1 week before',
-        '48h': '48h before',
-        '24h': '24h before', 
-        '12h': '12h before',
-        '2h': '2h before'
+        '1w': '1 week',
+        '48h': '48h',
+        '24h': '24h', 
+        '12h': '12h',
+        '2h': '2h'
       }
       const timingItems = notificationFilters.map(filter => 
         timingMap[filter.timing] || filter.timing

@@ -791,8 +791,14 @@ const callbacks = {
         case 'spots_toggle_3':
         case 'spots_toggle_5':
         case 'spots_toggle_10':
-          const spotCount = parseInt(action.split('_')[2])
+        case 'pref_spots_toggle_1':
+        case 'pref_spots_toggle_2':
+        case 'pref_spots_toggle_3':
+        case 'pref_spots_toggle_5':
+        case 'pref_spots_toggle_10': {
+          const spotCount = parseInt(action.split('_')[action.includes('pref_') ? 3 : 2])
           return await callbacks.toggleUserMinSpots(supabase, ctx, userProfile, spotCount)
+        }
           
         case 'spots_save':
         case 'pref_spots_save':
