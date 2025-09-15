@@ -35,6 +35,61 @@ async function getUserProfile(supabase, telegramId) {
   return data
 }
 
+// Safe edit helpers to ignore "message is not modified" errors
+async function safeEditText(ctx, text, extra) {
+  try {
+    return await ctx.editMessageText(text, extra)
+  } catch (error) {
+    if (String(error.description || '').includes('not modified')) {
+      return // Silent success
+    }
+    throw error
+  }
+}
+
+async function safeEditMarkup(ctx, markup) {
+  try {
+    return await ctx.editMessageReplyMarkup(markup)
+  } catch (error) {
+    if (String(error.description || '').includes('not modified')) {
+      return // Silent success
+    }
+    throw error
+  }
+}
+
+// Helper function to generate time window buttons
+function generateTimeWindowButtons(currentTimes, saveCallbackData, backCallbackData) {
+  const hasAnyTime = currentTimes.length === 0
+  const timeButtons = []
+  
+  // "Any time" option
+  timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
+  
+  // Specific time windows
+  const timeWindows = [
+    { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
+    { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
+    { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
+    { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
+    { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
+  ]
+  
+  timeWindows.forEach((time, index) => {
+    const isSelected = currentTimes.some(ct => 
+      (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
+      (ct.end_time === time.end || ct.end_time === time.end + ':00')
+    )
+    const text = `${isSelected ? '✅ ' : ''}${time.desc}`
+    timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
+  })
+  
+  timeButtons.push([{ text: '💾 Save Changes', callback_data: saveCallbackData }])
+  timeButtons.push([{ text: '🔙 Back', callback_data: backCallbackData }])
+  
+  return timeButtons
+}
+
 async function createUserProfile(supabase, telegramId, username = null) {
   const { data, error } = await supabase
     .from('profiles')
@@ -66,12 +121,16 @@ const callbacks = {
     // CRITICAL: Answer callback query first to remove loading state
     await ctx.answerCbQuery()
     
+    // Check if we need user profile for this action
+    const needsProfile = /^(pref_|levels|sides|days|times|spots|digests|alerts|notif_)/.test(action)
+    const userProfile = needsProfile ? await getUserProfile(supabase, ctx.from.id) : null
+    
     try {
       switch (action) {
-        case 'main':
+        case 'main': {
           // Get session counts for useful main menu message
           const telegramId = ctx.from.id
-          const userProfile = await getUserProfile(supabase, telegramId)
+          const mainUserProfile = userProfile || await getUserProfile(supabase, telegramId)
           
           let todayCount = null
           let tomorrowCount = null
@@ -79,26 +138,26 @@ const callbacks = {
           try {
             const scraper = new WaveScheduleScraper()
             
-            if (userProfile) {
+            if (mainUserProfile) {
               // Get user preferences for filtering
-              const userLevels = userProfile.user_levels?.map(ul => ul.level) || []
-              const userSides = userProfile.user_sides?.map(us => 
+              const userLevels = mainUserProfile.user_levels?.map(ul => ul.level) || []
+              const userSides = mainUserProfile.user_sides?.map(us => 
                 us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
               ) || []
-              const userDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
-              const userTimeWindows = userProfile.user_time_windows || []
+              const userDays = mainUserProfile.user_days?.map(ud => ud.day_of_week) || []
+              const userTimeWindows = mainUserProfile.user_time_windows || []
               
               // Get today's sessions
               const todaySessions = await scraper.getTodaysFutureSessions()
               const todayFiltered = scraper.filterSessionsForUser(
                 todaySessions, userLevels, userSides, userDays, true, userTimeWindows
-              ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
+              ).filter(s => (s.spots_available || 0) >= mainUserProfile.min_spots)
               
               // Get tomorrow's sessions
               const tomorrowSessions = await scraper.getTomorrowsSessions()
               const tomorrowFiltered = scraper.filterSessionsForUser(
                 tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows
-              ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
+              ).filter(s => (s.spots_available || 0) >= mainUserProfile.min_spots)
               
               todayCount = todayFiltered.length
               tomorrowCount = tomorrowFiltered.length
@@ -120,6 +179,7 @@ const callbacks = {
             parse_mode: 'HTML',
             reply_markup: menus.mainMenu(todayCount, tomorrowCount).reply_markup
           })
+        }
           
         case 'today':
           return commands.today(supabase, ctx)
@@ -138,7 +198,7 @@ const callbacks = {
           
         // Preference menu handlers - call the existing logic directly
         case 'pref_levels':
-        case 'levels':
+        case 'levels': {
           const currentLevels = userProfile.user_levels?.map(ul => ul.level) || []
           const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
           const levelButtons = levels.map(level => {
@@ -156,9 +216,10 @@ const callbacks = {
               reply_markup: { inline_keyboard: levelButtons }
             }
           )
+        }
           
         case 'pref_sides':
-        case 'sides':
+        case 'sides': {
           const currentSides = userProfile.user_sides?.map(us => us.side) || []
           const sideButtons = [
             [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
@@ -175,9 +236,10 @@ const callbacks = {
               reply_markup: { inline_keyboard: sideButtons }
             }
           )
+        }
           
         case 'pref_days':
-        case 'days':
+        case 'days': {
           const currentDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
           const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
           const dayButtons = dayNames.map((day, index) => {
@@ -195,36 +257,12 @@ const callbacks = {
               reply_markup: { inline_keyboard: dayButtons }
             }
           )
+        }
           
         case 'pref_times':
-        case 'times':
+        case 'times': {
           const currentTimes = userProfile.user_time_windows || []
-          const hasAnyTime = currentTimes.length === 0
-          
-          // Start with "Any time" option
-          const timeButtons = []
-          timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
-          
-          // Add specific time windows
-          const timeWindows = [
-            { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
-            { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
-            { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
-            { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
-            { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
-          ]
-          
-          timeWindows.forEach((time, index) => {
-            const isSelected = currentTimes.some(ct => 
-              (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
-              (ct.end_time === time.end || ct.end_time === time.end + ':00')
-            )
-            const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-            timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
-          })
-          
-          timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
-          timeButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
+          const timeButtons = generateTimeWindowButtons(currentTimes, 'pref_time_save', 'prefs')
           
           return ctx.editMessageText(
             '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
@@ -233,9 +271,10 @@ const callbacks = {
               reply_markup: { inline_keyboard: timeButtons }
             }
           )
+        }
           
         case 'pref_spots':
-        case 'spots':
+        case 'spots': {
           const currentMinSpots = userProfile.min_spots || 1
           const spotOptions = [
             { value: 1, desc: "1+ (I'll take any spot!)" },
@@ -259,9 +298,10 @@ const callbacks = {
               reply_markup: { inline_keyboard: spotButtons }
             }
           )
+        }
           
         case 'pref_digests':
-        case 'digests':
+        case 'digests': {
           const currentDigests = userProfile.user_digest_preferences?.map(udp => udp.digest_type) || []
           const digestOptions = [
             { key: 'morning', desc: '🌅 Morning Digest (8 AM)' },
@@ -283,11 +323,12 @@ const callbacks = {
               reply_markup: { inline_keyboard: digestButtons }
             }
           )
+        }
           
-        case 'alerts':
+        case 'alerts': {
           // Go directly to notification timing settings instead of overview
           const telegramIdAlerts = ctx.from.id
-          const userProfileAlerts = await getUserProfile(supabase, telegramIdAlerts)
+          const userProfileAlerts = userProfile || await getUserProfile(supabase, telegramIdAlerts)
           
           if (!userProfileAlerts) {
             return ctx.answerCbQuery('⚠️ Set up your profile first!')
@@ -301,11 +342,12 @@ const callbacks = {
               reply_markup: menus.notificationTimingMenu(currentTimings).reply_markup
             }
           )
+        }
           
-        case 'notif_timing':
+        case 'notif_timing': {
           // Also handle direct notif_timing calls
           const telegramIdTiming = ctx.from.id
-          const userProfileTiming = await getUserProfile(supabase, telegramIdTiming)
+          const userProfileTiming = userProfile || await getUserProfile(supabase, telegramIdTiming)
           
           if (!userProfileTiming) {
             return ctx.answerCbQuery('⚠️ Set up your profile first!')
@@ -319,16 +361,18 @@ const callbacks = {
               reply_markup: menus.notificationTimingMenu(currentTimingsDirect).reply_markup
             }
           )
+        }
           
-        case 'help':
+        case 'help': {
           const helpMessage = ui.helpMessage()
           return await ctx.editMessageText(helpMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.helpMenu()
+            reply_markup: menus.helpMenu().reply_markup
           })
+        }
           
         case 'support':
-        case 'donate':
+        case 'donate': {
           const supportMessage = ui.supportMessage()
           return await ctx.editMessageText(supportMessage, {
             parse_mode: 'HTML',
@@ -342,8 +386,9 @@ const callbacks = {
               ]
             }
           })
+        }
           
-        case 'help_contact':
+        case 'help_contact': {
           const contactMessage = ui.contactMessage()
           return await ctx.editMessageText(contactMessage, {
             parse_mode: 'HTML',
@@ -354,8 +399,9 @@ const callbacks = {
               ]
             }
           })
+        }
           
-        case 'help_feature':
+        case 'help_feature': {
           const featureMessage = ui.featureRequestMessage()
           return await ctx.editMessageText(featureMessage, {
             parse_mode: 'HTML',
@@ -366,6 +412,7 @@ const callbacks = {
               ]
             }
           })
+        }
           
         default:
           return ctx.answerCbQuery('Unknown navigation option')
@@ -401,14 +448,13 @@ const callbacks = {
         case 'notifications':
           return commands.notifications(supabase, ctx)
           
-        case 'help':
+        case 'help': {
           const helpMessage = ui.helpMessage()
           return await ctx.editMessageText(helpMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.helpMenu()
+            reply_markup: menus.helpMenu().reply_markup
           })
-          
-          
+        }
           
         default:
           return ctx.answerCbQuery('Unknown menu option')
@@ -441,7 +487,7 @@ const callbacks = {
       // All preference menu handlers are now handled in the navigation section
       // This function handles preference toggles and saves
       switch (action) {
-        case 'levels':
+        case 'levels': {
           const currentLevels = userProfile.user_levels?.map(ul => ul.level) || []
           const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
           const levelButtons = levels.map(level => {
@@ -459,8 +505,9 @@ const callbacks = {
               reply_markup: { inline_keyboard: levelButtons }
             }
           )
+        }
           
-        case 'sides':
+        case 'sides': {
           const currentSides = userProfile.user_sides?.map(us => us.side) || []
           const sideButtons = [
             [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
@@ -477,6 +524,7 @@ const callbacks = {
               reply_markup: { inline_keyboard: sideButtons }
             }
           )
+        }
           
         case 'days':
           const currentDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
@@ -498,39 +546,14 @@ const callbacks = {
           )
           
         case 'times':
-          const currentTimes = userProfile.user_time_windows || []
-          const hasAnyTime = currentTimes.length === 0
-          
-          // Start with "Any time" option
-          const timeButtons = []
-          timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
-          
-          // Add specific time windows
-          const timeWindows = [
-            { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
-            { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
-            { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
-            { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
-            { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
-          ]
-          
-          timeWindows.forEach((time, index) => {
-            const isSelected = currentTimes.some(ct => 
-              (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
-              (ct.end_time === time.end || ct.end_time === time.end + ':00')
-            )
-            const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-            timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
-          })
-          
-          timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
-          timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+          const currentTimesPrefs = userProfile.user_time_windows || []
+          const timeButtonsPrefs = generateTimeWindowButtons(currentTimesPrefs, 'pref_time_save', 'menu_preferences')
           
           return ctx.editMessageText(
             '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
             {
               parse_mode: 'HTML',
-              reply_markup: { inline_keyboard: timeButtons }
+              reply_markup: { inline_keyboard: timeButtonsPrefs }
             }
           )
           
@@ -559,7 +582,7 @@ const callbacks = {
             }
           )
           
-        case 'notifications':
+        case 'notifications': {
           const currentNotifications = userProfile.user_digest_filters?.map(un => un.timing) || []
           const timingOptions = [
             { key: '1w', desc: '📅 1 week before' },
@@ -584,6 +607,7 @@ const callbacks = {
               reply_markup: { inline_keyboard: notificationButtons }
             }
           )
+        }
           
         case 'digests':
           const currentDigests = userProfile.user_digest_preferences?.map(udp => udp.digest_type) || []
@@ -620,15 +644,16 @@ const callbacks = {
             }
           })
           
-        case 'notifications':
+        case 'notif_timing_prefs': {
           const currentNotificationTimings = userProfile.user_digest_filters?.map(un => un.timing) || []
           return ctx.editMessageText(
             '🔔 <b>Notification Timing</b>\n\nHow many hours before a session do you want alerts?',
             {
               parse_mode: 'HTML',
-              reply_markup: menus.notificationTimingMenu(currentNotificationTimings)
+              reply_markup: menus.notificationTimingMenu(currentNotificationTimings).reply_markup
             }
           )
+        }
           
         case 'reset':
           return ctx.editMessageText(
@@ -643,13 +668,14 @@ const callbacks = {
           )
           
         // Level toggles
-        case 'level_toggle_beginner':
-        case 'level_toggle_improver':
-        case 'level_toggle_intermediate':
-        case 'level_toggle_advanced':
-        case 'level_toggle_expert':
-          const levelToToggle = action.split('_')[2]
+        case 'pref_level_toggle_beginner':
+        case 'pref_level_toggle_improver':
+        case 'pref_level_toggle_intermediate':
+        case 'pref_level_toggle_advanced':
+        case 'pref_level_toggle_expert': {
+          const levelToToggle = action.split('_')[3] // Updated index for pref_level_toggle_*
           return await callbacks.toggleUserLevel(supabase, ctx, userProfile, levelToToggle)
+        }
           
         // Save level changes
         case 'level_save':
@@ -668,11 +694,12 @@ const callbacks = {
           })
           
         // Side toggles
-        case 'side_toggle_L':
-        case 'side_toggle_R':
-        case 'side_toggle_A':
-          const sideToToggle = action.split('_')[2]
+        case 'pref_side_toggle_L':
+        case 'pref_side_toggle_R':
+        case 'pref_side_toggle_A': {
+          const sideToToggle = action.split('_')[3] // Updated index for pref_side_toggle_*
           return await callbacks.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
+        }
           
         case 'side_save':
         case 'pref_side_save':
@@ -687,15 +714,16 @@ const callbacks = {
           })
           
         // Day toggles
-        case 'day_toggle_0':
-        case 'day_toggle_1':
-        case 'day_toggle_2':
-        case 'day_toggle_3':
-        case 'day_toggle_4':
-        case 'day_toggle_5':
-        case 'day_toggle_6':
-          const dayToToggle = parseInt(action.split('_')[2])
+        case 'pref_day_toggle_0':
+        case 'pref_day_toggle_1':
+        case 'pref_day_toggle_2':
+        case 'pref_day_toggle_3':
+        case 'pref_day_toggle_4':
+        case 'pref_day_toggle_5':
+        case 'pref_day_toggle_6': {
+          const dayToToggle = parseInt(action.split('_')[3]) // Updated index for pref_day_toggle_*
           return await callbacks.toggleUserDay(supabase, ctx, userProfile, dayToToggle)
+        }
           
         case 'day_save':
           ctx.answerCbQuery('💾 Surf days saved!')
@@ -704,83 +732,57 @@ const callbacks = {
           const mainMessageDays = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessageDays, {
             parse_mode: 'HTML',
-            reply_markup: menus.mainMenu()
+            reply_markup: menus.mainMenu().reply_markup
           })
           
-        // Time toggles - Any time option
-        case 'time_toggle_any':
-          // Clear all existing time windows (Any time = no specific restrictions)
-          await supabase.from('user_time_windows').delete().eq('user_id', userProfile.id)
-          ctx.answerCbQuery('✅ Set to Any Time!')
-          
-          // Refresh the time selection screen to show the updated checkboxes
-          const updatedTimeProfile = await getUserProfile(supabase, ctx.from.id)
-          const currentTimesAny = updatedTimeProfile.user_time_windows || []
-          const hasAnyTimeNow = currentTimesAny.length === 0
-          
-          // Start with "Any time" option
-          const timeButtonsAny = []
-          timeButtonsAny.push([{ text: `${hasAnyTimeNow ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
-          
-          // Add specific time windows
-          const timeWindowsAny = [
-            { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
-            { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
-            { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
-            { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
-            { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
-          ]
-          
-          timeWindowsAny.forEach((time, index) => {
-            const isSelected = currentTimesAny.some(ct => 
-              (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
-              (ct.end_time === time.end || ct.end_time === time.end + ':00')
-            )
-            const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-            timeButtonsAny.push([{ text, callback_data: `pref_time_toggle_${index}` }])
-          })
-          
-          timeButtonsAny.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
-          timeButtonsAny.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
-          
-          return ctx.editMessageText(
-            '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
-            {
-              parse_mode: 'HTML',
-              reply_markup: { inline_keyboard: timeButtonsAny }
-            }
-          )
           
         // Time toggles (using numeric IDs instead of time strings to avoid parsing issues)
-        case 'time_toggle_0': // 06:00-09:00
-        case 'time_toggle_1': // 09:00-12:00  
-        case 'time_toggle_2': // 12:00-15:00
-        case 'time_toggle_3': // 15:00-18:00
-        case 'time_toggle_4': // 18:00-21:00
-          const timeId = parseInt(action.split('_')[2])
-          const availableTimeWindows = [
-            { start: '06:00', end: '09:00' },
-            { start: '09:00', end: '12:00' },
-            { start: '12:00', end: '15:00' },
-            { start: '15:00', end: '18:00' },
-            { start: '18:00', end: '21:00' }
-          ]
-          const selectedTimeWindow = availableTimeWindows[timeId]
-          return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, selectedTimeWindow.start, selectedTimeWindow.end)
+        case 'pref_time_toggle_0': // 06:00-09:00
+        case 'pref_time_toggle_1': // 09:00-12:00  
+        case 'pref_time_toggle_2': // 12:00-15:00
+        case 'pref_time_toggle_3': // 15:00-18:00
+        case 'pref_time_toggle_4': // 18:00-21:00
+        case 'pref_time_toggle_any': {
+          if (action === 'pref_time_toggle_any') {
+            // Clear all existing time windows (Any time = no specific restrictions)
+            await supabase.from('user_time_windows').delete().eq('user_id', userProfile.id)
+            ctx.answerCbQuery('✅ Set to Any Time!')
+            
+            // Refresh the time selection screen to show the updated checkboxes
+            const updatedTimeProfile = await getUserProfile(supabase, ctx.from.id)
+            const currentTimesAny = updatedTimeProfile.user_time_windows || []
+            const timeButtonsAny = generateTimeWindowButtons(currentTimesAny, 'pref_time_save', 'menu_preferences')
+            
+            return ctx.editMessageText(
+              '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
+              {
+                parse_mode: 'HTML',
+                reply_markup: { inline_keyboard: timeButtonsAny }
+              }
+            )
+          } else {
+            const timeId = parseInt(action.split('_')[3]) // Updated index for pref_time_toggle_*
+            const availableTimeWindows = [
+              { start: '06:00', end: '09:00' },
+              { start: '09:00', end: '12:00' },
+              { start: '12:00', end: '15:00' },
+              { start: '15:00', end: '18:00' },
+              { start: '18:00', end: '21:00' }
+            ]
+            const selectedTimeWindow = availableTimeWindows[timeId]
+            return await callbacks.toggleUserTimeWindow(supabase, ctx, userProfile, selectedTimeWindow.start, selectedTimeWindow.end)
+          }
+        }
           
         case 'time_save':
-          const savedTimesMessage = ui.createSavedPreferencesMessage('time windows')
-          return await ctx.editMessageText(savedTimesMessage, {
+          await ctx.answerCbQuery('✅ Time windows saved!')
+          
+          // Refresh and show preferences
+          const updatedTimeSaveProfile = await getUserProfile(supabase, telegramId)
+          const prefsMessageTime = ui.createPreferencesMessage(updatedTimeSaveProfile)
+          return await ctx.editMessageText(prefsMessageTime, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
-                [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
-                [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
-                [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
+            reply_markup: menus.preferencesMenu().reply_markup
           })
           
         // Min spots toggles (new toggle + save pattern)
@@ -923,7 +925,7 @@ const callbacks = {
         case 'digest_toggle_morning':
         case 'digest_toggle_evening':
           const digestType = action.split('_')[2]
-          return await this.toggleDigestPreference(supabase, ctx, userProfile, digestType)
+          return await callbacks.toggleDigestPreference(supabase, ctx, userProfile, digestType)
           
         case 'timing_toggle_1w':
         case 'timing_toggle_48h':
@@ -941,7 +943,7 @@ const callbacks = {
           const mainMessageTiming = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessageTiming, {
             parse_mode: 'HTML',
-            reply_markup: menus.mainMenu()
+            reply_markup: menus.mainMenu().reply_markup
           })
           
         case 'digest_save':
@@ -951,7 +953,7 @@ const callbacks = {
           const mainMessageDigest = ui.mainMenuMessage()
           return await ctx.editMessageText(mainMessageDigest, {
             parse_mode: 'HTML',
-            reply_markup: menus.mainMenu()
+            reply_markup: menus.mainMenu().reply_markup
           })
           
         default:
@@ -1009,7 +1011,7 @@ const callbacks = {
             '⚙️ <b>Detailed Setup</b>\n\nLet\'s configure everything step by step.\n\nStarting with your skill level:',
             {
               parse_mode: 'HTML',
-              reply_markup: menus.levelSelectionMenu()
+              reply_markup: menus.setupLevelSelectionMenu([])
             }
           )
           
@@ -1190,7 +1192,7 @@ const callbacks = {
         case 'all_tomorrow':
           // Show all sessions without user filtering
           const allTimeframe = action.split('_')[1]
-          return this.showAllSessions(supabase, ctx, allTimeframe)
+          return callbacks.showAllSessions(supabase, ctx, allTimeframe)
           
         default:
           return ctx.answerCbQuery('Unknown filter option')
@@ -1204,7 +1206,7 @@ const callbacks = {
   /**
    * Session management callbacks
    */
-  async sessions(supabase, ctx) {
+  async sessions(_supabase, ctx) {
     const action = ctx.match[1]
     return ctx.answerCbQuery('Session action not implemented yet')
   },
@@ -1212,7 +1214,7 @@ const callbacks = {
   /**
    * Pagination callbacks
    */
-  async pagination(supabase, ctx) {
+  async pagination(_supabase, ctx) {
     const action = ctx.match[1]
     const page = parseInt(ctx.match[2])
     return ctx.answerCbQuery(`Pagination: ${action} page ${page}`)
@@ -1226,7 +1228,7 @@ const callbacks = {
       ui.mainMenuMessage(),
       {
         parse_mode: 'HTML',
-        reply_markup: menus.mainMenu()
+        reply_markup: menus.mainMenu().reply_markup
       }
     )
   },
@@ -1234,7 +1236,7 @@ const callbacks = {
   /**
    * Back to specific menu navigation
    */
-  async backTo(supabase, ctx) {
+  async backTo(_supabase, ctx) {
     const target = ctx.match[1]
     return ctx.answerCbQuery(`Back to ${target} not implemented yet`)
   },
@@ -1401,7 +1403,7 @@ const callbacks = {
   },
 
   // New setup wizard helper methods
-  async toggleSetupLevel(supabase, ctx, level) {
+  async toggleSetupLevel(_supabase, ctx, level) {
     ctx.session = ctx.session || {}
     ctx.session.setup = ctx.session.setup || { levels: [] }
     
@@ -1419,7 +1421,7 @@ const callbacks = {
     )
   },
   
-  async toggleSetupSide(supabase, ctx, side) {
+  async toggleSetupSide(_supabase, ctx, side) {
     ctx.session = ctx.session || {}
     ctx.session.setup = ctx.session.setup || { sides: [] }
     
@@ -1437,7 +1439,7 @@ const callbacks = {
     )
   },
   
-  async toggleSetupDay(supabase, ctx, day) {
+  async toggleSetupDay(_supabase, ctx, day) {
     ctx.session = ctx.session || {}
     ctx.session.setup = ctx.session.setup || { days: [] }
     
@@ -1455,7 +1457,7 @@ const callbacks = {
     )
   },
   
-  async toggleSetupTime(supabase, ctx, timeSlot) {
+  async toggleSetupTime(_supabase, ctx, timeSlot) {
     ctx.session = ctx.session || {}
     ctx.session.setup = ctx.session.setup || { timeWindows: [] }
     
@@ -1571,13 +1573,13 @@ const callbacks = {
       
       return ctx.editMessageText(sessionMessage, {
         parse_mode: 'HTML',
-        reply_markup: menus.sessionMenu(timeframe, false)
+        reply_markup: menus.sessionMenu(timeframe, false).reply_markup
       })
     } catch (error) {
       return ctx.editMessageText(
         `❌ Error loading ${timeframe}'s sessions. Please try again.`,
         {
-          reply_markup: menus.sessionMenu(timeframe, false)
+          reply_markup: menus.sessionMenu(timeframe, false).reply_markup
         }
       )
     }
@@ -1719,32 +1721,7 @@ const callbacks = {
       const currentTimes = updatedProfile.user_time_windows || []
       console.log(`📊 Current time windows after toggle: ${currentTimes.map(t => `${t.start_time}-${t.end_time}`).join(', ')}`)
       
-      // Check if "Any Time" is selected (no specific time windows)
-      const hasAnyTime = currentTimes.length === 0
-      
-      // Start with "Any time" option
-      const timeButtons = []
-      timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
-      
-      // Add specific time windows
-      const timeWindows = [
-        { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
-        { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
-        { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
-        { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
-        { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
-      ]
-      
-      timeWindows.forEach((time, index) => {
-        const isSelected = currentTimes.some(ct => 
-          (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
-          (ct.end_time === time.end || ct.end_time === time.end + ':00')
-        )
-        const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-        timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
-      })
-      timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
-      timeButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+      const timeButtons = generateTimeWindowButtons(currentTimes, 'pref_time_save', 'menu_preferences')
       
       return ctx.editMessageReplyMarkup({ inline_keyboard: timeButtons })
     } catch (error) {
@@ -1946,7 +1923,7 @@ const callbacks = {
     }
   },
 
-  async toggleUserMinSpots(supabase, ctx, userProfile, spotCount) {
+  async toggleUserMinSpots(_supabase, ctx, userProfile, spotCount) {
     // CRITICAL: Answer callback query first to dismiss loading state
     await ctx.answerCbQuery()
     
@@ -2030,13 +2007,15 @@ const callbacks = {
         case 'toggle_morning':
         case 'toggle_evening':
           const digestType = action.split('_')[1]
-          return await this.toggleDigestPreference(supabase, ctx, userProfile, digestType)
+          return await callbacks.toggleDigestPreference(supabase, ctx, userProfile, digestType)
           
         case 'save':
           await ctx.answerCbQuery('💾 Digest preferences saved!')
-          const savedMessage = ui.createSavedPreferencesMessage('digest preferences')
           
-          return ctx.editMessageText(savedMessage, {
+          // Refresh and show preferences
+          const updatedDigestProfile = await getUserProfile(supabase, telegramId)
+          const prefsMessageDigest = ui.createPreferencesMessage(updatedDigestProfile)
+          return ctx.editMessageText(prefsMessageDigest, {
             parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
@@ -2064,7 +2043,7 @@ const callbacks = {
   /**
    * Test callbacks
    */
-  async test(supabase, ctx) {
+  async test(_supabase, ctx) {
     const action = ctx.match[1]
     await ctx.answerCbQuery()
     
