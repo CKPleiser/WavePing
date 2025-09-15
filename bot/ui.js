@@ -409,7 +409,10 @@ Tell me the problem, what you want the bot to do, and why it helps.`
   createSavedPreferencesMessage(settingType = null) {
     let message = `✅ <b>Saved!</b> Your ${settingType || 'preferences'} have been updated.\n\n`
     
-    message += `<b>Want to adjust more settings or see your sessions?</b>`
+    message += `<b>What's next?</b>\n`
+    message += `• <b>Done</b> — Back to main menu\n`
+    message += `• <b>Edit More</b> — Quick access to other common settings\n`
+    message += `• <b>Back to Sessions</b> — See today's surf sessions (if available)`
     
     return message
   },
@@ -420,14 +423,14 @@ Tell me the problem, what you want the bot to do, and why it helps.`
   createEditTrayMessage() {
     return `⚙️ <b>Quick Settings</b>
 
-Most surfers also adjust these settings:
+<b>Common next steps:</b>
 
-<b>🎯 Skill Levels</b> — Add beginner, advanced, etc.
-<b>🕐 Time Windows</b> — Narrow down preferred hours  
-<b>💺 Min Spots</b> — How many spots you need available
-<b>🔔 Notifications</b> — When to get alerts
+<b>🎯 Skill Levels</b> — Add beginner/advanced to your intermediate default
+<b>🕐 Time Windows</b> — Narrow from "6AM-9PM" to your preferred hours  
+<b>💺 Min Spots</b> — Change from "1+" if you want more availability
+<b>🔔 Notifications</b> — Adjust when you get alerts (currently 24h before)
 
-<i>Choose what to adjust next:</i>`
+<i>What would you like to customize?</i>`
   },
 
   /**
