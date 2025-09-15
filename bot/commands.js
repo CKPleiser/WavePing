@@ -123,11 +123,19 @@ const commands = {
           tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows
         ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
         
-        sessionSummary = `\n\n**Today:** ${todayFiltered.length} surf session${todayFiltered.length !== 1 ? 's' : ''} match your preferences\n**Tomorrow:** ${tomorrowFiltered.length} surf session${tomorrowFiltered.length !== 1 ? 's' : ''} match your preferences`
+        const todayText = todayFiltered.length === 0 ? 'No matches today' : 
+          todayFiltered.length === 1 ? '1 session ready to book!' :
+          `${todayFiltered.length} sessions ready to book!`
+          
+        const tomorrowText = tomorrowFiltered.length === 0 ? 'No matches tomorrow' :
+          tomorrowFiltered.length === 1 ? '1 session available' :
+          `${tomorrowFiltered.length} sessions available`
+          
+        sessionSummary = `\n\n**Today:** ${todayText}\n**Tomorrow:** ${tomorrowText}`
       } catch (error) {
         // Silently ignore if we can't get sessions
         console.log('Could not fetch sessions for summary:', error.message)
-        sessionSummary = '\n\nCheck today and tomorrow for available sessions'
+        sessionSummary = '\n\n**Today:** Check for available sessions\n**Tomorrow:** Check for available sessions'
       }
       
       // Welcome back existing user
