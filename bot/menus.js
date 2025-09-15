@@ -129,12 +129,6 @@ const menus = {
   helpMenu() {
     return Markup.inlineKeyboard([
       [
-        Markup.button.callback('💬 Contact Developer', 'help_contact')
-      ],
-      [
-        Markup.button.callback('📈 Request a Feature', 'help_feature')
-      ],
-      [
         Markup.button.callback('🏠 Main Menu', 'main')
       ]
     ])

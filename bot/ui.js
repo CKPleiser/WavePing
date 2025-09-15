@@ -139,14 +139,14 @@ Your Setup and Alerts & Digests below.`
     // Levels - clean, no emojis
     const levels = userProfile.user_levels?.map(ul => this.capitalizeWords(ul.level)) || []
     const levelText = levels.length > 0 ? levels.join(', ') : 'Not set'
-    message += `**Level:** ${levelText}\n`
+    message += `<b>Level:</b> ${levelText}\n`
     
     // Sides - clean
     const sides = userProfile.user_sides?.map(us => 
       us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
     ) || []
     const sideText = sides.length > 0 ? sides.join(', ') : 'Any'
-    message += `**Wave side:** ${sideText}\n`
+    message += `<b>Wave side:</b> ${sideText}\n`
     
     // Days - compact format
     const days = userProfile.user_days?.map(ud => {
@@ -161,18 +161,36 @@ Your Setup and Alerts & Digests below.`
     } else if (days.length > 0 && days.length < 7) {
       daysText = days.join(', ')
     }
-    message += `**Days:** ${daysText}\n`
+    message += `<b>Days:</b> ${daysText}\n`
     
     // Time windows - chip format
     const times = userProfile.user_time_windows?.map(tw => 
       this.chipTimeWindow(tw.start_time, tw.end_time)
     ) || []
     const timesText = times.length > 0 ? times.join(', ') : 'Any'
-    message += `**Time windows:** ${timesText}\n`
+    message += `<b>Time windows:</b> ${timesText}\n`
     
     // Min spots
     const minSpots = userProfile.min_spots || 1
-    message += `**Min spots:** ${minSpots}+\n`
+    message += `<b>Min spots:</b> ${minSpots}+\n`
+    
+    // Notification timing preferences - show when user gets alerts
+    const notificationFilters = userProfile.user_digest_filters || []
+    let notificationText = 'Not set'
+    if (notificationFilters.length > 0) {
+      const timingMap = {
+        '1w': '1 week before',
+        '48h': '48h before',
+        '24h': '24h before', 
+        '12h': '12h before',
+        '2h': '2h before'
+      }
+      const timingItems = notificationFilters.map(filter => 
+        timingMap[filter.timing] || filter.timing
+      )
+      notificationText = timingItems.join(', ')
+    }
+    message += `<b>Notification timing:</b> ${notificationText}\n`
     
     // Digest preferences - clean format
     const digestPrefs = userProfile.user_digest_preferences || []
@@ -184,13 +202,13 @@ Your Setup and Alerts & Digests below.`
       })
       digestText = digestItems.join(', ')
     }
-    message += `**Digests:** ${digestText}\n`
+    message += `<b>Digests:</b> ${digestText}\n`
     
     // Alerts status - clean
     const alertsStatus = userProfile.notification_enabled ? 'On' : 'Off'
-    message += `**Alerts:** ${alertsStatus}\n`
+    message += `<b>Alerts:</b> ${alertsStatus}\n`
     
-    message += `\n*Tap a setting below to change it:*`
+    message += `\n<i>Tap a setting below to change it:</i>`
     
     return message
   },

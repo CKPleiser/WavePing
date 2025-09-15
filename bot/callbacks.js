@@ -161,6 +161,12 @@ const callbacks = {
     
     try {
       switch (action) {
+        case 'today':
+          return commands.today(supabase, ctx)
+          
+        case 'tomorrow':
+          return commands.tomorrow(supabase, ctx)
+          
         case 'preferences':
         case 'menu_preferences':
           return commands.preferences(supabase, ctx)

@@ -83,12 +83,12 @@ const commands = {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
-            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
-            [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
-            [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
-            [{ text: '❓ Help & Support', callback_data: 'menu_help' }],
-            [{ text: '☕ Buy the dev a coffee', url: 'https://buymeacoffee.com/driftwithcaz' }]
+            [{ text: '🌊 Today at The Wave', callback_data: 'today' }],
+            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'tomorrow' }],
+            [{ text: '🛠 Your Setup', callback_data: 'prefs' }],
+            [{ text: '🔔 Alerts & Digests', callback_data: 'alerts' }],
+            [{ text: '❓ Help & Feedback', callback_data: 'help' }],
+            [{ text: '☕ Donate', callback_data: 'donate' }]
           ]
         }
       })
@@ -152,8 +152,8 @@ const commands = {
         parse_mode: 'HTML',  
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
-            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }]
+            [{ text: '🌊 Today at The Wave', callback_data: 'today' }],
+            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'tomorrow' }]
           ]
         }
       })
