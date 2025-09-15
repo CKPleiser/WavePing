@@ -1444,30 +1444,28 @@ const callbacks = {
   
   async toggleNotificationTiming(supabase, ctx, userProfile, timingKey) {
     try {
-      const { data: existing } = await supabase
+      console.log(`🔄 Setting notification timing: ${timingKey} for user ${userProfile.id} (single-select)`)
+      
+      // Single-select: remove all existing timings first, then add the selected one
+      await supabase
         .from('user_digest_filters')
-        .select('timing')
+        .delete()
         .eq('user_id', userProfile.id)
-        .eq('timing', timingKey)
-        .single()
+      
+      // Add the new selection
+      await supabase
+        .from('user_digest_filters')
+        .insert({
+          user_id: userProfile.id,
+          timing: timingKey
+        })
 
-      if (existing) {
-        await supabase
-          .from('user_digest_filters')
-          .delete()
-          .eq('user_id', userProfile.id)
-          .eq('timing', timingKey)
-      } else {
-        await supabase
-          .from('user_digest_filters')
-          .insert({
-            user_id: userProfile.id,
-            timing: timingKey
-          })
-      }
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       const updatedProfile = await getUserProfile(supabase, ctx.from.id)
       const currentTimings = updatedProfile.user_digest_filters?.map(un => un.timing) || []
+      console.log(`📊 Current timing after toggle: ${currentTimings.join(', ')}`)
       
       return ctx.editMessageReplyMarkup(
         menus.notificationTimingMenu(currentTimings).reply_markup
