@@ -59,10 +59,11 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway
-        run: railway up
+        run: |
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway up
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE_ID }}
 
   setup-database:
     name: Deploy Database Changes
