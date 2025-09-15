@@ -50,7 +50,50 @@ async function createUserProfile(supabase, telegramId, username = null) {
     return null
   }
   
+  // Apply sensible defaults for new users
+  await applyDefaultSetup(supabase, data.id)
+  
   return data
+}
+
+async function applyDefaultSetup(supabase, userId) {
+  try {
+    // Default skill levels: Intermediate (most common)
+    await supabase.from('user_levels').insert([
+      { user_id: userId, level: 'intermediate' }
+    ])
+    
+    // Default wave side: Any side
+    await supabase.from('user_sides').insert([
+      { user_id: userId, side: 'A' }
+    ])
+    
+    // Default days: All days (Mon-Sun)
+    const allDays = [0, 1, 2, 3, 4, 5, 6].map(day => ({
+      user_id: userId,
+      day_of_week: day
+    }))
+    await supabase.from('user_days').insert(allDays)
+    
+    // Default time window: All day (6am-9pm)
+    await supabase.from('user_time_windows').insert([
+      { user_id: userId, start_time: '06:00', end_time: '21:00' }
+    ])
+    
+    // Default notification: 24h before sessions
+    await supabase.from('user_digest_filters').insert([
+      { user_id: userId, timing: '24h' }
+    ])
+    
+    // Default digest: Morning digest
+    await supabase.from('user_digest_preferences').insert([
+      { user_id: userId, digest_type: 'morning' }
+    ])
+    
+    console.log(`✅ Applied default setup for user ${userId}`)
+  } catch (error) {
+    console.error('Error applying default setup:', error)
+  }
 }
 
 const commands = {
@@ -82,12 +125,9 @@ const commands = {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌊 Today at The Wave', callback_data: 'today' }],
-            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'tomorrow' }],
-            [{ text: '🛠 Your Setup', callback_data: 'prefs' }],
-            [{ text: '🔔 Alerts & Digests', callback_data: 'alerts' }],
-            [{ text: '❓ Help & Feedback', callback_data: 'help' }],
-            [{ text: '☕ Donate', callback_data: 'donate' }]
+            [{ text: '🏄‍♂️ See Today\'s Sessions', callback_data: 'today' }],
+            [{ text: '⚙️ Customize My Setup', callback_data: 'prefs' }],
+            [{ text: '🔔 Notification Settings', callback_data: 'alerts' }]
           ]
         }
       })

@@ -12,14 +12,17 @@ const ui = {
 
 <b>Your Personal Surf Assistant for The Wave Bristol</b>
 
-Get instant notifications when surf sessions matching your preferences become available!
+I've set you up with smart defaults to get you started right away:
 
-<b>What WavePing does for you:</b>
-• Smart notifications for your preferred sessions
-• Daily surf digests delivered when you want them
-• Personalized recommendations based on your skill level
+<b>✅ Your Default Setup:</b>
+• <b>Level:</b> Intermediate
+• <b>Side:</b> Any side
+• <b>Days:</b> All week
+• <b>Times:</b> 6:00 AM - 9:00 PM
+• <b>Notifications:</b> 24h before sessions
+• <b>Digest:</b> Morning summary (8 AM)
 
-<b>Ready to catch your perfect wave?</b>`
+<b>Ready to see today's sessions or customize your setup?</b>`
   },
 
   /**
@@ -133,7 +136,19 @@ Your Setup and Alerts & Digests below.`
    * Preferences display
    */
   createPreferencesMessage(userProfile) {
-    let message = `🛠 <b>Your Setup</b>\n\n`
+    let message = `⚙️ <b>Your Setup</b>\n\n`
+    
+    // Check if user has default setup
+    const hasDefaultSetup = userProfile.user_levels?.length === 1 && 
+                           userProfile.user_levels[0].level === 'intermediate' &&
+                           userProfile.user_sides?.length === 1 &&
+                           userProfile.user_sides[0].side === 'A' &&
+                           userProfile.user_days?.length === 7
+                           
+    if (hasDefaultSetup) {
+      message += `<i>You're using our smart defaults - perfect for getting started!</i>\n\n`
+    }
+    
     
     // Levels - clean, no emojis
     const levels = userProfile.user_levels?.map(ul => this.capitalizeWords(ul.level)) || []
