@@ -116,13 +116,13 @@ class DigestService {
     
     // Header based on digest type
     if (digestType === 'morning') {
-      message = `🌅 **Good Morning, Wave Rider!** ☀️\n\n`
+      message = `🌅 <b>Good Morning, Wave Rider!</b> ☀️\n\n`
     } else {
-      message = `🌇 **Evening Wave Report** 🌊\n\n`
+      message = `🌇 <b>Evening Wave Report</b> 🌊\n\n`
     }
     
     // Session count and page info
-    message += `🌊 **${timeframeLabel.toUpperCase()}** (${sessions.length} match${sessions.length === 1 ? '' : 'es'})`
+    message += `🌊 <b>${timeframeLabel.toUpperCase()}</b> (${sessions.length} match${sessions.length === 1 ? '' : 'es'})`
     if (totalPages > 1) {
       message += ` - Page ${page}/${totalPages}`
     }
@@ -141,8 +141,8 @@ class DigestService {
     })
     
     // Links
-    message += `[🏄‍♂️ <b>Book at The Wave</b>](https://ticketing.thewave.com/)\n\n`
-    message += `[☕ <b>Support WavePing</b>](https://buymeacoffee.com/driftwithcaz)\n\n`
+    message += `<a href="https://ticketing.thewave.com/">🏄‍♂️ <b>Book at The Wave</b></a>\n\n`
+    message += `<a href="https://buymeacoffee.com/driftwithcaz">☕ <b>Support WavePing</b></a>\n\n`
     
     // Commands
     if (digestType === 'morning') {
@@ -245,7 +245,7 @@ class DigestService {
         // Store sessions in cache for pagination (you might want to use Redis or similar)
         // For now, we'll need to refetch when paginating
         
-        const options = { parse_mode: 'Markdown' }
+        const options = { parse_mode: 'HTML' }
         if (keyboard) {
           options.reply_markup = keyboard.reply_markup
         }
@@ -320,7 +320,7 @@ class DigestService {
           ? this.createDigestPaginationKeyboard(1, totalPages, 'evening', timeframeCode)
           : undefined
 
-        const options = { parse_mode: 'Markdown' }
+        const options = { parse_mode: 'HTML' }
         if (keyboard) {
           options.reply_markup = keyboard.reply_markup
         }
@@ -350,7 +350,7 @@ class DigestService {
    * Get quick commands for morning digest
    */
   getQuickCommands() {
-    return `💡 *Quick Commands:*\n` +
+    return `💡 <b>Quick Commands:</b>\n` +
            `• /today - See all today's sessions\n` +
            `• /tomorrow - Check tomorrow's lineup\n` +
            `• /setup - Update your preferences\n\n` +
@@ -361,7 +361,7 @@ class DigestService {
    * Get quick commands for evening digest
    */
   getEveningCommands() {
-    return `💡 *Plan Your Sessions:*\n` +
+    return `💡 <b>Plan Your Sessions:</b>\n` +
            `• /tomorrow - Full tomorrow schedule\n` +
            `• /setup - Update preferences\n\n` +
            `🌙 Rest well, wave rider! 🏄‍♂️`
@@ -437,7 +437,7 @@ class DigestService {
         ? this.createDigestPaginationKeyboard(validPage, totalPages, digestType, timeframeCode)
         : undefined
       
-      const options = { parse_mode: 'Markdown' }
+      const options = { parse_mode: 'HTML' }
       if (keyboard) {
         options.reply_markup = keyboard.reply_markup
       }
