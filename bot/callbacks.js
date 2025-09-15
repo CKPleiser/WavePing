@@ -1473,9 +1473,36 @@ const callbacks = {
       const currentTimings = updatedProfile.user_digest_filters?.map(un => un.timing) || []
       console.log(`📊 Current timing after toggle: ${currentTimings.join(', ')}`)
       
-      return ctx.editMessageReplyMarkup(
-        menus.notificationTimingMenu(currentTimings).reply_markup
-      )
+      // Regenerate the correct menu based on which context called this function
+      // Check if we're in preferences context by looking at the original callback
+      const originalCallback = ctx.callbackQuery?.data || ''
+      const isPreferencesContext = originalCallback.startsWith('pref_')
+      
+      if (isPreferencesContext) {
+        // Regenerate preferences-style buttons
+        const timingOptions = [
+          { key: '1w', desc: '📅 1 week before' },
+          { key: '48h', desc: '🌅 48 hours before' },
+          { key: '24h', desc: '📅 24 hours before' },
+          { key: '12h', desc: '🌅 12 hours before' },
+          { key: '2h', desc: '⏰ 2 hours before' }
+        ]
+        
+        const notificationButtons = timingOptions.map(timing => {
+          const isSelected = currentTimings.includes(timing.key)
+          const text = `${isSelected ? '✅ ' : ''}${timing.desc}`
+          return [{ text, callback_data: `pref_notification_toggle_${timing.key}` }]
+        })
+        notificationButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_notification_save' }])
+        notificationButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
+        
+        return ctx.editMessageReplyMarkup({ inline_keyboard: notificationButtons })
+      } else {
+        // Use the standard notification timing menu
+        return ctx.editMessageReplyMarkup(
+          menus.notificationTimingMenu(currentTimings).reply_markup
+        )
+      }
     } catch (error) {
       console.error('Toggle notification timing error:', error)
       return ctx.answerCbQuery('Error updating notification timing')
