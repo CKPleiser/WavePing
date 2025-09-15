@@ -803,7 +803,7 @@ const callbacks = {
         case 'setup_level_toggle_advanced':
         case 'setup_level_toggle_expert':
           const levelToToggle = action.split('_')[3]
-          return this.toggleSetupLevel(supabase, ctx, levelToToggle)
+          return callbacks.toggleSetupLevel(supabase, ctx, levelToToggle)
           
         case 'setup_level_continue':
           if (!ctx.session?.setup?.levels?.length) {
@@ -823,7 +823,7 @@ const callbacks = {
         case 'setup_side_toggle_Right':
         case 'setup_side_toggle_Any':
           const sideToToggle = action.split('_')[3]
-          return this.toggleSetupSide(supabase, ctx, sideToToggle)
+          return callbacks.toggleSetupSide(supabase, ctx, sideToToggle)
           
         case 'setup_side_continue':
           if (!ctx.session?.setup?.sides?.length) {
@@ -863,7 +863,7 @@ const callbacks = {
         case 'setup_day_toggle_5':
         case 'setup_day_toggle_6':
           const dayToToggle = parseInt(action.split('_')[3])
-          return this.toggleSetupDay(supabase, ctx, dayToToggle)
+          return callbacks.toggleSetupDay(supabase, ctx, dayToToggle)
           
         case 'setup_day_continue':
           if (!ctx.session?.setup?.days?.length) {
@@ -883,7 +883,7 @@ const callbacks = {
         case 'setup_time_toggle_afternoon':
         case 'setup_time_toggle_evening':
           const timeToToggle = action.split('_')[3]
-          return this.toggleSetupTime(supabase, ctx, timeToToggle)
+          return callbacks.toggleSetupTime(supabase, ctx, timeToToggle)
           
         case 'setup_time_continue':
           if (!ctx.session?.setup?.timeWindows?.length) {
@@ -912,7 +912,7 @@ const callbacks = {
           const notifChoice = action.split('_')[2]
           
           // Save all preferences to database
-          await this.saveSetupWizard(supabase, userProfile, ctx.session.setup, notifChoice)
+          await callbacks.saveSetupWizard(supabase, userProfile, ctx.session.setup, notifChoice)
           
           // Clear session
           delete ctx.session.setup
