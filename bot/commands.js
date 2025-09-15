@@ -398,37 +398,28 @@ const commands = {
     let userProfile = await getUserProfile(supabase, telegramId)
     
     if (!userProfile) {
-      // Create user profile and start setup wizard
+      // Create user profile with smart defaults automatically
       userProfile = await createUserProfile(supabase, telegramId, ctx.from.username)
-      
-      return ctx.reply('🚀 <b>Welcome to WavePing!</b>\n\nLet\'s set up your preferences!', {
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🎯 Start Setup', callback_data: 'setup_start' }],
-            [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-          ]
-        }
-      })
     }
     
     // Complete preferences menu with all options
     const preferencesMessage = ui.createPreferencesMessage(userProfile)
-    await ctx.reply(preferencesMessage, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Skill Levels', callback_data: 'pref_levels' }],
-          [{ text: 'Wave Side', callback_data: 'pref_sides' }],
-          [{ text: 'Surf Days', callback_data: 'pref_days' }],
-          [{ text: 'Time Windows', callback_data: 'pref_times' }],
-          [{ text: 'Min Spots', callback_data: 'pref_spots' }],
-          [{ text: 'Notification Timing', callback_data: 'pref_notifications' }],
-          [{ text: 'Daily Digests', callback_data: 'pref_digests' }],
-          [{ text: '⬅️ Main Menu', callback_data: 'menu_main' }]
-        ]
-      }
-    })
+    const menuMarkup = menus.preferencesMenu()
+    
+    // Check if this is a callback (has callbackQuery) or a direct command
+    if (ctx.callbackQuery) {
+      // Edit existing message for callbacks
+      await ctx.editMessageText(preferencesMessage, {
+        parse_mode: 'HTML',
+        reply_markup: menuMarkup
+      })
+    } else {
+      // Send new message for direct commands
+      await ctx.reply(preferencesMessage, {
+        parse_mode: 'HTML',
+        reply_markup: menuMarkup
+      })
+    }
   },
 
   /**
