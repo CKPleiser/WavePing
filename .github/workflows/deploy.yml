@@ -82,7 +82,11 @@ jobs:
 
       - name: Link to Supabase project
         run: |
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          if [ -z "${{ secrets.SUPABASE_PROJECT_REF }}" ]; then
+            echo "Error: SUPABASE_PROJECT_REF secret is not set"
+            exit 1
+          fi
+          supabase link --project-ref="${{ secrets.SUPABASE_PROJECT_REF }}"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
