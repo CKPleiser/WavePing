@@ -249,8 +249,9 @@ const menus = {
   setupMinSpotsMenu(currentSpots = 1) {
     const options = [
       { value: 1, desc: "1+ spot (I'll take any!)" },
-      { value: 2, desc: '2+ spots (Small group)' },
-      { value: 5, desc: '5+ spots (Want options)' },
+      { value: 2, desc: '2+ spots' },
+      { value: 3, desc: '3+ spots' },
+      { value: 5, desc: '5+ spots' },
       { value: 10, desc: '10+ spots (Lots of space)' }
     ]
     
