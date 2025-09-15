@@ -17,6 +17,7 @@ class DigestService {
       .select(`
         id, 
         telegram_id,
+        telegram_username,
         min_spots,
         user_levels (level),
         user_sides (side),
@@ -106,7 +107,7 @@ class DigestService {
   /**
    * Format digest message with pagination support
    */
-  formatDigestMessage(sessions, page, sessionsPerPage, digestType, timeframeLabel) {
+  formatDigestMessage(sessions, page, sessionsPerPage, digestType, timeframeLabel, userName = null) {
     const totalPages = Math.ceil(sessions.length / sessionsPerPage)
     const startIdx = (page - 1) * sessionsPerPage
     const endIdx = Math.min(startIdx + sessionsPerPage, sessions.length)
@@ -115,10 +116,11 @@ class DigestService {
     let message = ''
     
     // Header based on digest type
+    const greeting = userName ? userName : 'Wave Rider'
     if (digestType === 'morning') {
-      message = `🌅 <b>Good Morning, Wave Rider!</b> ☀️\n\n`
+      message = `🌅 <b>Good Morning, ${greeting}!</b> ☀️\n\n`
     } else {
-      message = `🌇 <b>Evening Wave Report</b> 🌊\n\n`
+      message = `🌇 <b>Evening Wave Report, ${greeting}</b> 🌊\n\n`
     }
     
     // Session count and page info
@@ -228,12 +230,14 @@ class DigestService {
 
         // Create paginated message
         const sessionsPerPage = 10
+        const userName = user.telegram_username || null
         const message = this.formatDigestMessage(
           filteredSessions,
           1, // Start at page 1
           sessionsPerPage,
           'morning',
-          timeframeLabel
+          timeframeLabel,
+          userName
         )
         
         // Add pagination keyboard if needed
@@ -306,12 +310,14 @@ class DigestService {
 
         // Create paginated message
         const sessionsPerPage = 12
+        const userName = user.telegram_username || null
         const message = this.formatDigestMessage(
           filteredSessions,
           1, // Start at page 1
           sessionsPerPage,
           'evening',
-          timeframeLabel
+          timeframeLabel,
+          userName
         )
         
         // Add pagination keyboard if needed
@@ -382,6 +388,7 @@ class DigestService {
         .select(`
           id,
           telegram_id,
+          telegram_username,
           min_spots,
           user_levels (level),
           user_sides (side),
@@ -425,12 +432,14 @@ class DigestService {
       // Validate page number
       const validPage = Math.min(Math.max(1, page), totalPages)
       
+      const userName = profile.telegram_username || null
       const message = this.formatDigestMessage(
         filteredSessions,
         validPage,
         sessionsPerPage,
         digestType,
-        timeframeLabel
+        timeframeLabel,
+        userName
       )
       
       const keyboard = totalPages > 1 
