@@ -91,7 +91,6 @@ const menus = {
       [Markup.button.callback('💺 Min Spots', 'pref_spots')],
       [Markup.button.callback('🔔 Notifications', 'alerts')],
       [Markup.button.callback('📱 Digests', 'pref_digests')],
-      [Markup.button.callback('🚀 Setup Wizard', 'setup_restart')],
       [
         Markup.button.callback('🏠 Main Menu', 'main')
       ]
@@ -132,154 +131,11 @@ const menus = {
     ])
   },
 
-  /**
-   * Quick setup menus
-   */
-  quickSetupLevelsMenu() {
-    return Markup.inlineKeyboard([
-      [Markup.button.callback('🟢 Beginner', 'setup_quick_level_beginner')],
-      [Markup.button.callback('🔵 Improver', 'setup_quick_level_improver')],
-      [Markup.button.callback('🟡 Intermediate', 'setup_quick_level_intermediate')],
-      [Markup.button.callback('🟠 Advanced', 'setup_quick_level_advanced')],
-      [Markup.button.callback('🔴 Expert', 'setup_quick_level_expert')],
-      [Markup.button.callback('🔙 Back', 'main')]
-    ])
-  },
 
-  /**
-   * Level selection menu (for preferences)
-   */
-  levelSelectionMenu(currentLevels = []) {
-    const levels = [
-      { key: 'beginner', name: 'Beginner' },
-      { key: 'improver', name: 'Improver' },
-      { key: 'intermediate', name: 'Intermediate' },
-      { key: 'advanced', name: 'Advanced' },
-      { key: 'expert', name: 'Expert' }
-    ]
-    
-    const buttons = levels.map(level => {
-      const isSelected = currentLevels.includes(level.key)
-      const text = `${isSelected ? '✅ ' : ''}${level.name}`
-      return [Markup.button.callback(text, `pref_level_toggle_${level.key}`)]
-    })
-    
-    buttons.push(
-      [Markup.button.callback('💾 Save Changes', 'pref_level_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
-    )
-    
-    return Markup.inlineKeyboard(buttons)
-  },
 
-  /**
-   * Side selection menu
-   */
-  sideSelectionMenu(currentSides = []) {
-    const sides = [
-      { key: 'L', emoji: '🏄‍♂️', name: 'Left Side' },
-      { key: 'R', emoji: '🏄‍♀️', name: 'Right Side' },
-      { key: 'A', emoji: '🌊', name: 'Any Side' }
-    ]
-    
-    const buttons = sides.map(side => {
-      const isSelected = currentSides.includes(side.key)
-      const text = `${isSelected ? '✅ ' : ''}${side.emoji} ${side.name}`
-      return [Markup.button.callback(text, `pref_side_toggle_${side.key}`)]
-    })
-    
-    buttons.push(
-      [Markup.button.callback('💾 Save Changes', 'pref_side_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
-    )
-    
-    return Markup.inlineKeyboard(buttons)
-  },
 
-  /**
-   * Day selection menu
-   */
-  daySelectionMenu(currentDays = []) {
-    const days = [
-      { key: 0, name: 'Mon' }, { key: 1, name: 'Tue' }, { key: 2, name: 'Wed' },
-      { key: 3, name: 'Thu' }, { key: 4, name: 'Fri' }, { key: 5, name: 'Sat' }, { key: 6, name: 'Sun' }
-    ]
-    
-    const buttons = [
-      days.slice(0, 4).map(day => {
-        const isSelected = currentDays.includes(day.key)
-        const text = `${isSelected ? '✅ ' : ''}${day.name}`
-        return Markup.button.callback(text, `pref_day_toggle_${day.key}`)
-      }),
-      days.slice(4).map(day => {
-        const isSelected = currentDays.includes(day.key)
-        const text = `${isSelected ? '✅ ' : ''}${day.name}`
-        return Markup.button.callback(text, `pref_day_toggle_${day.key}`)
-      })
-    ]
-    
-    buttons.push(
-      [Markup.button.callback('💾 Save Changes', 'pref_day_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
-    )
-    
-    return Markup.inlineKeyboard(buttons)
-  },
 
-  /**
-   * Time window selection menu
-   */
-  timeSelectionMenu(currentTimes = []) {
-    const timeWindows = [
-      { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
-      { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
-      { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
-      { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
-      { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
-    ]
-    
-    const buttons = timeWindows.map((time, index) => {
-      const isSelected = currentTimes.some(ct => 
-        ct.start_time === time.start && ct.end_time === time.end
-      )
-      const text = `${isSelected ? '✅ ' : ''}${time.desc}`
-      return [Markup.button.callback(text, `pref_time_toggle_${index}`)]
-    })
-    
-    buttons.push(
-      [Markup.button.callback('💾 Save Changes', 'pref_time_save')],
-      [Markup.button.callback('➕ Custom Time', 'pref_time_custom')],
-      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
-    )
-    
-    return Markup.inlineKeyboard(buttons)
-  },
 
-  /**
-   * Min spots selection menu
-   */
-  minSpotsMenu(currentMinSpots = 1) {
-    const options = [
-      { value: 1, desc: "1+ (I'll take any spot!)" },
-      { value: 2, desc: '2+ (Small group)' },
-      { value: 3, desc: '3+ (Want options)' },
-      { value: 5, desc: '5+ (Plenty of space)' },
-      { value: 10, desc: '10+ (Lots of availability)' }
-    ]
-    
-    const buttons = options.map(option => {
-      const isSelected = currentMinSpots === option.value
-      const text = `${isSelected ? '✅ ' : ''}${option.desc}`
-      return [Markup.button.callback(text, `pref_spots_toggle_${option.value}`)]
-    })
-    
-    buttons.push(
-      [Markup.button.callback('💾 Save Changes', 'pref_spots_save')],
-      [Markup.button.callback('🔙 Back to Preferences', 'prefs')]
-    )
-    
-    return Markup.inlineKeyboard(buttons)
-  },
 
   /**
    * Notification timing menu
@@ -342,29 +198,7 @@ const menus = {
     ])
   },
 
-  /**
-   * Quick setup time menu (simplified)
-   */
-  quickSetupTimeMenu() {
-    return Markup.inlineKeyboard([
-      [Markup.button.callback('🌅 Early Bird (6-12 PM)', 'setup_quick_time_morning')],
-      [Markup.button.callback('☀️ Afternoon Rider (12-6 PM)', 'setup_quick_time_afternoon')],
-      [Markup.button.callback('🌇 Evening Surfer (6-9 PM)', 'setup_quick_time_evening')],
-      [Markup.button.callback('🌊 Any Time is Good!', 'setup_quick_time_any')]
-    ])
-  },
 
-  /**
-   * Quick setup notifications menu
-   */
-  quickSetupNotificationsMenu() {
-    return Markup.inlineKeyboard([
-      [Markup.button.callback('📅 24h before (recommended)', 'setup_quick_notif_24h')],
-      [Markup.button.callback('🌅 12h before', 'setup_quick_notif_12h')],
-      [Markup.button.callback('⏰ 6h before', 'setup_quick_notif_6h')],
-      [Markup.button.callback('🌊 Daily digest only', 'setup_quick_notif_digest')]
-    ])
-  },
 
   /**
    * Setup wizard specific menus

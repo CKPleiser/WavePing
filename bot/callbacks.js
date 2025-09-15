@@ -136,6 +136,154 @@ const callbacks = {
         case 'prefs':
           return commands.preferences(supabase, ctx)
           
+        // Preference menu handlers - call the existing logic directly
+        case 'pref_levels':
+        case 'levels':
+          const currentLevels = userProfile.user_levels?.map(ul => ul.level) || []
+          const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
+          const levelButtons = levels.map(level => {
+            const isSelected = currentLevels.includes(level)
+            const text = `${isSelected ? '✅ ' : ''}${level.charAt(0).toUpperCase() + level.slice(1)}`
+            return [{ text, callback_data: `pref_level_toggle_${level}` }]
+          })
+          levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
+          levelButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
+          
+          return ctx.editMessageText(
+            '🎯 <b>Select Your Skill Levels</b>\n\nChoose all levels you\'re comfortable surfing:',
+            {
+              parse_mode: 'HTML',
+              reply_markup: { inline_keyboard: levelButtons }
+            }
+          )
+          
+        case 'pref_sides':
+        case 'sides':
+          const currentSides = userProfile.user_sides?.map(us => us.side) || []
+          const sideButtons = [
+            [{ text: `${currentSides.includes('L') ? '✅ ' : ''}🏄‍♂️ Left Side`, callback_data: 'pref_side_toggle_L' }],
+            [{ text: `${currentSides.includes('R') ? '✅ ' : ''}🏄‍♀️ Right Side`, callback_data: 'pref_side_toggle_R' }],
+            [{ text: `${currentSides.includes('A') ? '✅ ' : ''}🌊 Any Side`, callback_data: 'pref_side_toggle_A' }],
+            [{ text: '💾 Save Changes', callback_data: 'pref_side_save' }],
+            [{ text: '🔙 Back', callback_data: 'prefs' }]
+          ]
+          
+          return ctx.editMessageText(
+            '🏄 <b>Wave Side Preference</b>\n\nWhich side of the wave do you prefer?',
+            {
+              parse_mode: 'HTML',
+              reply_markup: { inline_keyboard: sideButtons }
+            }
+          )
+          
+        case 'pref_days':
+        case 'days':
+          const currentDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
+          const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          const dayButtons = dayNames.map((day, index) => {
+            const isSelected = currentDays.includes(index)
+            const text = `${isSelected ? '✅ ' : ''}📅 ${day}`
+            return [{ text, callback_data: `pref_day_toggle_${index}` }]
+          })
+          dayButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_day_save' }])
+          dayButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
+          
+          return ctx.editMessageText(
+            '📅 <b>Select Surf Days</b>\n\nWhich days do you want to surf?',
+            {
+              parse_mode: 'HTML',
+              reply_markup: { inline_keyboard: dayButtons }
+            }
+          )
+          
+        case 'pref_times':
+        case 'times':
+          const currentTimes = userProfile.user_time_windows || []
+          const hasAnyTime = currentTimes.length === 0
+          
+          // Start with "Any time" option
+          const timeButtons = []
+          timeButtons.push([{ text: `${hasAnyTime ? '✅ ' : ''}🌊 Any Time`, callback_data: 'pref_time_toggle_any' }])
+          
+          // Add specific time windows
+          const timeWindows = [
+            { start: '06:00', end: '09:00', desc: '🌅 Early (6-9 AM)' },
+            { start: '09:00', end: '12:00', desc: '🌞 Morning (9-12 PM)' },
+            { start: '12:00', end: '15:00', desc: '☀️ Midday (12-3 PM)' },
+            { start: '15:00', end: '18:00', desc: '🌤️ Afternoon (3-6 PM)' },
+            { start: '18:00', end: '21:00', desc: '🌅 Evening (6-9 PM)' }
+          ]
+          
+          timeWindows.forEach((time, index) => {
+            const isSelected = currentTimes.some(ct => 
+              (ct.start_time === time.start || ct.start_time === time.start + ':00') && 
+              (ct.end_time === time.end || ct.end_time === time.end + ':00')
+            )
+            const text = `${isSelected ? '✅ ' : ''}${time.desc}`
+            timeButtons.push([{ text, callback_data: `pref_time_toggle_${index}` }])
+          })
+          
+          timeButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_time_save' }])
+          timeButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
+          
+          return ctx.editMessageText(
+            '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
+            {
+              parse_mode: 'HTML',
+              reply_markup: { inline_keyboard: timeButtons }
+            }
+          )
+          
+        case 'pref_spots':
+        case 'spots':
+          const currentMinSpots = userProfile.min_spots || 1
+          const spotOptions = [
+            { value: 1, desc: "1+ (I'll take any spot!)" },
+            { value: 2, desc: '2+' },
+            { value: 3, desc: '3+' },
+            { value: 5, desc: '5+' },
+            { value: 10, desc: '10+ (Lots of availability)' }
+          ]
+          const spotButtons = spotOptions.map(option => {
+            const isSelected = currentMinSpots === option.value
+            const text = `${isSelected ? '✅ ' : ''}${option.desc}`
+            return [{ text, callback_data: `pref_spots_toggle_${option.value}` }]
+          })
+          spotButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_spots_save' }])
+          spotButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
+          
+          return ctx.editMessageText(
+            '💺 <b>Minimum Available Spots</b>\n\nHow many spots should be available?',
+            {
+              parse_mode: 'HTML',
+              reply_markup: { inline_keyboard: spotButtons }
+            }
+          )
+          
+        case 'pref_digests':
+        case 'digests':
+          const currentDigests = userProfile.user_digest_preferences?.map(udp => udp.digest_type) || []
+          const digestOptions = [
+            { key: 'morning', desc: '🌅 Morning Digest (8 AM)' },
+            { key: 'evening', desc: '🌇 Evening Digest (6 PM)' }
+          ]
+          
+          const digestButtons = digestOptions.map(digest => {
+            const isSelected = currentDigests.includes(digest.key)
+            const text = `${isSelected ? '✅ ' : ''}${digest.desc}`
+            return [{ text, callback_data: `pref_digest_toggle_${digest.key}` }]
+          })
+          digestButtons.push([{ text: '💾 Save Changes', callback_data: 'digest_save' }])
+          digestButtons.push([{ text: '🔙 Back', callback_data: 'prefs' }])
+          
+          return ctx.editMessageText(
+            '📱 <b>Daily Digest Preferences</b>\n\nWhen would you like to receive daily session summaries?',
+            {
+              parse_mode: 'HTML',
+              reply_markup: { inline_keyboard: digestButtons }
+            }
+          )
+          
         case 'alerts':
           // Go directly to notification timing settings instead of overview
           const telegramIdAlerts = ctx.from.id
@@ -290,6 +438,8 @@ const callbacks = {
         return
       }
       
+      // All preference menu handlers are now handled in the navigation section
+      // This function handles preference toggles and saves
       switch (action) {
         case 'levels':
           const currentLevels = userProfile.user_levels?.map(ul => ul.level) || []

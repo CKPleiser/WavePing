@@ -130,7 +130,6 @@ class BotHandler {
         { command: 'today', description: '🏄‍♂️ Today\'s Sessions' },
         { command: 'tomorrow', description: '🌅 Tomorrow\'s Sessions' },
         { command: 'setup', description: '⚙️ Preferences' },
-        { command: 'notifications', description: '🔔 Notification Settings' },
         { command: 'support', description: '☕ Support WavePing' },
         { command: 'help', description: '❓ Help & Feedback' }
       ]

@@ -58,10 +58,6 @@ Set up your preferences to get personalized surf alerts.`
                           
       message += `<b>Today:</b> ${todayText}\n<b>Tomorrow:</b> ${tomorrowText}\n\n`
       message += `Tap Today or Tomorrow to see details.`
-    } else {
-      // Fallback when session data isn't available
-      message += `Your personalized surf assistant for The Wave Bristol.\n\n`
-      message += `Check Today and Tomorrow sessions below.`
     }
     
     return message
