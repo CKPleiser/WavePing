@@ -438,6 +438,7 @@ const callbacks = {
           
         // Save level changes
         case 'level_save':
+        case 'pref_level_save':
           const savedLevelsMessage = ui.createSavedPreferencesMessage('skill levels')
           const comeFromSessions = ctx.session?.comeFromSessions || false
           return await ctx.editMessageText(savedLevelsMessage, {
@@ -453,6 +454,7 @@ const callbacks = {
           return await callbacks.toggleUserSide(supabase, ctx, userProfile, sideToToggle)
           
         case 'side_save':
+        case 'pref_side_save':
           const savedSidesMessage = ui.createSavedPreferencesMessage('wave side preferences')
           const comeFromSessions2 = ctx.session?.comeFromSessions || false
           return await ctx.editMessageText(savedSidesMessage, {
@@ -567,6 +569,7 @@ const callbacks = {
           return await callbacks.toggleUserMinSpots(supabase, ctx, userProfile, spotCount)
           
         case 'spots_save':
+        case 'pref_spots_save':
           // Save the min spots from session to database
           const spotCountToSave = ctx.session?.tempMinSpots || userProfile.min_spots || 1
           await supabase.from('profiles').update({
