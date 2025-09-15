@@ -231,8 +231,7 @@ const callbacks = {
           const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
           const levelButtons = levels.map(level => {
             const isSelected = currentLevels.includes(level)
-            const emoji = level === 'beginner' ? '🟢' : level === 'improver' ? '🔵' : level === 'intermediate' ? '🟡' : level === 'advanced' ? '🟠' : '🔴'
-            const text = `${isSelected ? '✅ ' : ''}${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}`
+            const text = `${isSelected ? '✅ ' : ''}${level.charAt(0).toUpperCase() + level.slice(1)}`
             return [{ text, callback_data: `pref_level_toggle_${level}` }]
           })
           levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
@@ -338,7 +337,7 @@ const callbacks = {
           spotButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '💺 *Minimum Available Spots*\n\nHow many spots should be available?',
+            '💺 <b>Minimum Available Spots</b>\n\nHow many spots should be available?',
             {
               parse_mode: 'HTML',
               reply_markup: { inline_keyboard: spotButtons }
@@ -364,7 +363,7 @@ const callbacks = {
           notificationButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '🔔 *Notification Timing*\n\nHow far in advance should sessions be included in your digests?',
+            '🔔 <b>Notification Timing</b>\n\nHow far in advance should sessions be included in your digests?',
             {
               parse_mode: 'HTML',
               reply_markup: { inline_keyboard: notificationButtons }
@@ -387,7 +386,7 @@ const callbacks = {
           digestButtons.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '📱 *Daily Digest Timing*\n\nWhen would you like daily summaries?\n\n🌅 *Morning*: Plan your surf day with today\'s sessions\n🌇 *Evening*: Preview tomorrow\'s available sessions\n\nSelect morning, evening, both, or neither:',
+            '📱 <b>Daily Digest Timing</b>\n\nWhen would you like daily summaries?\n\n🌅 <b>Morning</b>: Plan your surf day with today\'s sessions\n🌇 <b>Evening</b>: Preview tomorrow\'s available sessions\n\nSelect morning, evening, both, or neither:',
             {
               parse_mode: 'HTML',
               reply_markup: { inline_keyboard: digestButtons }
@@ -409,7 +408,7 @@ const callbacks = {
         case 'notifications':
           const currentNotificationTimings = userProfile.user_digest_filters?.map(un => un.timing) || []
           return ctx.editMessageText(
-            '🔔 *Notification Timing*\n\nHow many hours before a session do you want alerts?',
+            '🔔 <b>Notification Timing</b>\n\nHow many hours before a session do you want alerts?',
             {
               parse_mode: 'HTML',
               reply_markup: menus.notificationTimingMenu(currentNotificationTimings)
@@ -418,7 +417,7 @@ const callbacks = {
           
         case 'reset':
           return ctx.editMessageText(
-            '⚠️ *Reset All Preferences*\n\nThis will delete ALL your preferences and start fresh.\n\nAre you sure?',
+            '⚠️ <b>Reset All Preferences</b>\n\nThis will delete ALL your preferences and start fresh.\n\nAre you sure?',
             {
               parse_mode: 'HTML',
               reply_markup: Markup.inlineKeyboard([
@@ -533,7 +532,7 @@ const callbacks = {
           timeButtonsAny.push([{ text: '🔙 Back', callback_data: 'menu_preferences' }])
           
           return ctx.editMessageText(
-            '🕐 *Select Time Windows*\n\nWhen do you prefer to surf?\n\n🌊 *Any Time*: Match all session times\n🕐 *Specific Times*: Only match selected time windows',
+            '🕐 <b>Select Time Windows</b>\n\nWhen do you prefer to surf?\n\n🌊 <b>Any Time</b>: Match all session times\n🕐 <b>Specific Times</b>: Only match selected time windows',
             {
               parse_mode: 'HTML',
               reply_markup: { inline_keyboard: timeButtonsAny }
@@ -680,7 +679,7 @@ const callbacks = {
           return commands.notifications(supabase, ctx)
           
         case 'test':
-          const testMessage = `🧪 *Test Notification* 🔔\n\nThis is a test to make sure your WavePing notifications are working!\n\nIf you can see this message, everything is working perfectly! 🎉`
+          const testMessage = `🧪 <b>Test Notification</b> 🔔\n\nThis is a test to make sure your WavePing notifications are working!\n\nIf you can see this message, everything is working perfectly! 🎉`
           
           await ctx.reply(testMessage, { parse_mode: 'HTML' })
           return ctx.answerCbQuery('📤 Test notification sent!')
@@ -762,7 +761,7 @@ const callbacks = {
           }
           
           return ctx.editMessageText(
-            '🚀 *Setup Wizard Started!* ⚡\n\n*Step 1 of 6: Skill Levels*\n\nChoose all levels you\'re comfortable surfing with:',
+            '🚀 <b>Setup Wizard Started!</b> ⚡\n\n<b>Step 1 of 6: Skill Levels</b>\n\nChoose all levels you\'re comfortable surfing with:',
             {
               parse_mode: 'HTML',
               reply_markup: menus.setupLevelSelectionMenu([])
@@ -771,7 +770,7 @@ const callbacks = {
           
         case 'detailed':
           return ctx.editMessageText(
-            '⚙️ *Detailed Setup*\n\nLet\'s configure everything step by step.\n\nStarting with your skill level:',
+            '⚙️ <b>Detailed Setup</b>\n\nLet\'s configure everything step by step.\n\nStarting with your skill level:',
             {
               parse_mode: 'HTML',
               reply_markup: menus.levelSelectionMenu()
@@ -793,7 +792,7 @@ const callbacks = {
           }
           
           return ctx.editMessageText(
-            `✅ *Levels Selected*\n\n*Step 2 of 6: Wave Sides*\n\nWhich side do you prefer to surf?`,
+            `✅ <b>Levels Selected</b>\n\n<b>Step 2 of 6: Wave Sides</b>\n\nWhich side do you prefer to surf?`,
             {
               parse_mode: 'HTML',
               reply_markup: menus.setupSideSelectionMenu([])
@@ -813,7 +812,7 @@ const callbacks = {
           }
           
           return ctx.editMessageText(
-            `✅ *Wave Sides Selected*\n\n*Step 3 of 6: Minimum Spots*\n\nHow many available spots do you need?`,
+            `✅ <b>Wave Sides Selected</b>\n\n<b>Step 3 of 6: Minimum Spots</b>\n\nHow many available spots do you need?`,
             {
               parse_mode: 'HTML',
               reply_markup: menus.setupMinSpotsMenu(1)
@@ -829,7 +828,7 @@ const callbacks = {
           ctx.session.setup.minSpots = spotCount
           
           return ctx.editMessageText(
-            `✅ *Minimum Spots: ${spotCount}*\n\n*Step 4 of 6: Surf Days*\n\nWhich days can you surf?`,
+            `✅ <b>Minimum Spots: ${spotCount}</b>\n\n<b>Step 4 of 6: Surf Days</b>\n\nWhich days can you surf?`,
             {
               parse_mode: 'HTML',
               reply_markup: menus.setupDaySelectionMenu([])
@@ -853,7 +852,7 @@ const callbacks = {
           }
           
           return ctx.editMessageText(
-            `✅ *Surf Days Selected*\n\n*Step 5 of 6: Time Windows*\n\nWhen do you prefer to surf?`,
+            `✅ <b>Surf Days Selected</b>\n\n<b>Step 5 of 6: Time Windows</b>\n\nWhen do you prefer to surf?`,
             {
               parse_mode: 'HTML',
               reply_markup: menus.setupTimeSelectionMenu([])
@@ -880,7 +879,7 @@ const callbacks = {
           }
           
           return ctx.editMessageText(
-            `✅ *Time Windows Selected*\n\n*Step 6 of 6: Notifications*\n\nHow would you like to be notified?`,
+            `✅ <b>Time Windows Selected</b>\n\n<b>Step 6 of 6: Notifications</b>\n\nHow would you like to be notified?`,
             {
               parse_mode: 'HTML',
               reply_markup: menus.setupNotificationMenu()
@@ -900,7 +899,7 @@ const callbacks = {
           delete ctx.session.setup
           
           return ctx.editMessageText(
-            `🎉 *Setup Complete!* 🎉\n\n✅ Skill levels configured\n✅ Wave preferences set\n✅ Timing preferences saved\n✅ Notifications enabled\n\n*You're all set to get personalized surf alerts!*\n\nTry /today to see your matches! 🌊`,
+            `🎉 <b>Setup Complete!</b> 🎉\n\n✅ Skill levels configured\n✅ Wave preferences set\n✅ Timing preferences saved\n✅ Notifications enabled\n\n<b>You're all set to get personalized surf alerts!</b>\n\nTry /today to see your matches! 🌊`,
             {
               parse_mode: 'HTML',
               reply_markup: menus.mainMenu()
@@ -1039,8 +1038,7 @@ const callbacks = {
       const levels = ['beginner', 'improver', 'intermediate', 'advanced', 'expert']
       const levelButtons = levels.map(level => {
         const isSelected = currentLevels.includes(level)
-        const emoji = level === 'beginner' ? '🟢' : level === 'improver' ? '🔵' : level === 'intermediate' ? '🟡' : level === 'advanced' ? '🟠' : '🔴'
-        const text = `${isSelected ? '✅ ' : ''}${emoji} ${level.charAt(0).toUpperCase() + level.slice(1)}`
+        const text = `${isSelected ? '✅ ' : ''}${level.charAt(0).toUpperCase() + level.slice(1)}`
         return [{ text, callback_data: `pref_level_toggle_${level}` }]
       })
       levelButtons.push([{ text: '💾 Save Changes', callback_data: 'pref_level_save' }])
@@ -1671,7 +1669,7 @@ const callbacks = {
           ctx.answerCbQuery('✅ All preferences reset!')
           
           return ctx.editMessageText(
-            '✅ *Preferences Reset Complete!*\n\n🌊 Your preferences have been cleared.\n\nReady to set up fresh preferences?',
+            '✅ <b>Preferences Reset Complete!</b>\n\n🌊 Your preferences have been cleared.\n\nReady to set up fresh preferences?',
             {
               parse_mode: 'HTML',
               reply_markup: Markup.inlineKeyboard([

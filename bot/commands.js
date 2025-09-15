@@ -196,7 +196,7 @@ const commands = {
           ctx.chat.id,
           loadingMsg.message_id,
           undefined,
-          '🏄‍♂️ *Welcome to WavePing!*\n\n' +
+          '🏄‍♂️ <b>Welcome to WavePing!</b>\n\n' +
           'Set up your preferences first to get personalized session recommendations.\n\n' +
           'Or browse all sessions without filtering! 🌊',
           {
@@ -372,7 +372,7 @@ const commands = {
       // Create user profile and start setup wizard
       userProfile = await createUserProfile(supabase, telegramId, ctx.from.username)
       
-      return ctx.reply('🚀 *Welcome to WavePing!*\n\nLet\'s set up your preferences!', {
+      return ctx.reply('🚀 <b>Welcome to WavePing!</b>\n\nLet\'s set up your preferences!', {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [

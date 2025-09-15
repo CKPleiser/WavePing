@@ -217,19 +217,19 @@ Your Setup and Alerts & Digests below.`
    * Current profile overview
    */
   createProfileOverviewMessage(userProfile) {
-    let message = `👤 *Your Current Profile* 🏄‍♂️\n\n`
+    let message = `👤 <b>Your Current Profile</b> 🏄‍♂️\n\n`
     
     // Account info
-    message += `*Account:* ${userProfile.telegram_username ? '@' + userProfile.telegram_username : 'Telegram User'}\n`
-    message += `*Status:* ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n\n`
+    message += `<b>Account:</b> ${userProfile.telegram_username ? '@' + userProfile.telegram_username : 'Telegram User'}\n`
+    message += `<b>Status:</b> ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n\n`
     
     // Skill Levels
     const levels = userProfile.user_levels?.map(ul => ul.level) || []
     if (levels.length > 0) {
       const levelText = levels.map(l => this.capitalizeWords(l)).join(', ')
-      message += `🎯 *Skill Levels:* ${levelText}\n`
+      message += `🎯 <b>Skill Levels:</b> ${levelText}\n`
     } else {
-      message += `🎯 *Skill Levels:* Not set\n`
+      message += `🎯 <b>Skill Levels:</b> Not set\n`
     }
     
     // Wave Sides
@@ -237,7 +237,7 @@ Your Setup and Alerts & Digests below.`
       us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
     ) || []
     const sideText = sides.length > 0 ? sides.join(', ') : 'Any side'
-    message += `🏄 *Wave Side:* ${sideText}\n`
+    message += `🏄 <b>Wave Side:</b> ${sideText}\n`
     
     // Days
     const days = userProfile.user_days?.map(ud => {
@@ -245,17 +245,17 @@ Your Setup and Alerts & Digests below.`
       return dayNames[ud.day_of_week]
     }) || []
     const daysText = days.length > 0 ? days.join(', ') : 'Any day'
-    message += `📅 *Surf Days:* ${daysText}\n`
+    message += `📅 <b>Surf Days:</b> ${daysText}\n`
     
     // Time windows
     const times = userProfile.user_time_windows?.map(tw => 
       `${tw.start_time}-${tw.end_time}`
     ) || []
     const timesText = times.length > 0 ? times.join(', ') : 'Any time'
-    message += `🕐 *Time Windows:* ${timesText}\n`
+    message += `🕐 <b>Time Windows:</b> ${timesText}\n`
     
     // Min spots
-    message += `💺 *Min Spots:* ${userProfile.min_spots || 1}\n`
+    message += `💺 <b>Min Spots:</b> ${userProfile.min_spots || 1}\n`
     
     // Notifications
     const digestPrefs = userProfile.user_digest_preferences || []
@@ -263,12 +263,12 @@ Your Setup and Alerts & Digests below.`
       const digestText = digestPrefs.map(pref => {
         return pref.digest_type === 'morning' ? '🌅 Morning digest' : '🌇 Evening digest'
       }).join(', ')
-      message += `🔔 *Daily Digests:* ${digestText}\n`
+      message += `🔔 <b>Daily Digests:</b> ${digestText}\n`
     } else {
-      message += `🔔 *Daily Digests:* None set\n`
+      message += `🔔 <b>Daily Digests:</b> None set\n`
     }
     
-    message += `\n*Ready to make changes?* Use the buttons below! 👇`
+    message += `\n<b>Ready to make changes?</b> Use the buttons below! 👇`
     
     return message
   },
@@ -277,31 +277,31 @@ Your Setup and Alerts & Digests below.`
    * Notification settings
    */
   createNotificationMessage(userProfile) {
-    let message = `🔔 *Notification Settings* 📱\n\n`
+    let message = `🔔 <b>Notification Settings</b> 📱\n\n`
     
-    message += `*Current Status:* ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n\n`
+    message += `<b>Current Status:</b> ${userProfile.notification_enabled ? '✅ Active' : '❌ Paused'}\n\n`
     
     // Show digest delivery preferences (morning/evening)
     const digestPrefs = userProfile.user_digest_preferences || []
     if (digestPrefs.length > 0) {
-      message += `*Daily Digest Delivery:*\n`
+      message += `<b>Daily Digest Delivery:</b>\n`
       digestPrefs.forEach(pref => {
         const emoji = pref.digest_type === 'morning' ? '🌅' : '🌇'
         const time = pref.digest_type === 'morning' ? '8:00 AM' : '6:00 PM'
         message += `${emoji} ${this.capitalizeWords(pref.digest_type)} digest at ${time}\n`
       })
     } else {
-      message += `*No digest delivery preferences set*\n`
+      message += `<b>No digest delivery preferences set</b>\n`
       message += `Choose when you want to receive daily surf summaries! ⏰`
     }
     
     // Show session filters (what sessions to include)
     const sessionFilters = userProfile.user_digest_filters || []
     if (sessionFilters.length > 0) {
-      message += `\n*Session Filters:*\n`
+      message += `\n<b>Session Filters:</b>\n`
       message += `Include sessions starting within: ${sessionFilters.map(f => f.timing).join(', ')}\n`
     } else {
-      message += `\n*No session filters set*\n`
+      message += `\n<b>No session filters set</b>\n`
       message += `Choose how far ahead to look for sessions! 🔍`
     }
     
@@ -312,36 +312,36 @@ Your Setup and Alerts & Digests below.`
    * Setup welcome
    */
   setupWelcomeMessage() {
-    return `⚙️ *Setup Your Surf Preferences* 🏄‍♂️
+    return `⚙️ <b>Setup Your Surf Preferences</b> 🏄‍♂️
 
 Let's personalize WavePing for you!
 
-🚀 *Quick Setup (30 seconds)*
+🚀 <b>Quick Setup (30 seconds)</b>
 Perfect for getting started fast with smart defaults.
 
-⚙️ *Detailed Setup (2 minutes)*  
+⚙️ <b>Detailed Setup (2 minutes)</b>  
 Full customization of all preferences.
 
-*Choose your adventure:* 🤙`
+<b>Choose your adventure:</b> 🤙`
   },
 
   /**
    * Quick setup message
    */
   quickSetupMessage() {
-    return `🚀 *Quick Setup Started!* ⚡
+    return `🚀 <b>Quick Setup Started!</b> ⚡
 
-*Step 1 of 3: Your Skill Level*
+<b>Step 1 of 3: Your Skill Level</b>
 
 Choose your surfing level to get the right session recommendations:
 
-🟢 *Beginner* - New to surfing, learning basics
-🔵 *Improver* - Getting comfortable, building confidence  
-🟡 *Intermediate* - Regular surfer, comfortable on most waves
-🟠 *Advanced* - Experienced surfer, all conditions
-🔴 *Expert* - Pro level, coaching others
+🟢 <b>Beginner</b> - New to surfing, learning basics
+🔵 <b>Improver</b> - Getting comfortable, building confidence  
+🟡 <b>Intermediate</b> - Regular surfer, comfortable on most waves
+🟠 <b>Advanced</b> - Experienced surfer, all conditions
+🔴 <b>Expert</b> - Pro level, coaching others
 
-*What's your level?* 🏄‍♂️`
+<b>What's your level?</b> 🏄‍♂️`
   },
 
   /**
@@ -372,19 +372,19 @@ Tell me the problem, what you want the bot to do, and why it helps.`
     const hasProfile = !!userProfile
     const hasPrefs = hasProfile && userProfile.user_levels?.length > 0
     
-    let message = `🧪 *WavePing Test Center* 🔬\n\n`
+    let message = `🧪 <b>WavePing Test Center</b> 🔬\n\n`
     
-    message += `*Profile Status:* ${hasProfile ? '✅' : '❌'}\n`
-    message += `*Preferences Set:* ${hasPrefs ? '✅' : '❌'}\n`
-    message += `*Notifications:* ${hasProfile && userProfile.notification_enabled ? '✅' : '❌'}\n\n`
+    message += `<b>Profile Status:</b> ${hasProfile ? '✅' : '❌'}\n`
+    message += `<b>Preferences Set:</b> ${hasPrefs ? '✅' : '❌'}\n`
+    message += `<b>Notifications:</b> ${hasProfile && userProfile.notification_enabled ? '✅' : '❌'}\n\n`
     
     if (hasProfile) {
-      message += `*User ID:* ${userProfile.id}\n`
-      message += `*Telegram ID:* ${userProfile.telegram_id}\n`
-      message += `*Min Spots:* ${userProfile.min_spots || 1}\n\n`
+      message += `<b>User ID:</b> ${userProfile.id}\n`
+      message += `<b>Telegram ID:</b> ${userProfile.telegram_id}\n`
+      message += `<b>Min Spots:</b> ${userProfile.min_spots || 1}\n\n`
     }
     
-    message += `*Test Functions:* 🧪`
+    message += `<b>Test Functions:</b> 🧪`
     
     return message
   },
@@ -393,15 +393,15 @@ Tell me the problem, what you want the bot to do, and why it helps.`
    * Post-save confirmation message with clear next actions
    */
   createSavedPreferencesMessage() {
-    return `✅ *Saved.* We'll only ping you for matches.
+    return `✅ <b>Saved.</b> We'll only ping you for matches.
 
-*What's next?*
-• */today* — See matches you can book now at The Wave
-• */tomorrow* — Preview tomorrow's sessions
+<b>What's next?</b>
+• <b>/today</b> — See matches you can book now at The Wave
+• <b>/tomorrow</b> — Preview tomorrow's sessions
 
-*Need tweaks?*
-• *Alerts & Digests* — instant pings + daily summaries
-• *Your Setup* — levels, sides, days, times, spots`
+<b>Need tweaks?</b>
+• <b>Alerts & Digests</b> — instant pings + daily summaries
+• <b>Your Setup</b> — levels, sides, days, times, spots`
   },
 
   /**

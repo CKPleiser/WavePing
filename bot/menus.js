@@ -153,16 +153,16 @@ const menus = {
    */
   levelSelectionMenu(currentLevels = []) {
     const levels = [
-      { key: 'beginner', emoji: '🟢', name: 'Beginner' },
-      { key: 'improver', emoji: '🔵', name: 'Improver' },
-      { key: 'intermediate', emoji: '🟡', name: 'Intermediate' },
-      { key: 'advanced', emoji: '🟠', name: 'Advanced' },
-      { key: 'expert', emoji: '🔴', name: 'Expert' }
+      { key: 'beginner', name: 'Beginner' },
+      { key: 'improver', name: 'Improver' },
+      { key: 'intermediate', name: 'Intermediate' },
+      { key: 'advanced', name: 'Advanced' },
+      { key: 'expert', name: 'Expert' }
     ]
     
     const buttons = levels.map(level => {
       const isSelected = currentLevels.includes(level.key)
-      const text = `${isSelected ? '✅ ' : ''}${level.emoji} ${level.name}`
+      const text = `${isSelected ? '✅ ' : ''}${level.name}`
       return [Markup.button.callback(text, `pref_level_toggle_${level.key}`)]
     })
     
@@ -373,16 +373,16 @@ const menus = {
    */
   setupLevelSelectionMenu(currentLevels = []) {
     const levels = [
-      { key: 'beginner', emoji: '🟢', name: 'Beginner' },
-      { key: 'improver', emoji: '🔵', name: 'Improver' },
-      { key: 'intermediate', emoji: '🟡', name: 'Intermediate' },
-      { key: 'advanced', emoji: '🟠', name: 'Advanced' },
-      { key: 'expert', emoji: '🔴', name: 'Expert' }
+      { key: 'beginner', name: 'Beginner' },
+      { key: 'improver', name: 'Improver' },
+      { key: 'intermediate', name: 'Intermediate' },
+      { key: 'advanced', name: 'Advanced' },
+      { key: 'expert', name: 'Expert' }
     ]
     
     const buttons = levels.map(level => {
       const isSelected = currentLevels.includes(level.key)
-      const text = `${isSelected ? '✅ ' : ''}${level.emoji} ${level.name}`
+      const text = `${isSelected ? '✅ ' : ''}${level.name}`
       return [Markup.button.callback(text, `setup_level_toggle_${level.key}`)]
     })
     
