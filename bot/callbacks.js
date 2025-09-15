@@ -441,22 +441,23 @@ const callbacks = {
         case 'pref_level_save':
           const savedLevelsMessage = ui.createSavedPreferencesMessage('skill levels')
           const comeFromSessions = ctx.session?.comeFromSessions || false
-          const postSaveMenu = menus.postSaveActionsMenu(comeFromSessions)
-          console.log('🔧 Post-save menu generated:', JSON.stringify(postSaveMenu, null, 2))
           
-          try {
-            return await ctx.editMessageText(savedLevelsMessage, {
-              parse_mode: 'HTML',
-              reply_markup: postSaveMenu
-            })
-          } catch (error) {
-            console.error('🚨 Edit message failed:', error)
-            // Fallback to new message
-            return await ctx.reply(savedLevelsMessage, {
-              parse_mode: 'HTML',
-              reply_markup: postSaveMenu
-            })
+          // Inline the buttons directly to debug
+          const buttons = [
+            [{ text: '✅ Done', callback_data: 'main' }],
+            [{ text: '⚙️ Edit More', callback_data: 'post_save_tray' }]
+          ]
+          
+          if (comeFromSessions) {
+            buttons.push([{ text: '🌊 Back to Sessions', callback_data: 'back_to_sessions' }])
           }
+          
+          return await ctx.editMessageText(savedLevelsMessage, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: buttons
+            }
+          })
           
         // Side toggles
         case 'side_toggle_L':
