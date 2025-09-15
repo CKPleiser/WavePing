@@ -486,38 +486,7 @@ const menus = {
     ])
   },
 
-  /**
-   * Post-save action menu with Done/Edit More options
-   */
-  postSaveActionsMenu(comeFromSessions = false) {
-    const buttons = [
-      [Markup.button.callback('✅ Done', 'main')],
-      [Markup.button.callback('⚙️ Edit More', 'post_save_tray')]
-    ]
-    
-    // Add back to sessions if user came from today/tomorrow
-    if (comeFromSessions) {
-      buttons.push([Markup.button.callback('🌊 Back to Sessions', 'back_to_sessions')])
-    }
-    
-    return Markup.inlineKeyboard(buttons)
-  },
-
-  /**
-   * Edit tray menu with most common settings to adjust
-   */
-  editTrayMenu() {
-    return Markup.inlineKeyboard([
-      [Markup.button.callback('🎯 Skill Levels', 'pref_levels')],
-      [Markup.button.callback('🕐 Time Windows', 'pref_times')],
-      [Markup.button.callback('💺 Min Spots', 'pref_spots')],
-      [Markup.button.callback('🔔 Notifications', 'alerts')],
-      [
-        Markup.button.callback('🏠 Done', 'main'),
-        Markup.button.callback('⚙️ All Settings', 'prefs')
-      ]
-    ])
-  },
+  // Removed post-save menus - no longer needed with simplified flow
 
   /**
    * Back button utility

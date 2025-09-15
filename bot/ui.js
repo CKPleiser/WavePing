@@ -403,35 +403,7 @@ Tell me the problem, what you want the bot to do, and why it helps.`
     return message
   },
 
-  /**
-   * Post-save confirmation message with clear next actions
-   */
-  createSavedPreferencesMessage(settingType = null) {
-    let message = `✅ <b>Saved!</b> Your ${settingType || 'preferences'} have been updated.\n\n`
-    
-    message += `<b>What's next?</b>\n`
-    message += `• <b>Done</b> — Back to main menu\n`
-    message += `• <b>Edit More</b> — Quick access to other common settings\n`
-    message += `• <b>Back to Sessions</b> — See today's surf sessions (if available)`
-    
-    return message
-  },
-
-  /**
-   * Post-save edit tray message showing commonly adjusted settings
-   */
-  createEditTrayMessage() {
-    return `⚙️ <b>Quick Settings</b>
-
-<b>Common next steps:</b>
-
-<b>🎯 Skill Levels</b> — Add beginner/advanced to your intermediate default
-<b>🕐 Time Windows</b> — Narrow from "6AM-9PM" to your preferred hours  
-<b>💺 Min Spots</b> — Change from "1+" if you want more availability
-<b>🔔 Notifications</b> — Adjust when you get alerts (currently 24h before)
-
-<i>What would you like to customize?</i>`
-  },
+  // Removed post-save messages - no longer needed with simplified flow
 
   /**
    * Support message - Donations only

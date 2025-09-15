@@ -439,24 +439,17 @@ const callbacks = {
         // Save level changes
         case 'level_save':
         case 'pref_level_save':
-          const savedLevelsMessage = ui.createSavedPreferencesMessage('skill levels')
-          const comeFromSessions = ctx.session?.comeFromSessions || false
+          // Just show a quick confirmation then go back to preferences
+          await ctx.answerCbQuery('✅ Skill levels saved!')
           
-          // Inline the buttons directly to debug
-          const buttons = [
-            [{ text: '✅ Done', callback_data: 'main' }],
-            [{ text: '⚙️ Edit More', callback_data: 'post_save_tray' }]
-          ]
+          // Refresh the user profile to get updated data
+          const updatedProfile = await getUserProfile(supabase, telegramId)
           
-          if (comeFromSessions) {
-            buttons.push([{ text: '🌊 Back to Sessions', callback_data: 'back_to_sessions' }])
-          }
-          
-          return await ctx.editMessageText(savedLevelsMessage, {
+          // Show the preferences screen with updated data
+          const prefsMessage = ui.createPreferencesMessage(updatedProfile)
+          return await ctx.editMessageText(prefsMessage, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: buttons
-            }
+            reply_markup: menus.preferencesMenu()
           })
           
         // Side toggles
@@ -468,16 +461,14 @@ const callbacks = {
           
         case 'side_save':
         case 'pref_side_save':
-          const savedSidesMessage = ui.createSavedPreferencesMessage('wave side preferences')
+          await ctx.answerCbQuery('✅ Wave side preferences saved!')
           
-          return await ctx.editMessageText(savedSidesMessage, {
+          // Refresh and show preferences
+          const updatedProfile2 = await getUserProfile(supabase, telegramId)
+          const prefsMessage2 = ui.createPreferencesMessage(updatedProfile2)
+          return await ctx.editMessageText(prefsMessage2, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '✅ Done', callback_data: 'main' }],
-                [{ text: '⚙️ Edit More', callback_data: 'post_save_tray' }]
-              ]
-            }
+            reply_markup: menus.preferencesMenu()
           })
           
         // Day toggles
@@ -599,17 +590,14 @@ const callbacks = {
             delete ctx.session.tempMinSpots
           }
           
-          ctx.answerCbQuery(`💾 Minimum spots set to ${spotCountToSave}!`)
+          await ctx.answerCbQuery(`✅ Minimum spots set to ${spotCountToSave}!`)
           
-          const savedSpotsMessage = ui.createSavedPreferencesMessage('minimum spots')
-          return await ctx.editMessageText(savedSpotsMessage, {
+          // Refresh and show preferences
+          const updatedProfile3 = await getUserProfile(supabase, telegramId)
+          const prefsMessage3 = ui.createPreferencesMessage(updatedProfile3)
+          return await ctx.editMessageText(prefsMessage3, {
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '✅ Done', callback_data: 'main' }],
-                [{ text: '⚙️ Edit More', callback_data: 'post_save_tray' }]
-              ]
-            }
+            reply_markup: menus.preferencesMenu()
           })
           
         // Notification timing toggles (from preferences menu)
@@ -937,18 +925,7 @@ const callbacks = {
             }
           )
 
-        case 'post_save_tray':
-          return ctx.editMessageText(
-            ui.createEditTrayMessage(),
-            {
-              parse_mode: 'HTML',
-              reply_markup: menus.editTrayMenu()
-            }
-          )
-
-        case 'back_to_sessions':
-          // Go back to today's sessions (could be enhanced to remember context)
-          return commands.today(supabase, ctx)
+        // Removed post_save_tray and back_to_sessions - no longer needed with simplified flow
           
         default:
           return ctx.answerCbQuery('Unknown setup option')
