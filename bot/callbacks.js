@@ -137,7 +137,40 @@ const callbacks = {
           return commands.preferences(supabase, ctx)
           
         case 'alerts':
-          return commands.notifications(supabase, ctx)
+          // Go directly to notification timing settings instead of overview
+          const telegramIdAlerts = ctx.from.id
+          const userProfileAlerts = await getUserProfile(supabase, telegramIdAlerts)
+          
+          if (!userProfileAlerts) {
+            return ctx.answerCbQuery('⚠️ Set up your profile first!')
+          }
+          
+          const currentTimings = userProfileAlerts.user_digest_filters?.map(un => un.timing) || []
+          return ctx.editMessageText(
+            '⏰ <b>Notification Timing</b>\n\nWhen do you want to be notified before sessions start?\n\nSelect all that apply:',
+            {
+              parse_mode: 'HTML',
+              reply_markup: menus.notificationTimingMenu(currentTimings).reply_markup
+            }
+          )
+          
+        case 'notif_timing':
+          // Also handle direct notif_timing calls
+          const telegramIdTiming = ctx.from.id
+          const userProfileTiming = await getUserProfile(supabase, telegramIdTiming)
+          
+          if (!userProfileTiming) {
+            return ctx.answerCbQuery('⚠️ Set up your profile first!')
+          }
+          
+          const currentTimingsDirect = userProfileTiming.user_digest_filters?.map(un => un.timing) || []
+          return ctx.editMessageText(
+            '⏰ <b>Notification Timing</b>\n\nWhen do you want to be notified before sessions start?\n\nSelect all that apply:',
+            {
+              parse_mode: 'HTML',
+              reply_markup: menus.notificationTimingMenu(currentTimingsDirect).reply_markup
+            }
+          )
           
         case 'help':
           const helpMessage = ui.helpMessage()
