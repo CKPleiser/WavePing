@@ -8,7 +8,6 @@ const menus = require('./menus')
 const ui = require('./ui')
 const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
 const { checkRateLimit } = require('../utils/telegram-helpers')
-// Import utilities directly to avoid circular dependency
 
 // Utility functions for user profile management
 async function getUserProfile(supabase, telegramId) {
@@ -100,7 +99,7 @@ const commands = {
       // Get session counts for today and tomorrow
       let sessionSummary = ''
       try {
-        const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
+        // Use already imported scraper
         const scraper = new WaveScheduleScraper()
         
         // Extract user preferences in correct format
@@ -131,7 +130,7 @@ const commands = {
           tomorrowFiltered.length === 1 ? '1 session available' :
           `${tomorrowFiltered.length} sessions available`
           
-        sessionSummary = `\n\n<b>Today:</b> ${todayText}\n<b>Tomorrow:</b> ${tomorrowText}`
+        sessionSummary = `\n\n<b>Today:</b> ${todayText}\n\n<b>Tomorrow:</b> ${tomorrowText}`
       } catch (error) {
         // Silently ignore if we can't get sessions
         console.log('Could not fetch sessions for summary:', error.message)
@@ -141,14 +140,8 @@ const commands = {
       // Welcome back existing user - streamlined flow
       const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile) + sessionSummary
       
-      console.log('🔧 DEBUG: About to call ctx.reply():', {
-        hasCtx: !!ctx,
-        hasReply: !!(ctx && ctx.reply),
-        chatId: ctx.chat?.id,
-        messageLength: welcomeBackMessage.length
-      })
       
-      const replyResult = await ctx.reply(welcomeBackMessage, {
+      await ctx.reply(welcomeBackMessage, {
         parse_mode: 'HTML',  
         reply_markup: {
           inline_keyboard: [
@@ -158,10 +151,6 @@ const commands = {
         }
       })
       
-      console.log('✅ Welcome back message sent, result:', {
-        hasResult: !!replyResult,
-        messageId: replyResult?.message_id
-      })
     }
     } catch (error) {
       console.error('🚨 START command error:', error.message, error.stack)

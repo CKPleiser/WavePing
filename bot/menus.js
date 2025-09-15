@@ -4,6 +4,7 @@
  */
 
 const { Markup } = require('telegraf')
+const logger = require('../utils/logger').child('Menus')
 
 const menus = {
   /**
@@ -40,7 +41,7 @@ const menus = {
   sessionMenu(timeframe, sessions = [], showingCount = null) {
     const buttons = []
     
-    console.log(`🔧 sessionMenu: Creating menu for ${timeframe}, sessions=${sessions.length}`)
+    logger.debug(`Creating session menu for ${timeframe}`, { sessionCount: sessions.length })
     
     // Bottom row: Book • Refresh only  
     buttons.push([
@@ -66,9 +67,9 @@ const menus = {
     
     buttons.push([Markup.button.callback('Main Menu', 'main')])
     
-    console.log(`🔧 sessionMenu: Created ${buttons.length} button rows`)
+    logger.debug(`Created session menu with ${buttons.length} button rows`)
     const menu = Markup.inlineKeyboard(buttons)
-    console.log(`🔧 sessionMenu: Menu structure:`, JSON.stringify(menu.reply_markup, null, 2))
+    logger.debug('Menu structure created', { menuStructure: menu.reply_markup })
     
     return menu
   },
@@ -288,11 +289,11 @@ const menus = {
    */
   notificationTimingMenu(currentTimings = []) {
     const timings = [
-      { key: '1w', desc: '📅 1 week before' },
-      { key: '48h', desc: '🌅 48 hours before' },
-      { key: '24h', desc: '📅 24 hours before' },
-      { key: '12h', desc: '🌅 12 hours before' },
-      { key: '2h', desc: '⏰ 2 hours before' }
+      { key: '1w', desc: '📅 1 week' },
+      { key: '48h', desc: '🌅 48 hours' },
+      { key: '24h', desc: '📅 24 hours' },
+      { key: '12h', desc: '🌅 12 hours' },
+      { key: '2h', desc: '⏰ 2 hours' }
     ]
     
     const buttons = timings.map(timing => {
@@ -314,8 +315,8 @@ const menus = {
    */
   digestMenu(currentDigests = []) {
     const digests = [
-      { key: 'morning', desc: '🌅 Morning Digest (8 AM)' },
-      { key: 'evening', desc: '🌇 Evening Digest (6 PM)' }
+      { key: 'morning', desc: '🌅 Morning (8 AM)' },
+      { key: 'evening', desc: '🌇 Evening (6 PM)' }
     ]
     
     const buttons = digests.map(digest => {
@@ -387,7 +388,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('➡️ Continue to Step 2', 'setup_level_continue')],
+      [Markup.button.callback('➡️ Continue', 'setup_level_continue')],
       [Markup.button.callback('🔙 Back to Menu', 'main')]
     )
     
@@ -408,7 +409,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('➡️ Continue to Step 3', 'setup_side_continue')]
+      [Markup.button.callback('➡️ Continue', 'setup_side_continue')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -451,7 +452,7 @@ const menus = {
     ]
     
     buttons.push(
-      [Markup.button.callback('➡️ Continue to Step 5', 'setup_day_continue')]
+      [Markup.button.callback('➡️ Continue', 'setup_day_continue')]
     )
     
     return Markup.inlineKeyboard(buttons)
@@ -471,7 +472,7 @@ const menus = {
     })
     
     buttons.push(
-      [Markup.button.callback('➡️ Continue to Step 6', 'setup_time_continue')]
+      [Markup.button.callback('➡️ Continue', 'setup_time_continue')]
     )
     
     return Markup.inlineKeyboard(buttons)

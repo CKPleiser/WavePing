@@ -10,15 +10,14 @@ const ui = {
   welcomeMessage(firstName) {
     return `🌊 <b>Welcome to WavePing, ${firstName}!</b>
 
-<b>Your Personal Surf Assistant</b>
+<b>Your Personal Surf Assistant for The Wave Bristol</b>
 
-Get instant notifications when surf sessions matching your preferences become available at The Wave Bristol!
+Get instant notifications when surf sessions matching your preferences become available!
 
 <b>What WavePing does for you:</b>
-Smart notifications for your preferred sessions
-Daily surf digests delivered when you want them
-Daily session digest updates
-Personalized recommendations based on your skill level
+• Smart notifications for your preferred sessions
+• Daily surf digests delivered when you want them
+• Personalized recommendations based on your skill level
 
 <b>Ready to catch your perfect wave?</b>`
   },
@@ -249,7 +248,7 @@ Your Setup and Alerts & Digests below.`
     
     // Time windows
     const times = userProfile.user_time_windows?.map(tw => 
-      `${tw.start_time}-${tw.end_time}`
+      `${this.formatTime12Hour(tw.start_time)}-${this.formatTime12Hour(tw.end_time)}`
     ) || []
     const timesText = times.length > 0 ? times.join(', ') : 'Any time'
     message += `🕐 <b>Time Windows:</b> ${timesText}\n`
@@ -335,11 +334,11 @@ Full customization of all preferences.
 
 Choose your surfing level to get the right session recommendations:
 
-🟢 <b>Beginner</b> - New to surfing, learning basics
-🔵 <b>Improver</b> - Getting comfortable, building confidence  
-🟡 <b>Intermediate</b> - Regular surfer, comfortable on most waves
-🟠 <b>Advanced</b> - Experienced surfer, all conditions
-🔴 <b>Expert</b> - Pro level, coaching others
+<b>Beginner</b> - New to surfing, learning basics
+<b>Improver</b> - Getting comfortable, building confidence  
+<b>Intermediate</b> - Regular surfer, comfortable on most waves
+<b>Advanced</b> - Experienced surfer, all conditions
+<b>Expert</b> - Pro level, coaching others
 
 <b>What's your level?</b> 🏄‍♂️`
   },
@@ -410,12 +409,12 @@ Tell me the problem, what you want the bot to do, and why it helps.`
   supportMessage() {
     return `<b>☕ Donate to WavePing</b>
 
-Free, open-source digests for The Wave Bristol.
-Your donation keeps this running.
+Free, open-source digests for The Wave Bristol. Your donation keeps this running.
 
 <b>Your support funds</b>
-• Servers & scraping
+• Servers
 • Fixes and new features
+• Support
 
 Thanks for keeping it free for everyone.`
   },
@@ -463,9 +462,13 @@ Thanks for keeping it free for everyone.`
   },
 
   chipTimeWindow(startTime, endTime) {
-    const start = parseInt(startTime.split(':')[0])
-    const end = parseInt(endTime.split(':')[0])
-    return `${start}–${end}`
+    const startHour = parseInt(startTime.split(':')[0])
+    const endHour = parseInt(endTime.split(':')[0])
+    
+    const startFormatted = startHour === 0 ? '12AM' : startHour > 12 ? `${startHour - 12}PM` : startHour === 12 ? '12PM' : `${startHour}AM`
+    const endFormatted = endHour === 0 ? '12AM' : endHour > 12 ? `${endHour - 12}PM` : endHour === 12 ? '12PM' : `${endHour}AM`
+    
+    return `${startFormatted}–${endFormatted}`
   },
 
   spotsLabel(spots) {
@@ -474,6 +477,17 @@ Thanks for keeping it free for everyone.`
 
   capitalizeWords(str) {
     return str.replace(/\b\w/g, l => l.toUpperCase())
+  },
+
+  formatTime12Hour(time24) {
+    if (!time24 || typeof time24 !== 'string') return time24
+    
+    const [hours, minutes] = time24.split(':')
+    const hour24 = parseInt(hours, 10)
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+    const ampm = hour24 >= 12 ? 'PM' : 'AM'
+    
+    return `${hour12}:${minutes} ${ampm}`
   },
 
   getDayName(dateISO, today) {
