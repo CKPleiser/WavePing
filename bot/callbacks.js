@@ -1627,6 +1627,33 @@ const callbacks = {
         return ctx.answerCbQuery('❌ User profile not found!')
       }
       
+      // Handle pagination callbacks: digest_page_[page]_[type]_[timeframe]
+      if (action.startsWith('page_')) {
+        const parts = action.split('_')
+        const page = parseInt(parts[1])
+        const digestType = parts[2] // 'morning' or 'evening'
+        const timeframeCode = parts[3] // '1w', '48h', '24h'
+        
+        // Import DigestService to handle pagination
+        const DigestService = require('../services/digestService')
+        const digestService = new DigestService(supabase, ctx.telegram)
+        
+        return await digestService.handleDigestPagination(ctx, page, digestType, timeframeCode)
+      }
+      
+      // Handle refresh callbacks: digest_refresh_[type]_[timeframe]
+      if (action.startsWith('refresh_')) {
+        const parts = action.split('_')
+        const digestType = parts[1] // 'morning' or 'evening'
+        const timeframeCode = parts[2] // '1w', '48h', '24h'
+        
+        // Import DigestService to handle refresh (same as page 1)
+        const DigestService = require('../services/digestService')
+        const digestService = new DigestService(supabase, ctx.telegram)
+        
+        return await digestService.handleDigestPagination(ctx, 1, digestType, timeframeCode)
+      }
+      
       switch (action) {
         case 'toggle_morning':
         case 'toggle_evening':
@@ -1648,6 +1675,10 @@ const callbacks = {
               ]
             }
           })
+          
+        case 'noop':
+          // No-op callback for non-clickable buttons like page indicators
+          return ctx.answerCbQuery()
           
         default:
           return ctx.answerCbQuery('❌ Unknown digest action')

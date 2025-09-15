@@ -105,6 +105,96 @@ class DigestService {
   }
 
   /**
+   * Format digest message with pagination support
+   */
+  formatDigestMessage(sessions, page, sessionsPerPage, digestType, timeframeLabel) {
+    const totalPages = Math.ceil(sessions.length / sessionsPerPage)
+    const startIdx = (page - 1) * sessionsPerPage
+    const endIdx = Math.min(startIdx + sessionsPerPage, sessions.length)
+    const sessionsToShow = sessions.slice(startIdx, endIdx)
+    
+    let message = ''
+    
+    // Header based on digest type
+    if (digestType === 'morning') {
+      message = `🌅 **Good Morning, Wave Rider!** ☀️\n\n`
+    } else {
+      message = `🌇 **Evening Wave Report** 🌊\n\n`
+    }
+    
+    // Session count and page info
+    message += `🌊 **${timeframeLabel.toUpperCase()}** (${sessions.length} match${sessions.length === 1 ? '' : 'es'})`
+    if (totalPages > 1) {
+      message += ` - Page ${page}/${totalPages}`
+    }
+    message += `\n\n`
+    
+    // Display sessions for current page
+    let currentDate = ''
+    sessionsToShow.forEach((session, index) => {
+      // Add date header for multi-day views
+      if (timeframeLabel !== 'Today' && timeframeLabel !== 'Tomorrow' && session.dateLabel && session.dateLabel !== currentDate) {
+        if (index > 0) message += '\n'
+        message += `**${session.dateLabel}**\n`
+        currentDate = session.dateLabel
+      }
+      message += this.formatSession(session, false)
+    })
+    
+    // Links
+    message += `[🏄‍♂️ **Book at The Wave**](https://ticketing.thewave.com/)\n\n`
+    message += `[☕ **Support WavePing**](https://buymeacoffee.com/driftwithcaz)\n\n`
+    
+    // Commands
+    if (digestType === 'morning') {
+      message += this.getQuickCommands()
+    } else {
+      message += this.getEveningCommands()
+    }
+    
+    return message
+  }
+
+  /**
+   * Create pagination keyboard for digest messages
+   */
+  createDigestPaginationKeyboard(currentPage, totalPages, digestType, timeframe) {
+    const { Markup } = require('telegraf')
+    const buttons = []
+    
+    // Pagination row if needed
+    if (totalPages > 1) {
+      const paginationRow = []
+      
+      if (currentPage > 1) {
+        paginationRow.push(
+          Markup.button.callback('⬅️ Previous', `digest_page_${currentPage - 1}_${digestType}_${timeframe}`)
+        )
+      }
+      
+      // Page indicator (non-clickable)
+      paginationRow.push(
+        Markup.button.callback(`📄 ${currentPage}/${totalPages}`, 'noop')
+      )
+      
+      if (currentPage < totalPages) {
+        paginationRow.push(
+          Markup.button.callback('➡️ Next', `digest_page_${currentPage + 1}_${digestType}_${timeframe}`)
+        )
+      }
+      
+      buttons.push(paginationRow)
+    }
+    
+    // Refresh button
+    buttons.push([
+      Markup.button.callback('🔄 Refresh', `digest_refresh_${digestType}_${timeframe}`)
+    ])
+    
+    return Markup.inlineKeyboard(buttons)
+  }
+
+  /**
    * Send morning digest to users
    */
   async sendMorningDigest() {
@@ -128,43 +218,40 @@ class DigestService {
         // Determine timeframe label
         const userTimings = user.user_digest_filters?.map(n => n.timing) || []
         let timeframeLabel = 'Today'
+        let timeframeCode = '24h' // for callback data
         if (userTimings.includes('1w')) {
           timeframeLabel = 'Next 7 Days'
+          timeframeCode = '1w'
         } else if (userTimings.includes('48h')) {
           timeframeLabel = 'Next 2 Days'
+          timeframeCode = '48h'
         }
 
-        // Create morning digest message
-        let message = `🌅 **Good Morning, Wave Rider!** ☀️\n\n`
-        message += `🌊 **${timeframeLabel.toUpperCase()}** (${filteredSessions.length} match${filteredSessions.length === 1 ? '' : 'es'})\n\n`
+        // Create paginated message
+        const sessionsPerPage = 10
+        const message = this.formatDigestMessage(
+          filteredSessions,
+          1, // Start at page 1
+          sessionsPerPage,
+          'morning',
+          timeframeLabel
+        )
         
-        // Show up to 10 sessions, grouped by date if multiple days
-        const sessionsToShow = filteredSessions.slice(0, 10)
-        let currentDate = ''
-        
-        sessionsToShow.forEach((session, index) => {
-          // Add date header for multi-day views
-          if (timeframeLabel !== 'Today' && session.dateLabel && session.dateLabel !== currentDate) {
-            if (index > 0) message += '\n'
-            message += `**${session.dateLabel}**\n`
-            currentDate = session.dateLabel
-          }
-          message += this.formatSession(session, false)
-        })
-        
-        if (filteredSessions.length > 10) {
-          message += `...and ${filteredSessions.length - 10} more sessions!\n\n`
-        }
-        
-        // Single booking link
-        message += `[🏄‍♂️ **Book at The Wave**](https://ticketing.thewave.com/)\n\n`
-        
-        // Support link
-        message += `[☕ **Support WavePing**](https://buymeacoffee.com/driftwithcaz)\n\n`
-        
-        message += this.getQuickCommands()
+        // Add pagination keyboard if needed
+        const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage)
+        const keyboard = totalPages > 1 
+          ? this.createDigestPaginationKeyboard(1, totalPages, 'morning', timeframeCode)
+          : undefined
 
-        await this.bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
+        // Store sessions in cache for pagination (you might want to use Redis or similar)
+        // For now, we'll need to refetch when paginating
+        
+        const options = { parse_mode: 'Markdown' }
+        if (keyboard) {
+          options.reply_markup = keyboard.reply_markup
+        }
+
+        await this.bot.telegram.sendMessage(user.telegram_id, message, options)
         results.push({ 
           telegramId: user.telegram_id, 
           status: 'sent', 
@@ -209,43 +296,37 @@ class DigestService {
         // Determine timeframe label
         const userTimings = user.user_digest_filters?.map(n => n.timing) || []
         let timeframeLabel = 'Tomorrow'
+        let timeframeCode = '24h' // for callback data
         if (userTimings.includes('1w')) {
           timeframeLabel = 'Next 7 Days'
+          timeframeCode = '1w'
         } else if (userTimings.includes('48h')) {
           timeframeLabel = 'Next 2 Days'
+          timeframeCode = '48h'
         }
 
-        // Create evening digest message
-        let message = `🌇 **Evening Wave Report** 🌊\n\n`
-        message += `🌅 **${timeframeLabel.toUpperCase()}** (${filteredSessions.length} match${filteredSessions.length === 1 ? '' : 'es'})\n\n`
+        // Create paginated message
+        const sessionsPerPage = 12
+        const message = this.formatDigestMessage(
+          filteredSessions,
+          1, // Start at page 1
+          sessionsPerPage,
+          'evening',
+          timeframeLabel
+        )
         
-        // Show up to 12 sessions for evening digest, grouped by date if multiple days
-        const sessionsToShow = filteredSessions.slice(0, 12)
-        let currentDate = ''
-        
-        sessionsToShow.forEach((session, index) => {
-          // Add date header for multi-day views
-          if (timeframeLabel !== 'Tomorrow' && session.dateLabel && session.dateLabel !== currentDate) {
-            if (index > 0) message += '\n'
-            message += `**${session.dateLabel}**\n`
-            currentDate = session.dateLabel
-          }
-          message += this.formatSession(session, false)
-        })
-        
-        if (filteredSessions.length > 12) {
-          message += `...and ${filteredSessions.length - 12} more sessions!\n\n`
-        }
-        
-        // Single booking link
-        message += `[🏄‍♂️ **Book at The Wave**](https://ticketing.thewave.com/)\n\n`
-        
-        // Support link
-        message += `[☕ **Support WavePing**](https://buymeacoffee.com/driftwithcaz)\n\n`
-        
-        message += this.getEveningCommands()
+        // Add pagination keyboard if needed
+        const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage)
+        const keyboard = totalPages > 1 
+          ? this.createDigestPaginationKeyboard(1, totalPages, 'evening', timeframeCode)
+          : undefined
 
-        await this.bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' })
+        const options = { parse_mode: 'Markdown' }
+        if (keyboard) {
+          options.reply_markup = keyboard.reply_markup
+        }
+
+        await this.bot.telegram.sendMessage(user.telegram_id, message, options)
         results.push({ 
           telegramId: user.telegram_id, 
           status: 'sent', 
@@ -285,6 +366,89 @@ class DigestService {
            `• /tomorrow - Full tomorrow schedule\n` +
            `• /setup - Update preferences\n\n` +
            `🌙 Rest well, wave rider! 🏄‍♂️`
+  }
+
+  /**
+   * Handle digest pagination callback
+   */
+  async handleDigestPagination(ctx, page, digestType, timeframeCode) {
+    try {
+      await ctx.answerCbQuery()
+      
+      const userId = ctx.from.id
+      
+      // Get user profile with the same structure as filterSessionsForUser expects
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select(`
+          id,
+          telegram_id,
+          min_spots,
+          user_levels (level),
+          user_sides (side),
+          user_days (day_of_week),
+          user_time_windows (start_time, end_time)
+        `)
+        .eq('telegram_id', userId)
+        .single()
+      
+      if (!profile) {
+        return ctx.editMessageText('Unable to find your profile. Please run /setup first.')
+      }
+      
+      // Determine days to fetch based on timeframe code
+      let days = 1
+      let timeframeLabel = 'Today'
+      
+      if (timeframeCode === '1w') {
+        days = 7
+        timeframeLabel = 'Next 7 Days'
+      } else if (timeframeCode === '48h') {
+        days = 2
+        timeframeLabel = 'Next 2 Days'
+      } else if (timeframeCode === '24h') {
+        days = 1
+        timeframeLabel = digestType === 'evening' ? 'Tomorrow' : 'Today'
+      }
+      
+      // Get sessions
+      const sessions = await this.scraper.getSessionsInRange(days).catch(() => [])
+      const filteredSessions = this.filterSessionsForUser(sessions, profile)
+      
+      if (filteredSessions.length === 0) {
+        return ctx.editMessageText('No matching sessions found for your preferences.')
+      }
+      
+      // Generate paginated message
+      const sessionsPerPage = digestType === 'morning' ? 10 : 12
+      const totalPages = Math.ceil(filteredSessions.length / sessionsPerPage)
+      
+      // Validate page number
+      const validPage = Math.min(Math.max(1, page), totalPages)
+      
+      const message = this.formatDigestMessage(
+        filteredSessions,
+        validPage,
+        sessionsPerPage,
+        digestType,
+        timeframeLabel
+      )
+      
+      const keyboard = totalPages > 1 
+        ? this.createDigestPaginationKeyboard(validPage, totalPages, digestType, timeframeCode)
+        : undefined
+      
+      const options = { parse_mode: 'Markdown' }
+      if (keyboard) {
+        options.reply_markup = keyboard.reply_markup
+      }
+      
+      return ctx.editMessageText(message, options)
+      
+    } catch (error) {
+      console.error('Error handling digest pagination:', error)
+      await ctx.answerCbQuery('Failed to load page. Please try again.')
+    }
   }
 }
 
