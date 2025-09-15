@@ -777,6 +777,26 @@ const callbacks = {
             }
           )
           
+        case 'setup_start':
+        case 'setup_restart':
+          // Initialize session setup data
+          if (!ctx.session) ctx.session = {}
+          ctx.session.setup = {
+            levels: [],
+            sides: [],
+            days: [],
+            times: [],
+            minSpots: 1
+          }
+          
+          return ctx.editMessageText(
+            '🚀 <b>Setup Wizard Started!</b> ⚡\n\n<b>Step 1 of 6: Skill Levels</b>\n\nChoose all levels you\'re comfortable surfing with:',
+            {
+              parse_mode: 'HTML',
+              reply_markup: menus.setupLevelSelectionMenu([])
+            }
+          )
+
         // Setup wizard level toggles
         case 'setup_level_toggle_beginner':
         case 'setup_level_toggle_improver':
