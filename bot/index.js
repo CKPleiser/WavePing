@@ -65,7 +65,9 @@ class BotHandler {
     // Menu navigation with prefix
     this.bot.action(/^menu_(.+)$/, callbacks.menu.bind(null, this.supabase))
     
-    // Preferences management
+    // Preferences management - display callbacks go to navigation
+    this.bot.action(/^pref_(levels|sides|days|times|spots|digests|profile_overview)$/, callbacks.navigation.bind(null, this.supabase))
+    // Preferences management - toggle/save callbacks go to preferences  
     this.bot.action(/^pref_.+$/, callbacks.preferences.bind(null, this.supabase))
     this.bot.action(/^setup_(.+)$/, callbacks.setup.bind(null, this.supabase))
     
