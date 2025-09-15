@@ -152,7 +152,7 @@ const menus = {
     const buttons = timings.map(timing => {
       const isSelected = currentTimings.includes(timing.key)
       const text = `${isSelected ? '✅ ' : ''}${timing.desc}`
-      return [Markup.button.callback(text, `timing_toggle_${timing.key}`)]
+      return [Markup.button.callback(text, `pref_notification_toggle_${timing.key}`)]
     })
     
     buttons.push(
@@ -175,7 +175,7 @@ const menus = {
     const buttons = digests.map(digest => {
       const isSelected = currentDigests.includes(digest.key)
       const text = `${isSelected ? '✅ ' : ''}${digest.desc}`
-      return [Markup.button.callback(text, `digest_toggle_${digest.key}`)]
+      return [Markup.button.callback(text, `pref_digest_toggle_${digest.key}`)]
     })
     
     buttons.push(

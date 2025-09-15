@@ -840,11 +840,6 @@ const callbacks = {
           })
           
         // Notification timing toggles (from preferences menu)
-        case 'notification_toggle_1w':
-        case 'notification_toggle_48h':
-        case 'notification_toggle_24h':
-        case 'notification_toggle_12h':
-        case 'notification_toggle_2h':
         case 'pref_notification_toggle_1w':
         case 'pref_notification_toggle_48h':
         case 'pref_notification_toggle_24h':
@@ -861,9 +856,9 @@ const callbacks = {
           return commands.preferences(supabase, ctx)
           
         // Digest preference toggles  
-        case 'digest_toggle_morning':
-        case 'digest_toggle_evening':
-          const digestToToggle = action.split('_')[2]
+        case 'pref_digest_toggle_morning':
+        case 'pref_digest_toggle_evening':
+          const digestToToggle = action.split('_')[3] // Updated for pref_digest_toggle_*
           return await callbacks.toggleDigestPreference(supabase, ctx, userProfile, digestToToggle)
           
         case 'digest_save':
@@ -922,17 +917,17 @@ const callbacks = {
           await ctx.reply(testMessage, { parse_mode: 'HTML' })
           return ctx.answerCbQuery('📤 Test notification sent!')
           
-        case 'digest_toggle_morning':
-        case 'digest_toggle_evening':
-          const digestType = action.split('_')[2]
+        case 'pref_digest_toggle_morning':
+        case 'pref_digest_toggle_evening':
+          const digestType = action.split('_')[3] // Updated for pref_digest_toggle_*
           return await callbacks.toggleDigestPreference(supabase, ctx, userProfile, digestType)
           
-        case 'timing_toggle_1w':
-        case 'timing_toggle_48h':
-        case 'timing_toggle_24h':
-        case 'timing_toggle_12h':
-        case 'timing_toggle_2h':
-          const timingKey = action.split('_')[2]
+        case 'pref_notification_toggle_1w':
+        case 'pref_notification_toggle_48h':
+        case 'pref_notification_toggle_24h':
+        case 'pref_notification_toggle_12h':
+        case 'pref_notification_toggle_2h':
+          const timingKey = action.split('_')[3] // Updated for pref_notification_toggle_*
           return await callbacks.toggleNotificationTiming(supabase, ctx, userProfile, timingKey)
           
         case 'timing_save':
