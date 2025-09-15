@@ -97,12 +97,11 @@ const commands = {
     } else {
       console.log('🎉 Existing user found, sending welcome back message')
       
-      // Try to get session counts for dynamic urgency line (optional)
-      let dynamicUrgency = ''
+      // Get session counts for today and tomorrow
+      let sessionSummary = ''
       try {
         const { WaveScheduleScraper } = require('../lib/wave-scraper-final')
         const scraper = new WaveScheduleScraper()
-        const todaySessions = await scraper.getTodaysFutureSessions()
         
         // Extract user preferences in correct format
         const userLevels = userProfile.user_levels?.map(ul => ul.level) || []
@@ -112,20 +111,27 @@ const commands = {
         const userDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
         const userTimeWindows = userProfile.user_time_windows || []
         
-        const filteredSessions = scraper.filterSessionsForUser(
+        // Get today's sessions
+        const todaySessions = await scraper.getTodaysFutureSessions()
+        const todayFiltered = scraper.filterSessionsForUser(
           todaySessions, userLevels, userSides, userDays, true, userTimeWindows
         ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
         
-        if (filteredSessions.length > 0) {
-          dynamicUrgency = `\n\n🔥 ${filteredSessions.length} session${filteredSessions.length !== 1 ? 's' : ''} match${filteredSessions.length === 1 ? 'es' : ''} your setup today`
-        }
+        // Get tomorrow's sessions
+        const tomorrowSessions = await scraper.getTomorrowsSessions()
+        const tomorrowFiltered = scraper.filterSessionsForUser(
+          tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows
+        ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
+        
+        sessionSummary = `\n\n**Today:** ${todayFiltered.length} surf session${todayFiltered.length !== 1 ? 's' : ''} match your preferences\n**Tomorrow:** ${tomorrowFiltered.length} surf session${tomorrowFiltered.length !== 1 ? 's' : ''} match your preferences`
       } catch (error) {
         // Silently ignore if we can't get sessions
-        console.log('Could not fetch sessions for dynamic urgency:', error.message)
+        console.log('Could not fetch sessions for summary:', error.message)
+        sessionSummary = '\n\nCheck today and tomorrow for available sessions'
       }
       
       // Welcome back existing user
-      const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile) + dynamicUrgency
+      const welcomeBackMessage = ui.welcomeBackMessage(ctx.from.first_name || 'Wave Rider', userProfile) + sessionSummary
       
       console.log('🔧 DEBUG: About to call ctx.reply():', {
         hasCtx: !!ctx,
@@ -138,12 +144,8 @@ const commands = {
         parse_mode: 'Markdown',  
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌊 Today at The Wave', callback_data: 'menu_today' }],
-            [{ text: '🌅 Tomorrow at The Wave', callback_data: 'menu_tomorrow' }],
-            [{ text: '🛠 Your Setup', callback_data: 'menu_preferences' }],
-            [{ text: '🔔 Alerts & Digests', callback_data: 'menu_notifications' }],
-            [{ text: '❓ Help & Support', callback_data: 'menu_help' }],
-            [{ text: '☕ Buy the dev a coffee', url: 'https://buymeacoffee.com/driftwithcaz' }]
+            [{ text: 'Today at The Wave', callback_data: 'menu_today' }],
+            [{ text: 'Tomorrow at The Wave', callback_data: 'menu_tomorrow' }]
           ]
         }
       })

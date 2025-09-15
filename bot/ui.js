@@ -30,74 +30,11 @@ Get instant notifications when surf sessions matching your preferences become av
     const hasPreferences = userProfile.user_levels?.length > 0
     
     if (hasPreferences) {
-      // Format levels - compact, single value
-      const levels = userProfile.user_levels?.map(ul => this.capitalizeWords(ul.level)) || []
-      const levelText = levels.length === 1 ? levels[0] : levels.join(', ')
-      
-      // Format sides - compact
-      const sides = userProfile.user_sides?.map(us => {
-        if (us.side === 'L') return 'Left'
-        if (us.side === 'R') return 'Right'
-        return 'Any'
-      }) || []
-      const sideText = sides.length === 1 ? sides[0] : sides.join(' & ')
-      
-      // Format days - compact
-      const days = userProfile.user_days?.map(ud => {
-        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        return dayNames[ud.day_of_week]
-      }) || []
-      let daysText = 'Mon–Sun'
-      if (days.length === 5 && !days.includes('Sat') && !days.includes('Sun')) {
-        daysText = 'Mon–Fri'
-      } else if (days.length === 2 && days.includes('Sat') && days.includes('Sun')) {
-        daysText = 'Weekends'
-      } else if (days.length > 0 && days.length < 7) {
-        daysText = days.join(', ')
-      }
-      
-      // Format times - compact chip style
-      const times = userProfile.user_time_windows?.map(tw => {
-        const start = parseInt(tw.start_time.split(':')[0])
-        const end = parseInt(tw.end_time.split(':')[0])
-        return `${start}–${end}`
-      }) || []
-      const timesText = times.length > 0 ? times.join(', ') : 'Any'
-      
-      // Format min spots
-      const minSpots = userProfile.min_spots || 1
-      
-      // Format digests - compact
-      const digestPrefs = userProfile.user_digest_preferences || []
-      let digestText = 'Off'
-      if (digestPrefs.length > 0) {
-        const hasAM = digestPrefs.some(d => d.digest_type === 'morning')
-        const hasPM = digestPrefs.some(d => d.digest_type === 'evening')
-        if (hasAM && hasPM) digestText = 'AM & PM'
-        else if (hasAM) digestText = 'AM'
-        else if (hasPM) digestText = 'PM'
-      }
-      
-      // Instant alerts status
-      const alertsStatus = userProfile.notification_enabled ? 'On' : 'Off'
-      
-      return `🌊 *Welcome back, ${firstName}*
-
-*Quick actions*
-• *Today at The Wave* — sessions you can book now
-• *Tomorrow at The Wave* — plan ahead
-
-*Your setup*
-• *Level:* ${levelText}  • *Side:* ${sideText}
-• *Days:* ${daysText}
-• *Times:* ${timesText}
-• *Min spots:* ${minSpots}+  • *Alerts:* ${alertsStatus}  • *Digests:* ${digestText}`
+      return `*Welcome back, ${firstName}*`
     } else {
-      return `🌊 *Welcome back, ${firstName}*
+      return `*Welcome back, ${firstName}*
 
-Looks like you haven't finished setting up your preferences yet.
-
-*Ready to get personalized surf alerts?* 🤙`
+Set up your preferences to get personalized surf alerts.`
     }
   },
 
