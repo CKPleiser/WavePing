@@ -227,20 +227,6 @@ const callbacks = {
             reply_markup: menus.helpMenu()
           })
           
-        case 'support':
-        case 'menu_support':
-          const supportMessage = ui.supportMessage()
-          return await ctx.editMessageText(supportMessage, {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' }],
-                [{ text: '💬 Contact Developer', callback_data: 'support_contact' }],
-                [{ text: '📈 Feature Request', callback_data: 'support_feature' }],
-                [{ text: '🏠 Main Menu', callback_data: 'menu_main' }]
-              ]
-            }
-          })
           
           
         default:
@@ -1677,7 +1663,7 @@ const callbacks = {
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.url('📧 Email Support', 'mailto:support@waveping.app')],
               [Markup.button.url('💬 Telegram Support', 'https://t.me/WavePingSupport')],
-              [Markup.button.callback('🔙 Back to Support', 'menu_support')]
+              [Markup.button.callback('🔙 Back to Support', 'support')]
             ])
           })
           
@@ -1687,7 +1673,7 @@ const callbacks = {
             parse_mode: 'HTML',
             reply_markup: Markup.inlineKeyboard([
               [Markup.button.url('📈 Submit Feature Request', 'https://t.me/WavePingSupport')],
-              [Markup.button.callback('🔙 Back to Support', 'menu_support')]
+              [Markup.button.callback('🔙 Back to Support', 'support')]
             ])
           })
           
