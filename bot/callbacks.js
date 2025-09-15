@@ -395,19 +395,31 @@ const callbacks = {
           
         case 'support':
         case 'donate': {
-          const supportMessage = ui.supportMessage()
-          return await ctx.editMessageText(supportMessage, {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' },
-                  { text: '📤 Share Bot', url: 'https://t.me/share/url?url=https://t.me/WavePingBot&text=Check out WavePing - get instant notifications when surf sessions become available at The Wave Bristol! 🌊' }
-                ],
-                [{ text: '🏠 Main Menu', callback_data: 'main' }]
-              ]
-            }
-          })
+          try {
+            const supportMessage = ui.supportMessage()
+            return await safeEditText(ctx, supportMessage, {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '☕ Buy Me a Coffee', url: 'https://buymeacoffee.com/driftwithcaz' },
+                    { text: '📤 Share Bot', url: 'https://t.me/share/url?url=https://t.me/WavePingBot&text=Check out WavePing - get instant notifications when surf sessions become available at The Wave Bristol! 🌊' }
+                  ],
+                  [{ text: '🏠 Main Menu', callback_data: 'main' }]
+                ]
+              }
+            })
+          } catch (error) {
+            console.error('Error loading support screen:', error.message, error.stack)
+            return await ctx.editMessageText('💙 Support WavePing\n\nLoading support options...', {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '🏠 Main Menu', callback_data: 'main' }]
+                ]
+              }
+            })
+          }
         }
           
         case 'help_contact': {
