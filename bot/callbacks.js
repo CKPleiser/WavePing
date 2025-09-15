@@ -69,10 +69,56 @@ const callbacks = {
     try {
       switch (action) {
         case 'main':
-          const mainMessage = ui.mainMenuMessage()
+          // Get session counts for useful main menu message
+          const telegramId = ctx.from.id
+          const userProfile = await getUserProfile(supabase, telegramId)
+          
+          let todayCount = null
+          let tomorrowCount = null
+          
+          try {
+            const scraper = new WaveScheduleScraper()
+            
+            if (userProfile) {
+              // Get user preferences for filtering
+              const userLevels = userProfile.user_levels?.map(ul => ul.level) || []
+              const userSides = userProfile.user_sides?.map(us => 
+                us.side === 'L' ? 'Left' : us.side === 'R' ? 'Right' : 'Any'
+              ) || []
+              const userDays = userProfile.user_days?.map(ud => ud.day_of_week) || []
+              const userTimeWindows = userProfile.user_time_windows || []
+              
+              // Get today's sessions
+              const todaySessions = await scraper.getTodaysFutureSessions()
+              const todayFiltered = scraper.filterSessionsForUser(
+                todaySessions, userLevels, userSides, userDays, true, userTimeWindows
+              ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
+              
+              // Get tomorrow's sessions
+              const tomorrowSessions = await scraper.getTomorrowsSessions()
+              const tomorrowFiltered = scraper.filterSessionsForUser(
+                tomorrowSessions, userLevels, userSides, userDays, true, userTimeWindows
+              ).filter(s => (s.spots_available || 0) >= userProfile.min_spots)
+              
+              todayCount = todayFiltered.length
+              tomorrowCount = tomorrowFiltered.length
+            } else {
+              // No user profile, show all available sessions
+              const todaySessions = await scraper.getTodaysFutureSessions()
+              const tomorrowSessions = await scraper.getTomorrowsSessions()
+              
+              todayCount = todaySessions.filter(s => (s.spots_available || 0) > 0).length
+              tomorrowCount = tomorrowSessions.filter(s => (s.spots_available || 0) > 0).length
+            }
+          } catch (error) {
+            console.log('Could not fetch sessions for main menu:', error.message)
+            // Continue with null counts
+          }
+          
+          const mainMessage = ui.mainMenuMessage(todayCount, tomorrowCount)
           return await ctx.editMessageText(mainMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.mainMenu()
+            reply_markup: menus.mainMenu(todayCount, tomorrowCount).reply_markup
           })
           
         case 'today':

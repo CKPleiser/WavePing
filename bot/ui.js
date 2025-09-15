@@ -44,13 +44,27 @@ Set up your preferences to get personalized surf alerts.`
    * Main menu message
    */
   mainMenuMessage(todayCount = null, tomorrowCount = null) {
-    const todayText = todayCount !== null ? ` (${todayCount})` : ''
-    const tomorrowText = tomorrowCount !== null ? ` (${tomorrowCount})` : ''
+    let message = `🌊 <b>WavePing</b>\n\n`
     
-    return `🌊 <b>WavePing</b>
-
-Today${todayText} and Tomorrow${tomorrowText} sessions available.
-Your Setup and Alerts & Digests below.`
+    if (todayCount !== null && tomorrowCount !== null) {
+      // Show specific session counts
+      const todayText = todayCount === 0 ? 'No matches today' : 
+                       todayCount === 1 ? '1 session ready to book!' :
+                       `${todayCount} sessions ready to book!`
+                       
+      const tomorrowText = tomorrowCount === 0 ? 'No matches tomorrow' :
+                          tomorrowCount === 1 ? '1 session available' :
+                          `${tomorrowCount} sessions available`
+                          
+      message += `<b>Today:</b> ${todayText}\n<b>Tomorrow:</b> ${tomorrowText}\n\n`
+      message += `Tap Today or Tomorrow to see details.`
+    } else {
+      // Fallback when session data isn't available
+      message += `Your personalized surf assistant for The Wave Bristol.\n\n`
+      message += `Check Today and Tomorrow sessions below.`
+    }
+    
+    return message
   },
 
   /**
