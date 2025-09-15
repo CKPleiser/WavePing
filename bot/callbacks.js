@@ -469,10 +469,15 @@ const callbacks = {
         case 'side_save':
         case 'pref_side_save':
           const savedSidesMessage = ui.createSavedPreferencesMessage('wave side preferences')
-          const comeFromSessions2 = ctx.session?.comeFromSessions || false
+          
           return await ctx.editMessageText(savedSidesMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.postSaveActionsMenu(comeFromSessions2)
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '✅ Done', callback_data: 'main' }],
+                [{ text: '⚙️ Edit More', callback_data: 'post_save_tray' }]
+              ]
+            }
           })
           
         // Day toggles
@@ -597,10 +602,14 @@ const callbacks = {
           ctx.answerCbQuery(`💾 Minimum spots set to ${spotCountToSave}!`)
           
           const savedSpotsMessage = ui.createSavedPreferencesMessage('minimum spots')
-          const comeFromSessions3 = ctx.session?.comeFromSessions || false
           return await ctx.editMessageText(savedSpotsMessage, {
             parse_mode: 'HTML',
-            reply_markup: menus.postSaveActionsMenu(comeFromSessions3)
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '✅ Done', callback_data: 'main' }],
+                [{ text: '⚙️ Edit More', callback_data: 'post_save_tray' }]
+              ]
+            }
           })
           
         // Notification timing toggles (from preferences menu)
@@ -939,7 +948,7 @@ const callbacks = {
 
         case 'back_to_sessions':
           // Go back to today's sessions (could be enhanced to remember context)
-          return this.today(supabase, ctx)
+          return commands.today(supabase, ctx)
           
         default:
           return ctx.answerCbQuery('Unknown setup option')
