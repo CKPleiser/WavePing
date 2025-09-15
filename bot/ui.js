@@ -416,19 +416,23 @@ Tell me the problem, what you want the bot to do, and why it helps.`
   // Removed post-save messages - no longer needed with simplified flow
 
   /**
-   * Support message - Donations only
+   * Support message - Donations and sharing
    */
   supportMessage() {
-    return `<b>☕ Donate to WavePing</b>
+    return `<b>💙 Support WavePing</b>
 
-Free, open-source digests for The Wave Bristol. Your donation keeps this running.
+WavePing is free and open-source for all surfers at The Wave Bristol.
 
-<b>Your support funds</b>
-• Servers
-• Fixes and new features
-• Support
+<b>🤝 Two ways to help:</b>
+• <b>☕ Buy me a coffee</b> - Keeps the servers running
+• <b>📤 Share with friends</b> - Help more surfers discover it
 
-Thanks for keeping it free for everyone.`
+<b>Your support funds:</b>
+• Server costs and maintenance
+• Bug fixes and new features
+• Developer coffee ☕
+
+Thanks for keeping WavePing free for everyone! 🌊`
   },
 
   contactMessage() {
